@@ -9,6 +9,7 @@ from aiohttp import web
 
 from .views import hello
 from .settings import default_config_path, load_config, config
+from .perun.requests import close_session
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"
@@ -35,6 +36,8 @@ def app_init(
     with open(config_path) as file:
         app["config"] = load_config(file)
     app.add_routes([web.get(r"/{id}", hello)])
+
+    app.on_shutdown.append(close_session)
 
     return app
 
@@ -77,5 +80,11 @@ def main() -> int:
         )
     except OSError as e:
         _logger.exception("Could not start start application, see stacktrace attached.")
+    except Exception:
+        _logger.exception("Unhandled exception.")
 
     return 0
+
+
+if __name__ == "__main__":
+    exit(main())

@@ -10,6 +10,11 @@ _client = ClientSession(
 _logger = getLogger(__name__)
 
 
+async def close_session(_):
+    "Close session with grace."
+    await _client.close()
+
+
 async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     request_url = f"{config.perun_rpc_base_url}/{url}"
     _logger.debug("Sending POST request `%s` with data `%s`", request_url, params)
