@@ -3,6 +3,9 @@ name = "OS_project_usage_processor"
 version = "0.1.0"
 description = ""
 authors = ["gilbus"]
+packages = [
+	{ include = "os_project_usage_processor", from = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -12,6 +15,9 @@ toml = "^0.10.0"
 [tool.poetry.dev-dependencies]
 mypy = "^0.660.0"
 black = {version = "^18.3-alpha.0",allows-prereleases = true}
+
+[tool.poetry.scripts]
+credits_processor = 'os_project_usage_processor:main.main'
 
 [build-system]
 requires = ["poetry>=0.12"]
