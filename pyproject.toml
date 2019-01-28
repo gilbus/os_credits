@@ -6,8 +6,8 @@ authors = ["gilbus"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-python-dotenv = "^0.10.1"
 aiohttp = "^3.5"
+toml = "^0.10.0"
 
 [tool.poetry.dev-dependencies]
 mypy = "^0.660.0"
