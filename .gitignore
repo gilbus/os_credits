@@ -113,3 +113,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# do not check in config file with values
+# use *.in files for source control
+config/*.toml

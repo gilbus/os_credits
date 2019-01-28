@@ -11,16 +11,15 @@ from datetime import datetime
 from collections import defaultdict
 from re import match
 
-
+from ..settings import config
 from .requests import perun_rpc
 from .attributesManager import Attribute, get_attributes
-from .. import VO_ID
 
 _logger = getLogger(__name__)
 __url = "groupsManager"
 
 
-async def get_all_groups(vo: int = VO_ID) -> Dict[str, Group]:
+async def get_all_groups(vo: int = config.vo_id) -> Dict[str, Group]:
     """
     Returns all groups in the given VO.
     :return: Dictionary of all groups with their name as index
@@ -29,7 +28,7 @@ async def get_all_groups(vo: int = VO_ID) -> Dict[str, Group]:
     return {group["name"]: await Group(group["name"]).connect() for group in all_groups}
 
 
-async def get_group_by_name(name: str, vo: int = VO_ID) -> Dict[str, Any]:
+async def get_group_by_name(name: str, vo: int = config.vo_id) -> Dict[str, Any]:
     """
     :return: Dictionary of attributes of the requested Group.
     """
@@ -110,7 +109,7 @@ class Group:
         return f"Group(name={self.name})"
 
     @classmethod
-    async def get_all_groups(cls, vo: int = VO_ID) -> Dict[str, Group]:
+    async def get_all_groups(cls, vo: int = config.vo_id) -> Dict[str, Group]:
         """
         Returns all groups in the given VO.
         :return: Dictionary of all groups with their name as index
