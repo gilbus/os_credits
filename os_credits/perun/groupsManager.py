@@ -51,6 +51,7 @@ class Group:
     toEmail: Attribute[List[str]]
     denbiCreditsGranted: Attribute[float]
     denbiCreditsCurrent: Attribute[float]
+    denbiCreditsTimestamp: Attribute[datetime]
 
     def __init__(self, name: str) -> None:
         """
