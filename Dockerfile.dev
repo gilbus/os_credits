@@ -9,6 +9,6 @@ RUN pip install --no-cache poetry
 RUN poetry config settings.virtualenvs.create false
 RUN poetry install
 
-EXPOSE 8000
-EXPOSE 8001
-CMD adev runserver --host 0.0.0.0 /code/os_credits
+EXPOSE 80
+EXPOSE 80
+CMD adev runserver --port 80 --host 0.0.0.0 /code/os_credits
