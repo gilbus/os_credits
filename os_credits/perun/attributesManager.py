@@ -32,7 +32,7 @@ class Attribute(Generic[ValueType]):
 
     # parser/converter functions for the attribute of an Attribute, let's call them
     # subattributes
-    _parser_funcs: Dict[str, Callable[[str], Any]] = {
+    _subattr_parser: Dict[str, Callable[[str], Any]] = {
         "valueModifiedAt": lambda value: datetime.strptime(
             value, "%Y-%m-%d %H:%M:%S.%f"
         ),
@@ -42,7 +42,7 @@ class Attribute(Generic[ValueType]):
     # helper functions to fix shortcomings of the perun api, i.e. no support for floats
     # values with necessary conversions are identified by the friendlyName of the
     # Attribute
-    _value_funcs: Dict[str, Callable[[Any], Any]] = {
+    _value_parser: Dict[str, Callable[[Any], Any]] = {
         # in case some "genius" used the broken german notation with an actual
         # commata
         "denbiCreditsCurrent": lambda value: float(
@@ -50,6 +50,9 @@ class Attribute(Generic[ValueType]):
         ),
         "denbiCreditsGranted": lambda value: float(
             value.replace(",", ".") if isinstance(value, str) else float(value)
+        ),
+        "denbiCreditsTimestamp": lambda value: datetime.strptime(
+            value, "%Y-%m-%dT%H:%M:%S.%f"
         ),
     }
 
@@ -59,15 +62,15 @@ class Attribute(Generic[ValueType]):
             if attribute_attr_name.startswith("_"):
                 continue
             # check whether any parser function is defined and apply it if so
-            if attribute_attr_name in __class__._parser_funcs:
-                attribute_attr_value = __class__._parser_funcs[attribute_attr_name](
+            if attribute_attr_name in __class__._subattr_parser:
+                attribute_attr_value = __class__._subattr_parser[attribute_attr_name](
                     kwargs[attribute_attr_name]
                 )
             else:
                 attribute_attr_value = kwargs[attribute_attr_name]
             self.__setattr__(attribute_attr_name, attribute_attr_value)
         try:
-            self.value = __class__._value_funcs[self.friendlyName](self.value)
+            self.value = __class__._value_parser[self.friendlyName](self.value)
         except KeyError:
             pass
 
