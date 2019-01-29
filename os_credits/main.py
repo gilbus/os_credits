@@ -7,9 +7,9 @@ from os import getenv
 
 from aiohttp import web
 
-from .views import hello
-from .settings import default_config_path, load_config, config
-from .perun.requests import close_session
+from os_credits.views import hello, print_it
+from os_credits.settings import default_config_path, load_config, config
+from os_credits.perun.requests import close_session
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"
@@ -24,18 +24,15 @@ def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
     return parser
 
 
-def app_init(
-    argv=None, config_path: str = getenv(CONFIG_FILE_ENV_VAR, str(default_config_path))
-) -> web.Application:
+async def create_app() -> web.Application:
     """
     Separated from main function to be usable via `python -m aiohttp.web [...]`. Takes
     care of any application related setup, e.g. which config to use.
     """
 
     app = web.Application()
-    with open(config_path) as file:
-        app["config"] = load_config(file)
-    app.add_routes([web.get(r"/{id}", hello)])
+    app.add_routes([web.get(r"/{id}", hello), web.post("/write", print_it)])
+    app.update(name="os-credits", config=config)
 
     app.on_shutdown.append(close_session)
 
@@ -75,9 +72,7 @@ def main() -> int:
     _logger = getLogger(__name__)
 
     try:
-        web.run_app(
-            app_init(args.config), port=args.port, path=args.path, host=args.host
-        )
+        web.run_app(create_app(), port=args.port, path=args.path, host=args.host)
     except OSError as e:
         _logger.exception("Could not start start application, see stacktrace attached.")
     except Exception:
