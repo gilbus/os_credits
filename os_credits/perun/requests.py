@@ -5,7 +5,7 @@ from logging import getLogger
 from ..settings import config
 
 _client = ClientSession(
-    auth=BasicAuth(config.service_user["login"], config.service_user["password"])
+    auth=BasicAuth(config["service_user"]["login"], config["service_user"]["password"])
 )
 _logger = getLogger(__name__)
 
@@ -16,7 +16,7 @@ async def close_session(_):
 
 
 async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
-    request_url = f"{config.perun_rpc_base_url}/{url}"
+    request_url = f"{config['perun_rpc_base_url']}/{url}"
     _logger.debug("Sending POST request `%s` with data `%s`", request_url, params)
     async with _client.post(request_url, json=params) as response:
         response_content = await response.json()

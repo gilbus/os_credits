@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Any, TextIO
 from logging import getLogger
+from collections import UserDict
 
 from toml import loads
 
@@ -22,30 +23,28 @@ for path in default_config_paths:
 _logger = getLogger(__name__)
 
 
-class _Config:
+class _Config(UserDict):
     def __init__(self, config: Optional[str] = None):
-        self.data = None
+        super().__init__()
         if config:
-            self.data = loads(config)
-            assert self.vo_id
-            assert self.service_user
-            assert self.service_user["login"]
-            assert self.service_user["password"]
+            self.data.update(**loads(config))
+            assert self["vo_id"]
+            assert self["service_user"]
+            assert self["service_user"]["login"]
+            assert self["service_user"]["password"]
 
-    def __getattr__(self, name: str) -> Any:
+    def __getitem__(self, key: str) -> Any:
         if not self.data:
             _logger.info(
                 "No config file loaded but attribute %s was accessed. Trying to load "
                 "default config from default paths (%s).",
-                name,
+                key,
                 default_config_paths,
             )
             if not default_config_path:
                 raise RuntimeError("Could not load any default config.")
-            self.data = loads(default_config_path.read_text())
-        if name in self.data:
-            return self.data[name]
-        return getattr(self, name)
+            self.data.update(**loads(default_config_path.read_text()))
+        return super().__getitem__(key)
 
 
 def load_config(config_io: TextIO) -> _Config:
