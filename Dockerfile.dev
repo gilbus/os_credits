@@ -1,6 +1,5 @@
-FROM python:3.7-alpine
+FROM python:3.7
 
-RUN apk add --no-cache linux-headers musl-dev gcc
 ADD os_credits /code/os_credits
 ADD pyproject.toml poetry.lock /code/
 WORKDIR /code
@@ -10,5 +9,5 @@ RUN poetry config settings.virtualenvs.create false
 RUN poetry install
 
 EXPOSE 80
-EXPOSE 80
+EXPOSE 81
 CMD adev runserver --port 80 --host 0.0.0.0 /code/os_credits
