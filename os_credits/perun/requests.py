@@ -20,7 +20,7 @@ async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     _logger.debug("Sending POST request `%s` with data `%s`", request_url, params)
     async with _client.post(request_url, json=params) as response:
         response_content = await response.json()
-        if "errorId" in response_content:
+        if response_content and "errorId" in response_content:
             # Some kind of error has occured
             if response_content["name"] == "GroupNotExistsException":
                 raise GroupNotExistsError(response_content["message"])
