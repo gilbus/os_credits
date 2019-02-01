@@ -11,6 +11,7 @@ from aiohttp import web
 from os_credits.views import ping, influxdb_write_endpoint
 from os_credits.settings import default_config_path, load_config, config
 from os_credits.perun.requests import close_session
+from os_credits.influxdb import InfluxClient
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"
@@ -37,7 +38,7 @@ async def create_app() -> web.Application:
     app.add_routes(
         [web.get(r"/ping", ping), web.post("/write", influxdb_write_endpoint)]
     )
-    app.update(name="os-credits", config=config)
+    app.update(name="os-credits", config=config, influx_client=InfluxClient())
     if "logging" in config:
         dictConfig(config["logging"])
 
