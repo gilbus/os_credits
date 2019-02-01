@@ -84,30 +84,23 @@ class Group:
             if attribute_name in group_attributes:
                 self.__setattr__(
                     attribute_name,
-                    Attribute[Type[attribute_type]](**group_attributes[attribute_name]),
+                    Attribute[attribute_type](**group_attributes[attribute_name]),
                 )
             else:
                 self.__setattr__(attribute_name, None)
-
-        # for attribute in group_attributes:
-        #    # check whether this attribute should be added to the group object, in which
-        #    # case its type hint should be 'Attribute[<ValueType>]'
-        #    attribute_match = match(
-        #        r"Attribute\[(?P<value_type>.*)\]",
-        #        self.__annotations__.get(attribute["friendlyName"], ""),
-        #    )
-        #    if attribute_match:
-        #        self.__setattr__(
-        #            attribute["friendlyName"],
-        #            Attribute[attribute_match.groupdict()["value_type"]](**attribute),
-        #        )
-
-        #    # TODO: set all attributes without value to None
+        _logger.debug("Found Group '%s' in Perun and retrived attributes", self.name)
 
         return self
 
     def __repr__(self) -> str:
-        return f"Group(name={self.name})"
+        param_repr: List[str] = []
+        for attribute in self._attribute_types:
+            param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
+
+        return f"Group[{','.join(param_repr)}]"
+
+    def __str__(self) -> str:
+        return self.name
 
     @classmethod
     async def get_all_groups(cls, vo: int = config["vo_id"]) -> Dict[str, Group]:
