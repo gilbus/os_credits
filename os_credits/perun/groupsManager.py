@@ -39,6 +39,7 @@ async def get_group_by_name(name: str, vo: int = config["vo_id"]) -> Dict[str, A
 class Group:
     """
     Represents a Group object inside Perun.
+
     Every attribute requested via class variable declaration will at least be set to
     None in case Perun reports no value. Although the 'inner' type hints are not
     functional (in terms of type checking via `mypy` they are still helpful and
@@ -107,7 +108,7 @@ class Group:
         return self
 
     async def save(self) -> None:
-        """Saves all changed attribute values to Perun."""
+        """Save all changed attribute values to Perun."""
         # If this class is shared among multiple coroutines the following approach might
         # not be 'thread-safe' since another class could update the values during the
         # 'await' phase

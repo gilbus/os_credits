@@ -105,7 +105,8 @@ class PerunAttribute(Generic[ValueType]):
 
     @value.setter
     def value(self, value: Any) -> None:
-        if not isinstance(value, type(self._value)):
+        # only check for type correctness if we already have a value
+        if self._value and not isinstance(value, type(self._value)):
             raise TypeError(
                 f"Value must be of the same type as current one ({type(self.value)})"
             )
@@ -126,6 +127,9 @@ class PerunAttribute(Generic[ValueType]):
             param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
 
         return f"{type(self).__name__}({','.join(param_repr)})"
+
+    def __bool__(self) -> bool:
+        return bool(self.value)
 
 
 class DenbiCreditsCurrent(
