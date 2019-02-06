@@ -135,12 +135,13 @@ class Attribute(Generic[ValueType]):
     def value(self, value: Any) -> None:
         if not isinstance(value, type(self._value)):
             raise TypeError(
-                f"Value must be of the same type as current one ({type(self._value)})"
+                f"Value must be of the same type as current one ({type(self.value)})"
             )
         _logger.debug(
             "Set %s of Group %s to %s", self.friendlyName, self.group.name, value
         )
-        self.group.changed_attributes.add(self)
+        if self.value != value:
+            self.group.changed_attributes.add(self)
         self._value = value
 
     def __str__(self) -> str:

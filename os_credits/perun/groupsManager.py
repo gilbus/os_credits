@@ -101,7 +101,11 @@ class Group:
 
     async def save(self) -> None:
         """Saves all changed attribute values to Perun."""
-        for attribute in self.changed_attributes:
+        # use a copy since we are asynchrnous and other attributes might be
+        # changed/added to the set in the meantime
+        attributes_to_set = self.changed_attributes.copy()
+        self.changed_attributes = set()
+        for attribute in attributes_to_set:
             await set_attribute(self.id, attribute)
 
     def __repr__(self) -> str:
