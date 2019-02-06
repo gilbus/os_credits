@@ -23,9 +23,22 @@ async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
         if response_content and "errorId" in response_content:
             # Some kind of error has occured
             if response_content["name"] == "GroupNotExistsException":
-                raise GroupNotExistsError(response_content["message"])
+                raise GroupNotExists(response_content["message"])
+            elif response_content["name"] == "AttributeNotExistsException":
+                raise AttributeNotExists(response_content["message"])
+            elif response_content["name"] == "InternalErrorException":
+                raise InternalErrorException(response_content["message"])
+
         return response_content
 
 
-class GroupNotExistsError(Exception):
+class GroupNotExists(Exception):
+    pass
+
+
+class AttributeNotExists(Exception):
+    pass
+
+
+class InternalErrorException(Exception):
     pass
