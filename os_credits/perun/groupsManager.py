@@ -13,7 +13,9 @@ from re import match
 
 from ..settings import config
 from .requests import perun_rpc
-from .attributesManager import Attribute, get_attributes, set_attribute
+from . import attributesManager
+from .attributesManager import get_attributes, set_attribute
+from .attributes import PerunAttribute
 
 _logger = getLogger(__name__)
 __url = "groupsManager"
@@ -45,16 +47,14 @@ class Group:
 
     id: int
     name: str
-    changed_attributes: Set[Attribute]
+    changed_attributes: Set[PerunAttribute]
     # list the friendlyName of every attribute to save here
     # the type inside its brackets will be set as type hint for its 'value', the actual
     # value of an attribute
-    denbiProjectShortname: Attribute[str]
-    denbiProjectDescription: Attribute[Optional[str]]
-    toEmail: Attribute[List[str]]
-    denbiCreditsGranted: Attribute[float]
-    denbiCreditsCurrent: Attribute[float]
-    denbiCreditsTimestamp: Attribute[datetime]
+    toEmail: PerunAttribute[List[str]]
+    denbiCreditsGranted: PerunAttribute[int]
+    denbiCreditsCurrent: PerunAttribute[float]
+    denbiCreditsTimestamp: PerunAttribute[datetime]
 
     def __init__(self, name: str) -> None:
         """
@@ -85,16 +85,18 @@ class Group:
             for attribute in await get_attributes(self.id)
         }
 
-        for attribute_name, attribute_type in self._attribute_types.items():
-            if attribute_name in group_attributes:
+        for (
+            attr_friendly_name,
+            attr_class,
+        ) in PerunAttribute._registered_attributes.items():
+            try:
                 self.__setattr__(
-                    attribute_name,
-                    Attribute[attribute_type](
-                        group=self, **group_attributes[attribute_name]
-                    ),
+                    attr_friendly_name,
+                    attr_class(group=self, **group_attributes[attr_friendly_name]),
                 )
-            else:
-                self.__setattr__(attribute_name, None)
+            except KeyError:
+                self.__setattr__(attr_friendly_name, attr_class(group=self, value=None))
+
         _logger.debug("Found Group '%s' in Perun and retrived attributes", self.name)
 
         return self
