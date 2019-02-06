@@ -47,10 +47,11 @@ class Group:
 
     id: int
     name: str
-    changed_attributes: Set[PerunAttribute]
     # list the friendlyName of every attribute to save here
     # the type inside its brackets will be set as type hint for its 'value', the actual
     # value of an attribute
+    # please stick to given syntax of annotations since they are also used to list all
+    # attributes of a group
     toEmail: PerunAttribute[List[str]]
     denbiCreditsGranted: PerunAttribute[int]
     denbiCreditsCurrent: PerunAttribute[float]
@@ -64,10 +65,11 @@ class Group:
         """
         self.name = name
         self._attribute_types: Dict[str, str] = {}
-        self.changed_attributes = set()
         for var_name, var_annotation in self.__annotations__.items():
             #
-            attribute_match = match(r"Attribute\[(?P<value_type>.*)\]", var_annotation)
+            attribute_match = match(
+                r"PerunAttribute\[(?P<value_type>.*)\]", var_annotation
+            )
             if attribute_match:
                 self._attribute_types.update(
                     {var_name: attribute_match.groupdict()["value_type"]}
@@ -89,6 +91,9 @@ class Group:
             attr_friendly_name,
             attr_class,
         ) in PerunAttribute._registered_attributes.items():
+            # only save attributes which are requested via class annotations
+            if attr_friendly_name not in self._attribute_types:
+                continue
             try:
                 self.__setattr__(
                     attr_friendly_name,
@@ -103,12 +108,13 @@ class Group:
 
     async def save(self) -> None:
         """Saves all changed attribute values to Perun."""
-        # use a copy since we are asynchrnous and other attributes might be
-        # changed/added to the set in the meantime
-        attributes_to_set = self.changed_attributes.copy()
-        self.changed_attributes = set()
-        for attribute in attributes_to_set:
-            await set_attribute(self.id, attribute)
+        # If this class is shared among multiple coroutines the following approach might
+        # not be 'thread-safe' since another class could update the values during the
+        # 'await' phase
+        for attribute_name in self._attribute_types:
+            if getattr(self, attribute_name)._updated:
+                getattr(self, attribute_name)._updated = False
+                await set_attribute(self.id, getattr(self, attribute_name))
 
     def __repr__(self) -> str:
         param_repr: List[str] = []

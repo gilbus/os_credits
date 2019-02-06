@@ -146,8 +146,8 @@ class DenbiCreditsCurrent(
 
 class DenbiCreditsGranted(
     PerunAttribute[int],
-    perun_id=3382,
-    perun_friendly_name="denbiCreditsCurrent",
+    perun_id=3383,
+    perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
     perun_namespace="urn:perun:group:attribute-def:opt",
 ):
