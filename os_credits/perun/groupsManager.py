@@ -6,14 +6,14 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Any, Dict, Callable, List, Optional, Type
+from typing import Any, Dict, Callable, List, Optional, Type, Set
 from datetime import datetime
 from collections import defaultdict
 from re import match
 
 from ..settings import config
 from .requests import perun_rpc
-from .attributesManager import Attribute, get_attributes
+from .attributesManager import Attribute, get_attributes, set_attribute
 
 _logger = getLogger(__name__)
 __url = "groupsManager"
@@ -21,7 +21,8 @@ __url = "groupsManager"
 
 async def get_all_groups(vo: int = config["vo_id"]) -> Dict[str, Group]:
     """
-    Returns all groups in the given VO.
+    Return all groups in the given VO.
+
     :return: Dictionary of all groups with their name as index
     """
     all_groups = await perun_rpc(f"{__url}/getAllGroups", params={"vo": vo})
@@ -29,20 +30,22 @@ async def get_all_groups(vo: int = config["vo_id"]) -> Dict[str, Group]:
 
 
 async def get_group_by_name(name: str, vo: int = config["vo_id"]) -> Dict[str, Any]:
-    """
-    :return: Dictionary of attributes of the requested Group.
-    """
+    """:return: Dictionary of attributes of the requested Group."""
     return await perun_rpc(f"{__url}/getGroupByName", params={"vo": vo, "name": name})
 
 
 class Group:
     """
-    Represents a Group object inside Perun. Every attribute requested via class variable
-    declaration will at least be set to None in case Perun reports no value.
+    Represents a Group object inside Perun.
+    Every attribute requested via class variable declaration will at least be set to
+    None in case Perun reports no value. Although the 'inner' type hints are not
+    functional (in terms of type checking via `mypy` they are still helpful and
+    required, see the regular expressio inside __init__)
     """
 
     id: int
     name: str
+    changed_attributes: Set[Attribute]
     # list the friendlyName of every attribute to save here
     # the type inside its brackets will be set as type hint for its 'value', the actual
     # value of an attribute
@@ -61,7 +64,9 @@ class Group:
         """
         self.name = name
         self._attribute_types: Dict[str, str] = {}
+        self.changed_attributes = set()
         for var_name, var_annotation in self.__annotations__.items():
+            #
             attribute_match = match(r"Attribute\[(?P<value_type>.*)\]", var_annotation)
             if attribute_match:
                 self._attribute_types.update(
@@ -84,13 +89,20 @@ class Group:
             if attribute_name in group_attributes:
                 self.__setattr__(
                     attribute_name,
-                    Attribute[attribute_type](**group_attributes[attribute_name]),
+                    Attribute[attribute_type](
+                        group=self, **group_attributes[attribute_name]
+                    ),
                 )
             else:
                 self.__setattr__(attribute_name, None)
         _logger.debug("Found Group '%s' in Perun and retrived attributes", self.name)
 
         return self
+
+    async def save(self) -> None:
+        """Saves all changed attribute values to Perun."""
+        for attribute in self.changed_attributes:
+            await set_attribute(self.id, attribute)
 
     def __repr__(self) -> str:
         param_repr: List[str] = []

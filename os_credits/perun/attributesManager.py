@@ -1,6 +1,6 @@
 """
-Implements the RPC-Calls of the GroupsManager
-https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-GroupsManager.html
+Implements the RPC-Calls of the AttributesManager
+https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-AttributesManager.html
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ ValueType = TypeVar("ValueType")
 
 
 class Attribute(Generic[ValueType]):
+
     id: int
     displayName: str
     description: str
@@ -84,7 +85,8 @@ class Attribute(Generic[ValueType]):
         "denbiCreditsTimestamp": lambda value: value.strftime(PERUN_DATETIME_FORMAT),
     }
 
-    def __init__(self, **kwargs):
+    def __init__(self, group: Group, **kwargs):
+        self.group = group
         for attribute_attr_name in __class__.__annotations__:
             # ignore any non public attributes here, such as _parser_funcs
             if attribute_attr_name.startswith("_"):
@@ -128,6 +130,18 @@ class Attribute(Generic[ValueType]):
     @property
     def value(self) -> ValueType:
         return self._value
+
+    @value.setter
+    def value(self, value: Any) -> None:
+        if not isinstance(value, type(self._value)):
+            raise TypeError(
+                f"Value must be of the same type as current one ({type(self._value)})"
+            )
+        _logger.debug(
+            "Set %s of Group %s to %s", self.friendlyName, self.group.name, value
+        )
+        self.group.changed_attributes.add(self)
+        self._value = value
 
     def __str__(self) -> str:
         return str(self.value)
