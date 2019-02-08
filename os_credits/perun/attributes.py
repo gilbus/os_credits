@@ -26,7 +26,7 @@ class PerunAttribute(Generic[ValueType]):
     # mapping between the name of a subclass of PerunAttribute and the actual class
     # object, needed to determine the class of a requested attribute of a group, see
     # groupsManager.Group
-    _registered_attributes: Dict[str, Type[PerunAttribute]] = {}
+    _registered_attributes: Dict[str, Type[PerunAttribute[ValueType]]] = {}
 
     # decoder functions for the subattribute of an Attribute
     _subattr_decoder: Dict[str, Callable[[str], Any]] = {
@@ -53,7 +53,7 @@ class PerunAttribute(Generic[ValueType]):
         cls.namespace = perun_namespace
         PerunAttribute._registered_attributes.update({cls.__name__: cls})
 
-    def __init__(self, value: Any, **kwargs):
+    def __init__(self, value: Any, **kwargs) -> None:
         """
         lala
 
@@ -94,13 +94,24 @@ class PerunAttribute(Generic[ValueType]):
     def perun_attr_name(self) -> str:
         return f"{self.namespace}:{self.friendlyName}"
 
-    @classmethod
-    def perun_decode(cls, value: Any) -> Any:
+    def perun_decode(self, value: Any) -> Any:
         return value
 
-    @classmethod
-    def perun_encode(cls, value: Any) -> Any:
+    def perun_encode(self, value: Any) -> Any:
         return value
+
+    @property
+    def has_changed(self) -> bool:
+        """
+        Whether the `value` of this attribute has been changed since creation.
+
+        Exposed as function to enable overwriting in subclasses.
+        """
+        return self._updated
+
+    @has_changed.setter
+    def has_changed(self, value: bool) -> None:
+        self._updated = bool(value)
 
     @property
     def value(self) -> Optional[ValueType]:
@@ -142,11 +153,10 @@ class DenbiCreditsCurrent(
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    @classmethod
-    def perun_decode(cls, value: float) -> str:
+    def perun_decode(self, value: float) -> str:
         """Stored as str inside perun, unfortunately"""
         return str(value)
 
@@ -158,16 +168,14 @@ class DenbiCreditsGranted(
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    @classmethod
-    def perun_decode(cls, value: str) -> float:
+    def perun_decode(self, value: str) -> float:
         """Stored as str inside perun, unfortunately"""
         return float(value)
 
-    @classmethod
-    def perun_encode(cls, value: float) -> str:
+    def perun_encode(self, value: float) -> str:
         """Stored as str inside perun, unfortunately"""
         return str(value)
 
@@ -179,15 +187,13 @@ class DenbiCreditsTimestamp(
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    @classmethod
-    def perun_decode(cls, value: str) -> datetime:
+    def perun_decode(self, value: str) -> datetime:
         return datetime.strptime(value, PERUN_DATETIME_FORMAT)
 
-    @classmethod
-    def perun_encode(cls, value: datetime) -> str:
+    def perun_encode(self, value: datetime) -> str:
         return value.strftime(PERUN_DATETIME_FORMAT)
 
 
@@ -198,7 +204,7 @@ class ToEmail(
     perun_type="java.util.ArrayList",
     perun_namespace=PERUN_NAMESPACE_DEF,
 ):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
 
@@ -213,11 +219,11 @@ class DenbiCreditsTimestamps(
     perun_type="java.util.LinkedHashMap",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
+        self._value_copy: Optional[CreditsTimestamps] = None
         super().__init__(**kwargs)
 
-    @classmethod
-    def perun_decode(cls, value: Dict[str, str]) -> CreditsTimestamps:
+    def perun_decode(self, value: Dict[str, str]) -> CreditsTimestamps:
         measurement_timestamps = {}
         for measurement_str, timestamp_str in value.items():
             measurement_timestamps.update(
@@ -227,7 +233,24 @@ class DenbiCreditsTimestamps(
                     )
                 }
             )
+        self._value_copy = measurement_timestamps.copy()
         return measurement_timestamps
+
+    @property
+    def has_changed(self) -> bool:
+        """
+        Since the value of this attribute is a dictionary the setter approach of the
+        superclass to detect changes does not work. Instead we compare the current
+        values with the initial ones.
+        """
+        return self._value_copy != self.value
+
+    @has_changed.setter
+    def has_changed(self, value: bool) -> None:
+        if not value:
+            self._value_copy = self._value.copy() if self._value else None
+            return
+        raise ValueError("Manually setting to true not supported")
 
     @classmethod
     def perun_encode(cls, value: CreditsTimestamps) -> Dict[str, str]:

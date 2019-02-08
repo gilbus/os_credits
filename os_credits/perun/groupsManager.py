@@ -101,9 +101,16 @@ class Group:
         # If this class is shared among multiple coroutines the following approach might
         # not be 'thread-safe' since another class could update the values during the
         # 'await' phase
+        _logger.debug("Save of Group %s called", self)
         for attribute_name in Group._perun_attributes():
-            if getattr(self, attribute_name)._updated:
-                getattr(self, attribute_name)._updated = False
+            if getattr(self, attribute_name).has_changed:
+                _logger.debug(
+                    "Attribute %s of Group %s has changed since construction "
+                    "Sending new values to perun.",
+                    attribute_name,
+                    self,
+                )
+                getattr(self, attribute_name).has_changed = False
                 await set_attribute(self.id, getattr(self, attribute_name))
 
     def __repr__(self) -> str:
