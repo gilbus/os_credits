@@ -6,7 +6,7 @@ from logging import getLogger
 from aiohttp import web
 from asyncio import create_task
 
-from .credits import REQUIRED_MEASUREMENTS, process_influx_line
+from .credits.tasks import process_influx_line
 from .influxdb import InfluxClient
 
 _logger = getLogger(__name__)
