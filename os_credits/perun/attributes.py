@@ -5,11 +5,13 @@ from typing import TypeVar, Any, Dict, Callable, Generic, List, Type, Optional
 from datetime import datetime
 from logging import getLogger
 
-T = TypeVar("T")
+from ..credits.measurements import Measurement
 
 ValueType = TypeVar("ValueType")
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+PERUN_NAMESPACE_OPT = "urn:perun:group:attribute-def:opt"
+PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"
 
 _logger = getLogger(__name__)
 
@@ -21,8 +23,9 @@ class PerunAttribute(Generic[ValueType]):
     _value: Optional[ValueType]
     valueModifiedAt: datetime
 
-    # mapping between the friendlyName of an attribute and its class, needed to have
-    # access to its perun_decode method
+    # mapping between the name of a subclass of PerunAttribute and the actual class
+    # object, needed to determine the class of a requested attribute of a group, see
+    # groupsManager.Group
     _registered_attributes: Dict[str, Type[PerunAttribute]] = {}
 
     # decoder functions for the subattribute of an Attribute
@@ -48,7 +51,7 @@ class PerunAttribute(Generic[ValueType]):
         cls.id = perun_id
         cls.type = perun_type
         cls.namespace = perun_namespace
-        PerunAttribute._registered_attributes.update({perun_friendly_name: cls})
+        PerunAttribute._registered_attributes.update({cls.__name__: cls})
 
     def __init__(self, value: Any, **kwargs):
         """
@@ -137,7 +140,7 @@ class DenbiCreditsCurrent(
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
     perun_type="java.lang.String",
-    perun_namespace="urn:perun:group:attribute-def:opt",
+    perun_namespace=PERUN_NAMESPACE_OPT,
 ):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -153,7 +156,7 @@ class DenbiCreditsGranted(
     perun_id=3383,
     perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
-    perun_namespace="urn:perun:group:attribute-def:opt",
+    perun_namespace=PERUN_NAMESPACE_OPT,
 ):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -174,7 +177,7 @@ class DenbiCreditsTimestamp(
     perun_id=3384,
     perun_friendly_name="denbiCreditsTimestamp",
     perun_type="java.lang.String",
-    perun_namespace="urn:perun:group:attribute-def:opt",
+    perun_namespace=PERUN_NAMESPACE_OPT,
 ):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -193,7 +196,42 @@ class ToEmail(
     perun_id=2020,
     perun_friendly_name="toEmail",
     perun_type="java.util.ArrayList",
-    perun_namespace="urn:perun:group:attribute-def:def",
+    perun_namespace=PERUN_NAMESPACE_DEF,
 ):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+
+CreditsTimestamps = Dict[Measurement, datetime]
+
+
+class DenbiCreditsTimestamps(
+    PerunAttribute[CreditsTimestamps],
+    # TODO: Currently misusing the project history until we have our real HashMap
+    perun_id=3362,
+    perun_friendly_name="denbiProjectHistory",
+    perun_type="java.util.LinkedHashMap",
+    perun_namespace=PERUN_NAMESPACE_OPT,
+):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @classmethod
+    def perun_decode(cls, value: Dict[str, str]) -> CreditsTimestamps:
+        measurement_timestamps = {}
+        for measurement_str, timestamp_str in value.items():
+            measurement_timestamps.update(
+                {
+                    Measurement(measurement_str): datetime.strptime(
+                        timestamp_str, PERUN_DATETIME_FORMAT
+                    )
+                }
+            )
+        return measurement_timestamps
+
+    @classmethod
+    def perun_encode(cls, value: CreditsTimestamps) -> Dict[str, str]:
+        return {
+            measurement.value: timestamp.strftime(PERUN_DATETIME_FORMAT)
+            for measurement, timestamp in value.items()
+        }

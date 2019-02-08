@@ -9,13 +9,21 @@ from logging import getLogger
 from typing import Any, Dict, Callable, List, Optional, Type, Set
 from datetime import datetime
 from collections import defaultdict
-from re import match
+from functools import lru_cache
 
 from ..settings import config
 from .requests import perun_rpc
 from . import attributesManager
 from .attributesManager import get_attributes, set_attribute
-from .attributes import PerunAttribute
+from .attributes import (
+    PerunAttribute,
+    # TODO: remove once finished
+    DenbiCreditsTimestamp,
+    DenbiCreditsTimestamps,
+    DenbiCreditsCurrent,
+    DenbiCreditsGranted,
+    ToEmail,
+)
 
 _logger = getLogger(__name__)
 __url = "groupsManager"
@@ -40,23 +48,20 @@ class Group:
     """
     Represents a Group object inside Perun.
 
-    Every attribute requested via class variable declaration will at least be set to
-    None in case Perun reports no value. Although the 'inner' type hints are not
-    functional (in terms of type checking via `mypy` they are still helpful and
-    required, see the regular expressio inside __init__)
+    Every attribute requested via class variable annotations, where the annotation
+    is a subclass of PerunAttribute, will be set on the class with the chosen name. This
+    happens during `connect()` which tries to fill the Attributes with information from
+    Perun.
     """
 
     id: int
     name: str
-    # list the friendlyName of every attribute to save here
-    # the type inside its brackets will be set as type hint for its 'value', the actual
-    # value of an attribute
-    # please stick to given syntax of annotations since they are also used to list all
-    # attributes of a group
-    toEmail: PerunAttribute[List[str]]
-    denbiCreditsGranted: PerunAttribute[int]
-    denbiCreditsCurrent: PerunAttribute[float]
-    denbiCreditsTimestamp: PerunAttribute[datetime]
+
+    email: ToEmail
+    credits_granted: DenbiCreditsGranted
+    credits_current: DenbiCreditsCurrent
+    credits_timestamp: DenbiCreditsTimestamp
+    credits_timestamps: DenbiCreditsTimestamps
 
     def __init__(self, name: str) -> None:
         """
@@ -65,17 +70,6 @@ class Group:
         async.
         """
         self.name = name
-        self._attribute_types: Dict[str, str] = {}
-        for var_name, var_annotation in self.__annotations__.items():
-            #
-            attribute_match = match(
-                r"PerunAttribute\[(?P<value_type>.*)\]", var_annotation
-            )
-            if attribute_match:
-                self._attribute_types.update(
-                    {var_name: attribute_match.groupdict()["value_type"]}
-                )
-
         _logger.debug("Created Group %s", name)
 
     async def connect(self) -> Group:
@@ -88,20 +82,15 @@ class Group:
             for attribute in await get_attributes(self.id)
         }
 
-        for (
-            attr_friendly_name,
-            attr_class,
-        ) in PerunAttribute._registered_attributes.items():
+        for (attr_name, attr_class) in Group._perun_attributes().items():
             # only save attributes which are requested via class annotations
-            if attr_friendly_name not in self._attribute_types:
-                continue
+            attr_friendly_name = attr_class.friendlyName
             try:
                 self.__setattr__(
-                    attr_friendly_name,
-                    attr_class(group=self, **group_attributes[attr_friendly_name]),
+                    attr_name, attr_class(**group_attributes[attr_friendly_name])
                 )
             except KeyError:
-                self.__setattr__(attr_friendly_name, attr_class(group=self, value=None))
+                self.__setattr__(attr_name, attr_class(value=None))
 
         _logger.debug("Found Group '%s' in Perun and retrived attributes", self.name)
 
@@ -112,14 +101,14 @@ class Group:
         # If this class is shared among multiple coroutines the following approach might
         # not be 'thread-safe' since another class could update the values during the
         # 'await' phase
-        for attribute_name in self._attribute_types:
+        for attribute_name in Group._perun_attributes():
             if getattr(self, attribute_name)._updated:
                 getattr(self, attribute_name)._updated = False
                 await set_attribute(self.id, getattr(self, attribute_name))
 
     def __repr__(self) -> str:
         param_repr: List[str] = []
-        for attribute in self._attribute_types:
+        for attribute in Group._perun_attributes():
             param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
 
         return f"Group[{','.join(param_repr)}]"
@@ -134,3 +123,31 @@ class Group:
         :return: Dictionary of all groups with their name as index
         """
         return await get_all_groups(vo)
+
+    @staticmethod
+    @lru_cache()
+    def _perun_attributes() -> Dict[str, Type[PerunAttribute]]:
+        """
+        Return all Group-attributes which are Perun-Attributes.
+
+        Declaring it as staticmethod and using a lru_cache saves time since the mapping
+        only needs to be done once, changes during Runtime would be way to silly.
+
+        :return: Dictionary of the attribute names of a Group and the corresponding
+        PerunAttribute subclass.
+        """
+        attributes = {}
+        for attr_name, attr_class_name in Group.__annotations__.items():
+            try:
+                attributes.update(
+                    {attr_name: PerunAttribute._registered_attributes[attr_class_name]}
+                )
+                _logger.debug(
+                    "Connected group attribute `%s` with PerunAttribute `%s`",
+                    attr_name,
+                    attr_class_name,
+                )
+            except KeyError:
+                # this will fail for any non-Perun attribute, such as name or id
+                pass
+        return attributes
