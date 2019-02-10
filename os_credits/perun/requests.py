@@ -27,9 +27,17 @@ async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
             elif response_content["name"] == "AttributeNotExistsException":
                 raise AttributeNotExists(response_content["message"])
             elif response_content["name"] == "InternalErrorException":
-                raise InternalErrorException(response_content["message"])
+                raise InternalError(response_content["message"])
+            elif response_content["name"] == "ConsistencyErrorException":
+                raise ConsistencyError(response_content["message"])
+            else:
+                raise RequestError(response_content["message"])
 
         return response_content
+
+
+class RequestError(Exception):
+    pass
 
 
 class GroupNotExists(Exception):
@@ -40,5 +48,9 @@ class AttributeNotExists(Exception):
     pass
 
 
-class InternalErrorException(Exception):
+class InternalError(Exception):
+    pass
+
+
+class ConsistencyError(Exception):
     pass

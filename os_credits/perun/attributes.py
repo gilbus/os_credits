@@ -20,7 +20,7 @@ class PerunAttribute(Generic[ValueType]):
     displayName: str
     description: str
     writable: bool
-    _value: Optional[ValueType]
+    _value: ValueType
     valueModifiedAt: datetime
 
     # mapping between the name of a subclass of PerunAttribute and the actual class
@@ -58,14 +58,11 @@ class PerunAttribute(Generic[ValueType]):
         lala
 
         """
-        if value is not None:
-            self._value = self.perun_decode(value)
-        else:
-            # Perun does not have any value stored for this attribute
-            self._value = None
-            # exit constructor since there are not subattributes to decode
+        self._value = self.perun_decode(value)
+        # non-bool value means that the attribute does not exist inside perun so there
+        # are no further subattribute to decode
+        if not self._value:
             return
-
         for attribute_attr_name in PerunAttribute.__annotations__:
             # ignore any non public attributes here, such as _parser_funcs
             if attribute_attr_name.startswith("_"):
@@ -147,7 +144,7 @@ class PerunAttribute(Generic[ValueType]):
 
 
 class DenbiCreditsCurrent(
-    PerunAttribute[float],
+    PerunAttribute[Optional[float]],
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
     perun_type="java.lang.String",
@@ -156,13 +153,16 @@ class DenbiCreditsCurrent(
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: float) -> str:
+    def perun_decode(self, value: Optional[str]) -> Optional[float]:
         """Stored as str inside perun, unfortunately"""
-        return str(value)
+        return float(value) if value else None
+
+    def perun_encode(self, value: Optional[float]) -> Optional[str]:
+        return str(value) if value else None
 
 
 class DenbiCreditsGranted(
-    PerunAttribute[int],
+    PerunAttribute[Optional[int]],
     perun_id=3383,
     perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
@@ -171,17 +171,17 @@ class DenbiCreditsGranted(
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: str) -> float:
+    def perun_decode(self, value: Optional[str]) -> Optional[float]:
         """Stored as str inside perun, unfortunately"""
-        return float(value)
+        return float(value) if value else None
 
-    def perun_encode(self, value: float) -> str:
+    def perun_encode(self, value: Optional[float]) -> Optional[str]:
         """Stored as str inside perun, unfortunately"""
-        return str(value)
+        return str(value) if value else None
 
 
 class DenbiCreditsTimestamp(
-    PerunAttribute[datetime],
+    PerunAttribute[Optional[datetime]],
     perun_id=3384,
     perun_friendly_name="denbiCreditsTimestamp",
     perun_type="java.lang.String",
@@ -190,15 +190,15 @@ class DenbiCreditsTimestamp(
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: str) -> datetime:
-        return datetime.strptime(value, PERUN_DATETIME_FORMAT)
+    def perun_decode(self, value: Optional[str]) -> Optional[datetime]:
+        return datetime.strptime(value, PERUN_DATETIME_FORMAT) if value else None
 
-    def perun_encode(self, value: datetime) -> str:
-        return value.strftime(PERUN_DATETIME_FORMAT)
+    def perun_encode(self, value: Optional[datetime]) -> Optional[str]:
+        return value.strftime(PERUN_DATETIME_FORMAT) if value else None
 
 
 class ToEmail(
-    PerunAttribute[List[str]],
+    PerunAttribute[Optional[List[str]]],
     perun_id=2020,
     perun_friendly_name="toEmail",
     perun_type="java.util.ArrayList",
@@ -223,18 +223,26 @@ class DenbiCreditsTimestamps(
         self._value_copy: Optional[CreditsTimestamps] = None
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Dict[str, str]) -> CreditsTimestamps:
+    def perun_decode(self, value: Optional[Dict[str, str]]) -> CreditsTimestamps:
         measurement_timestamps = {}
-        for measurement_str, timestamp_str in value.items():
-            measurement_timestamps.update(
-                {
-                    Measurement(measurement_str): datetime.strptime(
-                        timestamp_str, PERUN_DATETIME_FORMAT
-                    )
-                }
-            )
+        if value is not None:
+            for measurement_str, timestamp_str in value.items():
+                measurement_timestamps.update(
+                    {
+                        Measurement(measurement_str): datetime.strptime(
+                            timestamp_str, PERUN_DATETIME_FORMAT
+                        )
+                    }
+                )
         self._value_copy = measurement_timestamps.copy()
         return measurement_timestamps
+
+    @classmethod
+    def perun_encode(cls, value: CreditsTimestamps) -> Dict[str, str]:
+        return {
+            measurement.value: timestamp.strftime(PERUN_DATETIME_FORMAT)
+            for measurement, timestamp in value.items()
+        }
 
     @property
     def has_changed(self) -> bool:
@@ -251,10 +259,3 @@ class DenbiCreditsTimestamps(
             self._value_copy = self._value.copy() if self._value else None
             return
         raise ValueError("Manually setting to true not supported")
-
-    @classmethod
-    def perun_encode(cls, value: CreditsTimestamps) -> Dict[str, str]:
-        return {
-            measurement.value: timestamp.strftime(PERUN_DATETIME_FORMAT)
-            for measurement, timestamp in value.items()
-        }

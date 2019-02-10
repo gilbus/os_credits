@@ -10,6 +10,7 @@ from typing import Any, Dict, Callable, List, Optional, Type, Set
 from datetime import datetime
 from collections import defaultdict
 from functools import lru_cache
+from asyncio import Lock
 
 from ..settings import config
 from .requests import perun_rpc
@@ -63,6 +64,13 @@ class Group:
     credits_timestamp: DenbiCreditsTimestamp
     credits_timestamps: DenbiCreditsTimestamps
 
+    """
+    Since we process every measurement indenpendently but store the results in the same
+    group object inside perun we need to make sure that all transactions are performed
+    atomically.
+    """
+    _async_locks: Dict[Group, Lock] = {}
+
     def __init__(self, name: str) -> None:
         """
         Calling this method only creates the object, but does not query perun yet. Call
@@ -71,6 +79,8 @@ class Group:
         """
         self.name = name
         _logger.debug("Created Group %s", name)
+        if self not in Group._async_locks:
+            Group._async_locks[self] = Lock()
 
     async def connect(self) -> Group:
 
@@ -96,6 +106,10 @@ class Group:
 
         return self
 
+    @property
+    def async_lock(self) -> Lock:
+        return Group._async_locks[self]
+
     async def save(self) -> None:
         """Save all changed attribute values to Perun."""
         # If this class is shared among multiple coroutines the following approach might
@@ -112,6 +126,10 @@ class Group:
                 )
                 getattr(self, attribute_name).has_changed = False
                 await set_attribute(self.id, getattr(self, attribute_name))
+
+    def __hash__(self) -> int:
+        """Override since groups are only identified by their name."""
+        return hash((self.name))
 
     def __repr__(self) -> str:
         param_repr: List[str] = []
