@@ -37,20 +37,25 @@ async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
 
 
 class RequestError(Exception):
+    "Generic Exception in case no specific exception has been thrown"
     pass
 
 
 class GroupNotExists(Exception):
+    "Python mapping of Perun's GroupNotExistsException"
     pass
 
 
 class AttributeNotExists(Exception):
+    "Python mapping of Perun's AttributeNotExistsException"
     pass
 
 
 class InternalError(Exception):
+    "Python mapping of Perun's InternalErrorException"
     pass
 
 
 class ConsistencyError(Exception):
+    "Python mapping of Perun's ConsistencyErrorException"
     pass

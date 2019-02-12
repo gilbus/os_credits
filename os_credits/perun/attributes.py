@@ -1,19 +1,41 @@
 from __future__ import annotations
 
 
-from typing import TypeVar, Any, Dict, Callable, Generic, List, Type, Optional
+from typing import (
+    TypeVar,
+    Any,
+    Dict,
+    Callable,
+    Generic,
+    List,
+    Type,
+    Optional,
+    Container,
+)
 from datetime import datetime
 from logging import getLogger
 
-from ..credits.measurements import Measurement
+from os_credits.credits.measurements import Measurement
+from os_credits.exceptions import DenbiCreditsCurrentError
 
-ValueType = TypeVar("ValueType")
+__all__ = ["DenbiCreditsTimestamps", "DenbiCreditsCurrent", "ToEmails"]
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 PERUN_NAMESPACE_OPT = "urn:perun:group:attribute-def:opt"
 PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"
 
 _logger = getLogger(__name__)
+
+
+CreditsTimestamps = Dict[Measurement, datetime]
+ToEmails = List[str]
+
+ValueType = TypeVar("ValueType")
+# Used to ensure type checker, that the classes defined a `.copy` method
+ContainerValueType = TypeVar("ContainerValueType", ToEmails, CreditsTimestamps)
+
+
+registered_attributes: Dict[str, Type[PerunAttribute]] = {}
 
 
 class PerunAttribute(Generic[ValueType]):
@@ -26,7 +48,6 @@ class PerunAttribute(Generic[ValueType]):
     # mapping between the name of a subclass of PerunAttribute and the actual class
     # object, needed to determine the class of a requested attribute of a group, see
     # groupsManager.Group
-    _registered_attributes: Dict[str, Type[PerunAttribute[ValueType]]] = {}
 
     # decoder functions for the subattribute of an Attribute
     _subattr_decoder: Dict[str, Callable[[str], Any]] = {
@@ -51,9 +72,9 @@ class PerunAttribute(Generic[ValueType]):
         cls.id = perun_id
         cls.type = perun_type
         cls.namespace = perun_namespace
-        PerunAttribute._registered_attributes.update({cls.__name__: cls})
+        registered_attributes.update({cls.__name__: cls})
 
-    def __init__(self, value: Any, **kwargs) -> None:
+    def __init__(self, value: Any, **kwargs: str) -> None:
         """
         lala
 
@@ -80,7 +101,7 @@ class PerunAttribute(Generic[ValueType]):
         """Serialize the attribute into a dictionary which can passed as JSON content to
         the perun API"""
         return {
-            "value": self.perun_encode(self.value),
+            "value": self.perun_encode(self._value),
             "namespace": self.namespace,
             "id": self.id,
             "friendlyName": self.friendlyName,
@@ -108,10 +129,50 @@ class PerunAttribute(Generic[ValueType]):
 
     @has_changed.setter
     def has_changed(self, value: bool) -> None:
-        self._updated = bool(value)
+        if not isinstance(value, bool):
+            raise TypeError("`has_changed` must be of type bool.")
+        self._updated = value
+
+    def __str__(self) -> str:
+        return str(self._value)
+
+    def __repr__(self) -> str:
+        # This assumes that either the container value evaluates to false or in the
+        # scalar case that the attribute is None
+        if not self._value:
+            return f"{type(self).__name__}(value=None)"
+        param_repr: List[str] = [f"value={self._value}"]
+        for attribute in filter(
+            lambda attribute: not attribute.startswith("_"), self.__annotations__.keys()
+        ):
+            param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
+
+        return f"{type(self).__name__}({','.join(param_repr)})"
+
+    def __bool__(self) -> bool:
+        return bool(self._value)
+
+
+class _ScalarPerunAttribute(
+    PerunAttribute[ValueType],
+    perun_id=None,
+    perun_friendly_name=None,
+    perun_type=None,
+    perun_namespace=None,
+):
+    """
+    Base class for scalar attributes, where `value` only contains a scalar value, i.e.
+    an `float` or `str`, in contrast to container attributes
+    """
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
 
     @property
-    def value(self) -> Optional[ValueType]:
+    def value(self) -> ValueType:
         return self._value
 
     @value.setter
@@ -125,105 +186,137 @@ class PerunAttribute(Generic[ValueType]):
             self._updated = True
             self._value = value
 
-    def __str__(self) -> str:
-        return str(self.value)
 
-    def __repr__(self) -> str:
-        if self.value is None:
-            return f"{type(self).__name__}(value=None)"
-        param_repr: List[str] = [f"value={self.value}"]
-        for attribute in filter(
-            lambda attribute: not attribute.startswith("_"), self.__annotations__.keys()
-        ):
-            param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
+class _ContainerPerunAttribute(
+    PerunAttribute[ContainerValueType],
+    # class definition must contain the following attributes to allow 'passthrough' from
+    # base classes
+    perun_id=None,
+    perun_friendly_name=None,
+    perun_type=None,
+    perun_namespace=None,
+):
+    """
+    Base class for container attributes, i.e. ToEmails where the `value` is a list of
+    the actual mail addresses.
 
-        return f"{type(self).__name__}({','.join(param_repr)})"
+    The `has_changed` logic of PerunAttribute has to be overwritten for this classes
+    since any changes during runtime are not reflected by updating `value` as an
+    attribute but by updating its contents. Therefore `value` does not have a setter.
+    """
 
-    def __bool__(self) -> bool:
-        return bool(self.value)
+    _value: ContainerValueType
+    _value_copy: ContainerValueType
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+
+    @property
+    def has_changed(self) -> bool:
+        """
+        Since the value of this attribute is a dictionary the setter approach of the
+        superclass to detect changes does not work. Instead we compare the current
+        values with the initial ones.
+        """
+        return self._value_copy != self._value
+
+    @has_changed.setter
+    def has_changed(self, value: bool) -> None:
+        if not value:
+            # reset changed indicator
+            self._value_copy = self._value.copy()
+            return
+        raise ValueError("Manually setting to true not supported")
+
+    @property
+    def value(self) -> ContainerValueType:
+        return self._value
 
 
 class DenbiCreditsCurrent(
-    PerunAttribute[Optional[float]],
+    _ScalarPerunAttribute[float],
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: str) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> Optional[float]:
+    def perun_decode(self, value: Optional[str]) -> float:
         """Stored as str inside perun, unfortunately"""
-        return float(value) if value else None
+        if not value:
+            raise DenbiCreditsCurrentError()
+        try:
+            float_value = float(value)
+        except ValueError as e:
+            raise DenbiCreditsCurrentError(e)
+        if float_value < 0:
+            # TODO determine how to handle this case
+            pass
+        return float_value
 
-    def perun_encode(self, value: Optional[float]) -> Optional[str]:
-        return str(value) if value else None
+    def perun_encode(self, value: float) -> str:
+        return str(value)
 
 
 class DenbiCreditsGranted(
-    PerunAttribute[Optional[int]],
+    _ScalarPerunAttribute[Optional[int]],
     perun_id=3383,
     perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: str) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> Optional[float]:
+    def perun_decode(self, value: Optional[str]) -> Optional[int]:
         """Stored as str inside perun, unfortunately"""
-        return float(value) if value else None
+        return int(value) if value else None
 
-    def perun_encode(self, value: Optional[float]) -> Optional[str]:
+    def perun_encode(self, value: Optional[int]) -> Optional[str]:
         """Stored as str inside perun, unfortunately"""
         return str(value) if value else None
 
 
-class DenbiCreditsTimestamp(
-    PerunAttribute[Optional[datetime]],
-    perun_id=3384,
-    perun_friendly_name="denbiCreditsTimestamp",
-    perun_type="java.lang.String",
-    perun_namespace=PERUN_NAMESPACE_OPT,
-):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-    def perun_decode(self, value: Optional[str]) -> Optional[datetime]:
-        return datetime.strptime(value, PERUN_DATETIME_FORMAT) if value else None
-
-    def perun_encode(self, value: Optional[datetime]) -> Optional[str]:
-        return value.strftime(PERUN_DATETIME_FORMAT) if value else None
-
-
 class ToEmail(
-    PerunAttribute[Optional[List[str]]],
+    _ContainerPerunAttribute[ToEmails],
     perun_id=2020,
     perun_friendly_name="toEmail",
     perun_type="java.util.ArrayList",
     perun_namespace=PERUN_NAMESPACE_DEF,
 ):
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: str) -> None:
         super().__init__(**kwargs)
 
-
-CreditsTimestamps = Dict[Measurement, datetime]
+    def perun_decode(self, value: Optional[List[str]]) -> ToEmails:
+        # see explanation in DenbiCreditsTimestamps why initialising is no problem
+        toEmails = value if value else []
+        self._value_copy = toEmails.copy()
+        return toEmails
 
 
 class DenbiCreditsTimestamps(
-    PerunAttribute[CreditsTimestamps],
+    _ContainerPerunAttribute[CreditsTimestamps],
     # TODO: Currently misusing the project history until we have our real HashMap
     perun_id=3362,
     perun_friendly_name="denbiProjectHistory",
     perun_type="java.util.LinkedHashMap",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs) -> None:
-        self._value_copy: Optional[CreditsTimestamps] = None
+    def __init__(self, **kwargs: str) -> None:
         super().__init__(**kwargs)
 
     def perun_decode(self, value: Optional[Dict[str, str]]) -> CreditsTimestamps:
+        """Decodes the HashMap stored inside Perun and eases setting timestamps in case
+        the attribute did not exist yet"""
+
+        """Creating the empty dictionary although no value is stored inside Perun is
+        no problem, since its contents will not be send to perun during save unless
+        any changes of its content (only adding in this case) have been done"""
         measurement_timestamps = {}
         if value is not None:
             for measurement_str, timestamp_str in value.items():
@@ -243,19 +336,3 @@ class DenbiCreditsTimestamps(
             measurement.value: timestamp.strftime(PERUN_DATETIME_FORMAT)
             for measurement, timestamp in value.items()
         }
-
-    @property
-    def has_changed(self) -> bool:
-        """
-        Since the value of this attribute is a dictionary the setter approach of the
-        superclass to detect changes does not work. Instead we compare the current
-        values with the initial ones.
-        """
-        return self._value_copy != self.value
-
-    @has_changed.setter
-    def has_changed(self, value: bool) -> None:
-        if not value:
-            self._value_copy = self._value.copy() if self._value else None
-            return
-        raise ValueError("Manually setting to true not supported")

@@ -12,14 +12,12 @@ from collections import defaultdict
 from functools import lru_cache
 from asyncio import Lock
 
-from ..settings import config
+from os_credits.settings import config
 from .requests import perun_rpc
-from . import attributesManager
 from .attributesManager import get_attributes, set_attribute
 from .attributes import (
     PerunAttribute,
-    # TODO: remove once finished
-    DenbiCreditsTimestamp,
+    registered_attributes,
     DenbiCreditsTimestamps,
     DenbiCreditsCurrent,
     DenbiCreditsGranted,
@@ -61,7 +59,6 @@ class Group:
     email: ToEmail
     credits_granted: DenbiCreditsGranted
     credits_current: DenbiCreditsCurrent
-    credits_timestamp: DenbiCreditsTimestamp
     credits_timestamps: DenbiCreditsTimestamps
 
     """
@@ -164,9 +161,7 @@ class Group:
         attributes = {}
         for attr_name, attr_class_name in Group.__annotations__.items():
             try:
-                attributes.update(
-                    {attr_name: PerunAttribute._registered_attributes[attr_class_name]}
-                )
+                attributes.update({attr_name: registered_attributes[attr_class_name]})
                 _logger.debug(
                     "Connected group attribute `%s` with PerunAttribute `%s`",
                     attr_name,
