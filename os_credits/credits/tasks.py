@@ -8,12 +8,17 @@ from logging import getLogger, LoggerAdapter
 from datetime import datetime
 from dataclasses import dataclass
 from hashlib import sha256 as sha256func
+from asyncio import Lock
+
+from aiohttp.web import Application
 
 from os_credits.perun.groupsManager import Group
 from os_credits.exceptions import GroupNotExistsError
 from os_credits.influxdb import InfluxClient
 from .measurements import MeasurementType, InfluxMeasurement
 from .formulas import calculate_credits
+
+task_lock = Lock()
 
 
 def sha256(content: str) -> str:
@@ -22,7 +27,7 @@ def sha256(content: str) -> str:
     return s.hexdigest()
 
 
-async def process_influx_line(line: str, influx_client: InfluxClient) -> None:
+async def process_influx_line(line: str, app: Application) -> None:
     _debug_logger = getLogger(__name__)
     measurement_and_tag, field_set, timestamp = line.split()
     measurement_name, tag_set = measurement_and_tag.split(",", 1)
@@ -54,19 +59,22 @@ async def process_influx_line(line: str, influx_client: InfluxClient) -> None:
         measurement_date, measurement_type, float(fields["value"])
     )
     _logger.info("Processing Measurement `%s` - Group `%s`", measurement, perun_group)
+    # TODO: REMOVE
+    if perun_group.name != "credits":
+        return
     try:
         _logger.debug(
             "Awaiting async lock for Group %s to process measurement %s",
             perun_group,
             measurement,
         )
-        async with perun_group.async_lock:
+        async with task_lock:
             _logger.debug(
                 "Acquired async lock for Group %s, measurement %s",
                 perun_group,
                 measurement,
             )
-            await update_credits(perun_group, measurement, influx_client, _logger)
+            await update_credits(perun_group, measurement, app, _logger)
     except GroupNotExistsError as e:
         _logger.warning(
             "Could not resolve group with name `%s` against perun. %r",
@@ -77,58 +85,75 @@ async def process_influx_line(line: str, influx_client: InfluxClient) -> None:
 
 
 async def update_credits(
-    group: Group, measurement: InfluxMeasurement, influx_client: InfluxClient, _logger
+    group: Group, current_measurement: InfluxMeasurement, app: Application, _logger
 ) -> None:
     await group.connect()
     try:
-        last_measurement_timestamp = group.credits_timestamps.value[measurement.type]
+        last_measurement_timestamp = group.credits_timestamps.value[
+            current_measurement.type
+        ]
     except KeyError:
         _logger.info(
             "Group %s has no timestamp of most recent measurement of %s. "
             "Setting it to the timestamp of the current measurement.",
             group,
-            measurement.type,
+            current_measurement.type,
         )
         # set timestamp of current measurement so we can start billing the group once
         # the next measurements are submitted
-        group.credits_timestamps.value[measurement.type] = measurement.timestamp
+        group.credits_timestamps.value[
+            current_measurement.type
+        ] = current_measurement.timestamp
         await group.save()
         return
     _logger.info(
         "Last time credits were billed: %s",
-        group.credits_timestamps.value[measurement.type],
+        group.credits_timestamps.value[current_measurement.type],
     )
 
-    project_measurements = await influx_client.entries_by_project_since(
-        group.name, measurement.timestamp, measurement.type
+    project_measurements = await app["influx_client"].entries_by_project_since(
+        project_name=group.name,
+        since=last_measurement_timestamp,
+        measurement_type=current_measurement.type,
     )
     try:
-        last_measurement_value = project_measurements.loc[measurement.timestamp][
-            "value"
-        ]
+        last_measurement_value = project_measurements.loc[
+            last_measurement_timestamp
+        ].value
     except KeyError:
+        oldest_measurement_timestamp = project_measurements.head(
+            1
+        ).index.to_pydatetime()[0]
+
+        group.credits_timestamps.value[
+            current_measurement.type
+        ] = oldest_measurement_timestamp
         _logger.warning(
             """InfluxDB does not contains usage values for Group %s for measurement %s
             at timestamp %s, which means that the period between the last measurement
             and now cannot be used for credit billing. Setting the timestamp to the
-            oldest measurement available inside InfluxDB""",
+            oldest measurement between now and the last time measurements were billed
+            inside InfluxDB (%s)""",
             group,
-            measurement.type,
+            current_measurement.type,
             last_measurement_timestamp,
+            oldest_measurement_timestamp,
         )
-        group.credits_timestamps.value[measurement.type] = project_measurements.head(1)[
-            "value"
-        ]
         await group.save()
         return
 
     _logger.info(
-        "Usage value of last measurement: %s",
-        project_measurements.loc[measurement.timestamp]["value"],
+        "Usage value of last measurement: %f vs %f (=%f)",
+        project_measurements.loc[last_measurement_timestamp].value,
+        current_measurement.value,
+        project_measurements.loc[last_measurement_timestamp].value
+        - current_measurement.value,
     )
 
-    credits_to_bill = calculate_credits(measurement, last_measurement_value)
-    group.credits_timestamps.value[measurement.type] = measurement.timestamp
+    credits_to_bill = calculate_credits(current_measurement, last_measurement_value)
+    group.credits_timestamps.value[
+        current_measurement.type
+    ] = current_measurement.timestamp
 
     _logger.info("Credits to bill: %f", credits_to_bill)
 

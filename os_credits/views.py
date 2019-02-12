@@ -29,6 +29,6 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
     influxdb_lines = await request.text()
     # an unknown number of lines will be send, create separate tasks for all of them
     for line in influxdb_lines.splitlines():
-        create_task(process_influx_line(line, request.app["influx_client"]))
+        create_task(process_influx_line(line, request.app))
     # always return 204, even if we do not know whether the lines are valid
     return web.HTTPNoContent()

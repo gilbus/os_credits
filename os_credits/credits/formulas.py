@@ -17,12 +17,12 @@ def calculate_credits(measurement: InfluxMeasurement, usage_last: float) -> floa
 
 
 def _calculate_memory_mb(usage_last: float, usage_current: float) -> float:
-    CREDITS_PER_MB_HOUR = 5
-    return 3
+    CREDITS_PER_MB_HOUR = 0.3
+    # return 3
     return (usage_current - usage_last) * CREDITS_PER_MB_HOUR
 
 
 def _calculate_cpu(usage_last: float, usage_current: float) -> float:
-    CREDITS_PER_VCPU_HOUR = 40
-    return 2
+    CREDITS_PER_VCPU_HOUR = 1
+    # return 2
     return (usage_current - usage_last) * CREDITS_PER_VCPU_HOUR
