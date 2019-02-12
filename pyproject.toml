@@ -12,10 +12,10 @@ aioinflux = "^0.5.1"
 pandas = "^0.24.0"
 
 [tool.poetry.dev-dependencies]
-mypy = "^0.660.0"
 black = {version = "^18.3-alpha.0",allows-prereleases = true}
 aiohttp-devtools = "^0.11.0"
 ipython = "^7.2"
+mypy-mypyc = "^0.670.0"
 
 [build-system]
 requires = ["poetry>=0.12"]
