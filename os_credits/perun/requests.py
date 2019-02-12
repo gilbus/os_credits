@@ -2,7 +2,14 @@ from typing import Optional, Any, Dict
 from aiohttp import ClientSession, BasicAuth
 from logging import getLogger
 
-from ..settings import config
+from os_credits.settings import config
+from os_credits.exceptions import (
+    AttributeNotExistsError,
+    ConsistencyError,
+    GroupNotExistsError,
+    InternalError,
+    RequestError,
+)
 
 _client = ClientSession(
     auth=BasicAuth(config["service_user"]["login"], config["service_user"]["password"])
@@ -23,9 +30,9 @@ async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
         if response_content and "errorId" in response_content:
             # Some kind of error has occured
             if response_content["name"] == "GroupNotExistsException":
-                raise GroupNotExists(response_content["message"])
+                raise GroupNotExistsError(response_content["message"])
             elif response_content["name"] == "AttributeNotExistsException":
-                raise AttributeNotExists(response_content["message"])
+                raise AttributeNotExistsError(response_content["message"])
             elif response_content["name"] == "InternalErrorException":
                 raise InternalError(response_content["message"])
             elif response_content["name"] == "ConsistencyErrorException":
@@ -34,28 +41,3 @@ async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
                 raise RequestError(response_content["message"])
 
         return response_content
-
-
-class RequestError(Exception):
-    "Generic Exception in case no specific exception has been thrown"
-    pass
-
-
-class GroupNotExists(Exception):
-    "Python mapping of Perun's GroupNotExistsException"
-    pass
-
-
-class AttributeNotExists(Exception):
-    "Python mapping of Perun's AttributeNotExistsException"
-    pass
-
-
-class InternalError(Exception):
-    "Python mapping of Perun's InternalErrorException"
-    pass
-
-
-class ConsistencyError(Exception):
-    "Python mapping of Perun's ConsistencyErrorException"
-    pass
