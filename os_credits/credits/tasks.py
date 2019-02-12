@@ -7,27 +7,39 @@ from typing import Dict
 from logging import getLogger, LoggerAdapter
 from datetime import datetime
 from dataclasses import dataclass
-from hashlib import sha256 as sha256func
-from asyncio import Lock
+from hashlib import sha1 as sha_func
+from asyncio import Lock, Queue
+from collections import defaultdict
 
 from aiohttp.web import Application
 
 from os_credits.perun.groupsManager import Group
 from os_credits.exceptions import GroupNotExistsError
 from os_credits.influxdb import InfluxClient
-from .measurements import MeasurementType, InfluxMeasurement
+from .measurements import MeasurementType, UsageMeasurement
 from .formulas import calculate_credits
 
 task_lock = Lock()
 
 
-def sha256(content: str) -> str:
-    s = sha256func()
+def unique_identifier(content: str) -> str:
+    s = sha_func()
     s.update(content.encode())
     return s.hexdigest()
 
 
-async def process_influx_line(line: str, app: Application) -> None:
+async def worker(
+    name: str, queue: Queue, app: Application, group_locks: Dict[Group, Lock]
+) -> None:
+    while True:
+        influx_line = await queue.get()
+
+        await process_influx_line(influx_line, app, group_locks)
+
+
+async def process_influx_line(
+    line: str, app: Application, group_locks: Dict[Group, Lock]
+) -> None:
     _debug_logger = getLogger(__name__)
     measurement_and_tag, field_set, timestamp = line.split()
     measurement_name, tag_set = measurement_and_tag.split(",", 1)
@@ -40,9 +52,9 @@ async def process_influx_line(line: str, app: Application) -> None:
             line,
         )
         return
-    task_identifier = sha256(line)[:12]
+    line_identifier = unique_identifier(line)[:12]
     _logger = LoggerAdapter(
-        getLogger(f"{__name__}_handler"), {"task_id": task_identifier}
+        getLogger(f"{__name__}_handler"), {"task_id": line_identifier}
     )
     _logger.debug("Continuing with influx line %s", line)
     measurement_date = datetime.fromtimestamp(int(timestamp) / 1e9)
@@ -55,20 +67,17 @@ async def process_influx_line(line: str, app: Application) -> None:
         field_name, field_value = field_pair.split("=", 1)
         fields.update({field_name: field_value})
     perun_group = Group(tags["project_name"])
-    measurement = InfluxMeasurement(
+    measurement = UsageMeasurement(
         measurement_date, measurement_type, float(fields["value"])
     )
     _logger.info("Processing Measurement `%s` - Group `%s`", measurement, perun_group)
-    # TODO: REMOVE
-    if perun_group.name != "credits":
-        return
     try:
         _logger.debug(
             "Awaiting async lock for Group %s to process measurement %s",
             perun_group,
             measurement,
         )
-        async with task_lock:
+        async with group_locks[perun_group]:
             _logger.debug(
                 "Acquired async lock for Group %s, measurement %s",
                 perun_group,
@@ -85,7 +94,7 @@ async def process_influx_line(line: str, app: Application) -> None:
 
 
 async def update_credits(
-    group: Group, current_measurement: InfluxMeasurement, app: Application, _logger
+    group: Group, current_measurement: UsageMeasurement, app: Application, _logger
 ) -> None:
     await group.connect()
     try:

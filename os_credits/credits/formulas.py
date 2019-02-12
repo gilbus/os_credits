@@ -1,7 +1,7 @@
-from .measurements import InfluxMeasurement, MeasurementType
+from .measurements import UsageMeasurement, MeasurementType
 
 
-def calculate_credits(measurement: InfluxMeasurement, usage_last: float) -> float:
+def calculate_credits(measurement: UsageMeasurement, usage_last: float) -> float:
     """
     Calculate the used credits, given the measurement and the usage values.
 

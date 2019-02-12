@@ -6,7 +6,7 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 from __future__ import annotations
 
 from logging import getLogger
-from typing import Any, Dict, Callable, List, Optional, Type, Set
+from typing import Any, Dict, Callable, List, Optional, Type, Set, Hashable, Tuple
 from datetime import datetime
 from collections import defaultdict
 from functools import lru_cache
@@ -130,6 +130,11 @@ class Group:
 
     def __str__(self) -> str:
         return self.name
+
+    def __eq__(self, value: Any) -> bool:
+        if not isinstance(value, Group):
+            raise NotImplementedError
+        return hash(self) == hash(value)
 
     @classmethod
     async def get_all_groups(cls, vo: int = config["vo_id"]) -> Dict[str, Group]:

@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 @dataclass
-class InfluxMeasurement:
+class UsageMeasurement:
     timestamp: datetime
     type: MeasurementType
     value: float

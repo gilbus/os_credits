@@ -5,7 +5,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
 from logging import getLogger
 from logging.config import dictConfig
 from os import getenv
-from asyncio import Queue
+from asyncio import Queue, gather, Lock
 from collections import defaultdict
 
 from aiohttp import web
@@ -15,6 +15,7 @@ from os_credits.settings import default_config_path, load_config, config
 from os_credits.perun.requests import close_session
 from os_credits.perun.groupsManager import Group
 from os_credits.influxdb import InfluxClient
+from os_credits.credits.tasks import worker
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"
@@ -24,11 +25,29 @@ PORT_ENV_VAR = "CREDITS_PORT"
 HOST_ENV_VAR = "CREDITS_HOST"
 UNIX_DOMAIN_SOCKET_ENV_VAR = "CREDITS_UNIX_SOCKET"
 
+WORKER_NUMBER = 4
+
 _logger = getLogger(__name__)
+_group_locks: Dict[Group, Lock] = defaultdict(Lock)
 
 
 def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
     return parser
+
+
+async def create_worker(app: web.Application) -> None:
+    app["task_workers"] = [
+        app.loop.create_task(
+            worker(f"worker-{i}", app["task_queue"], app, _group_locks)
+        )
+        for i in range(WORKER_NUMBER)
+    ]
+
+
+async def stop_worker(app: web.Application) -> None:
+    for task in app["task_workers"]:
+        task.cancel()
+    await gather(*app["task_workers"], return_exceptions=True)
 
 
 async def create_app() -> web.Application:
@@ -41,11 +60,19 @@ async def create_app() -> web.Application:
     app.add_routes(
         [web.get(r"/ping", ping), web.post("/write", influxdb_write_endpoint)]
     )
-    app.update(name="os-credits", config=config, influx_client=InfluxClient())
+    task_queue = Queue()
+    app.update(
+        name="os-credits",
+        config=config,
+        influx_client=InfluxClient(),
+        task_queue=task_queue,
+    )
     if "logging" in config:
         dictConfig(config["logging"])
 
     app.on_shutdown.append(close_session)
+    app.on_shutdown.append(stop_worker)
+    app.on_startup.append(create_worker)
 
     return app
 
