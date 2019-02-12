@@ -18,11 +18,9 @@ def calculate_credits(measurement: UsageMeasurement, usage_last: float) -> float
 
 def _calculate_memory_mb(usage_last: float, usage_current: float) -> float:
     CREDITS_PER_MB_HOUR = 0.3
-    # return 3
     return (usage_current - usage_last) * CREDITS_PER_MB_HOUR
 
 
 def _calculate_cpu(usage_last: float, usage_current: float) -> float:
     CREDITS_PER_VCPU_HOUR = 1
-    # return 2
     return (usage_current - usage_last) * CREDITS_PER_VCPU_HOUR

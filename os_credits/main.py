@@ -28,7 +28,6 @@ UNIX_DOMAIN_SOCKET_ENV_VAR = "CREDITS_UNIX_SOCKET"
 WORKER_NUMBER = 4
 
 _logger = getLogger(__name__)
-_group_locks: Dict[Group, Lock] = defaultdict(Lock)
 
 
 def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -37,10 +36,7 @@ def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
 
 async def create_worker(app: web.Application) -> None:
     app["task_workers"] = [
-        app.loop.create_task(
-            worker(f"worker-{i}", app["task_queue"], app, _group_locks)
-        )
-        for i in range(WORKER_NUMBER)
+        app.loop.create_task(worker(f"worker-{i}", app)) for i in range(WORKER_NUMBER)
     ]
 
 
@@ -60,12 +56,12 @@ async def create_app() -> web.Application:
     app.add_routes(
         [web.get(r"/ping", ping), web.post("/write", influxdb_write_endpoint)]
     )
-    task_queue = Queue()
     app.update(
         name="os-credits",
         config=config,
         influx_client=InfluxClient(),
-        task_queue=task_queue,
+        task_queue=Queue(),
+        group_locks=defaultdict(Lock),
     )
     if "logging" in config:
         dictConfig(config["logging"])

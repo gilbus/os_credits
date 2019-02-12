@@ -8,7 +8,7 @@ from logging import getLogger, LoggerAdapter
 from datetime import datetime
 from dataclasses import dataclass
 from hashlib import sha1 as sha_func
-from asyncio import Lock, Queue
+from asyncio import Lock
 from collections import defaultdict
 
 from aiohttp.web import Application
@@ -19,8 +19,6 @@ from os_credits.influxdb import InfluxClient
 from .measurements import MeasurementType, UsageMeasurement
 from .formulas import calculate_credits
 
-task_lock = Lock()
-
 
 def unique_identifier(content: str) -> str:
     s = sha_func()
@@ -28,11 +26,11 @@ def unique_identifier(content: str) -> str:
     return s.hexdigest()
 
 
-async def worker(
-    name: str, queue: Queue, app: Application, group_locks: Dict[Group, Lock]
-) -> None:
+async def worker(name: str, app: Application) -> None:
+    group_locks = app["group_locks"]
+    task_queue = app["task_queue"]
     while True:
-        influx_line = await queue.get()
+        influx_line = await task_queue.get()
 
         await process_influx_line(influx_line, app, group_locks)
 
