@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional, List, TextIO
+from typing import Optional, List, TextIO, Dict
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
 from logging import getLogger
 from logging.config import dictConfig
 from os import getenv
+from asyncio import Queue
+from collections import defaultdict
 
 from aiohttp import web
 
 from os_credits.views import ping, influxdb_write_endpoint
 from os_credits.settings import default_config_path, load_config, config
 from os_credits.perun.requests import close_session
+from os_credits.perun.groupsManager import Group
 from os_credits.influxdb import InfluxClient
 
 __author__ = "gilbus"
