@@ -10,7 +10,6 @@ from typing import Any, Dict, Callable, List, Optional, Type, Set
 from datetime import datetime
 from collections import defaultdict
 from functools import lru_cache
-from asyncio import Lock
 
 from os_credits.settings import config
 from .requests import perun_rpc
@@ -66,7 +65,6 @@ class Group:
     group object inside perun we need to make sure that all transactions are performed
     atomically.
     """
-    _async_locks: Dict[Group, Lock] = {}
 
     def __init__(self, name: str) -> None:
         """
@@ -75,12 +73,8 @@ class Group:
         async.
         """
         self.name = name
-        _logger.debug("Created Group %s", name)
-        if self not in Group._async_locks:
-            Group._async_locks[self] = Lock()
 
     async def connect(self) -> Group:
-
         group_response = await get_group_by_name(self.name)
         self.id = int(group_response["id"])
 
@@ -102,10 +96,6 @@ class Group:
         _logger.debug("Found Group '%s' in Perun and retrived attributes", self.name)
 
         return self
-
-    @property
-    def async_lock(self) -> Lock:
-        return Group._async_locks[self]
 
     async def save(self) -> None:
         """Save all changed attribute values to Perun."""
@@ -129,6 +119,9 @@ class Group:
         return hash((self.name))
 
     def __repr__(self) -> str:
+        # in case Group has not been connected yet
+        if not getattr(self, "id", None):
+            return f"Group({self.name})"
         param_repr: List[str] = []
         for attribute in Group._perun_attributes():
             param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")

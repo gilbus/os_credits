@@ -15,7 +15,7 @@ from typing import (
 from datetime import datetime
 from logging import getLogger
 
-from os_credits.credits.measurements import Measurement
+from os_credits.credits.measurements import MeasurementType
 from os_credits.exceptions import DenbiCreditsCurrentError
 
 __all__ = ["DenbiCreditsTimestamps", "DenbiCreditsCurrent", "ToEmails"]
@@ -27,7 +27,7 @@ PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"
 _logger = getLogger(__name__)
 
 
-CreditsTimestamps = Dict[Measurement, datetime]
+CreditsTimestamps = Dict[MeasurementType, datetime]
 ToEmails = List[str]
 
 ValueType = TypeVar("ValueType")
@@ -322,7 +322,7 @@ class DenbiCreditsTimestamps(
             for measurement_str, timestamp_str in value.items():
                 measurement_timestamps.update(
                     {
-                        Measurement(measurement_str): datetime.strptime(
+                        MeasurementType(measurement_str): datetime.strptime(
                             timestamp_str, PERUN_DATETIME_FORMAT
                         )
                     }
