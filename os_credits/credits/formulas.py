@@ -1,4 +1,4 @@
-from .measurements import UsageMeasurement, MeasurementType
+from .measurements import MeasurementType, UsageMeasurement
 
 
 def calculate_credits(measurement: UsageMeasurement, usage_last: float) -> float:

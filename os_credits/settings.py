@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-
-from pathlib import Path
-from typing import Optional, Any, TextIO
-from logging import getLogger
 from collections import UserDict
+from logging import getLogger
+from pathlib import Path
+from typing import Any, Optional, TextIO
 
 from toml import loads
 

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-
-from typing import (
-    TypeVar,
-    Any,
-    Dict,
-    Callable,
-    Generic,
-    List,
-    Type,
-    Optional,
-    Container,
-)
 from datetime import datetime
 from logging import getLogger
+from typing import (
+    Any,
+    Callable,
+    Container,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+)
 
 from os_credits.credits.measurements import MeasurementType
 from os_credits.exceptions import DenbiCreditsCurrentError

@@ -5,12 +5,12 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 
 from __future__ import annotations
 
-from logging import getLogger
-from typing import Dict, Any, List, Optional
 from datetime import datetime
+from logging import getLogger
+from typing import Any, Dict, List, Optional
 
-from .requests import perun_rpc
 from .attributes import PerunAttribute
+from .requests import perun_rpc
 
 _logger = getLogger(__name__)
 __url = "attributesManager"

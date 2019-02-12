@@ -3,21 +3,21 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 """
 from __future__ import annotations
 
-from typing import Dict
-from logging import getLogger, LoggerAdapter
-from datetime import datetime
-from dataclasses import dataclass
-from hashlib import sha1 as sha_func
 from asyncio import Lock
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from hashlib import sha1 as sha_func
+from logging import LoggerAdapter, getLogger
+from typing import Dict
 
 from aiohttp.web import Application
-
-from os_credits.perun.groupsManager import Group
 from os_credits.exceptions import GroupNotExistsError
 from os_credits.influxdb import InfluxClient
-from .measurements import MeasurementType, UsageMeasurement
+from os_credits.perun.groupsManager import Group
+
 from .formulas import calculate_credits
+from .measurements import MeasurementType, UsageMeasurement
 
 
 def unique_identifier(content: str) -> str:

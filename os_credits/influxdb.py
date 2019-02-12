@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from aioinflux.client import InfluxDBClient
 from pandas import DataFrame
 
-from .settings import config
+from aioinflux.client import InfluxDBClient
+
 from .credits.measurements import MeasurementType
+from .settings import config
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 

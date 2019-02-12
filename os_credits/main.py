@@ -1,21 +1,20 @@
 from __future__ import annotations
 
-from typing import Optional, List, TextIO, Dict
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
+from asyncio import Lock, Queue, gather
+from collections import defaultdict
 from logging import getLogger
 from logging.config import dictConfig
 from os import getenv
-from asyncio import Queue, gather, Lock
-from collections import defaultdict
+from typing import Dict, List, Optional, TextIO
 
 from aiohttp import web
-
-from os_credits.views import ping, influxdb_write_endpoint
-from os_credits.settings import default_config_path, load_config, config
-from os_credits.perun.requests import close_session
-from os_credits.perun.groupsManager import Group
-from os_credits.influxdb import InfluxClient
 from os_credits.credits.tasks import worker
+from os_credits.influxdb import InfluxClient
+from os_credits.perun.groupsManager import Group
+from os_credits.perun.requests import close_session
+from os_credits.settings import config, default_config_path, load_config
+from os_credits.views import influxdb_write_endpoint, ping
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"

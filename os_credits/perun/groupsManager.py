@@ -5,23 +5,24 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 
 from __future__ import annotations
 
-from logging import getLogger
-from typing import Any, Dict, Callable, List, Optional, Type, Set, Hashable, Tuple
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 from functools import lru_cache
+from logging import getLogger
+from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Type
 
 from os_credits.settings import config
-from .requests import perun_rpc
-from .attributesManager import get_attributes, set_attribute
+
 from .attributes import (
-    PerunAttribute,
-    registered_attributes,
-    DenbiCreditsTimestamps,
     DenbiCreditsCurrent,
     DenbiCreditsGranted,
+    DenbiCreditsTimestamps,
+    PerunAttribute,
     ToEmail,
+    registered_attributes,
 )
+from .attributesManager import get_attributes, set_attribute
+from .requests import perun_rpc
 
 _logger = getLogger(__name__)
 __url = "groupsManager"

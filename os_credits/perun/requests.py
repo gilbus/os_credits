@@ -1,8 +1,7 @@
-from typing import Optional, Any, Dict
-from aiohttp import ClientSession, BasicAuth
 from logging import getLogger
+from typing import Any, Dict, Optional
 
-from os_credits.settings import config
+from aiohttp import BasicAuth, ClientSession
 from os_credits.exceptions import (
     AttributeNotExistsError,
     ConsistencyError,
@@ -10,6 +9,7 @@ from os_credits.exceptions import (
     InternalError,
     RequestError,
 )
+from os_credits.settings import config
 
 _client = ClientSession(
     auth=BasicAuth(config["service_user"]["login"], config["service_user"]["password"])
