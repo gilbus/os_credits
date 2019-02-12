@@ -9,10 +9,11 @@ from datetime import datetime
 from dataclasses import dataclass
 from hashlib import sha256 as sha256func
 
-from ..perun.groupsManager import Group
-from ..perun.requests import GroupNotExists
-from ..influxdb import InfluxClient
-from .measurements import Measurement, calculate_credits, InfluxMeasurement
+from os_credits.perun.groupsManager import Group
+from os_credits.exceptions import GroupNotExistsError
+from os_credits.influxdb import InfluxClient
+from .measurements import MeasurementType, InfluxMeasurement
+from .formulas import calculate_credits
 
 
 def sha256(content: str) -> str:
@@ -26,7 +27,7 @@ async def process_influx_line(line: str, influx_client: InfluxClient) -> None:
     measurement_and_tag, field_set, timestamp = line.split()
     measurement_name, tag_set = measurement_and_tag.split(",", 1)
     try:
-        measurement_type = Measurement(measurement_name)
+        measurement_type = MeasurementType(measurement_name)
     except ValueError:
         _debug_logger.debug(
             "Closing task for influx line `%s` since its measurement is not"
@@ -66,7 +67,7 @@ async def process_influx_line(line: str, influx_client: InfluxClient) -> None:
                 measurement,
             )
             await update_credits(perun_group, measurement, influx_client, _logger)
-    except GroupNotExists as e:
+    except GroupNotExistsError as e:
         _logger.warning(
             "Could not resolve group with name `%s` against perun. %r",
             tags["project_name"],
@@ -93,7 +94,10 @@ async def update_credits(
         group.credits_timestamps.value[measurement.type] = measurement.timestamp
         await group.save()
         return
-    _logger.info("Last time credits were billed: %s", group.credits_timestamp.value)
+    _logger.info(
+        "Last time credits were billed: %s",
+        group.credits_timestamps.value[measurement.type],
+    )
 
     project_measurements = await influx_client.entries_by_project_since(
         group.name, measurement.timestamp, measurement.type
