@@ -1,13 +1,9 @@
 """
 Contains all view function, the routes are specified inside main.py, django style like.
 """
-from asyncio import create_task
 from logging import getLogger
 
 from aiohttp import web
-
-from .credits.tasks import process_influx_line
-from .influxdb import InfluxClient
 
 _logger = getLogger(__name__)
 

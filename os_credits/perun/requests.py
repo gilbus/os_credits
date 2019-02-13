@@ -17,7 +17,7 @@ _client = ClientSession(
 _logger = getLogger(__name__)
 
 
-async def close_session(_):
+async def close_session(_) -> None:
     "Close session with grace."
     await _client.close()
 
