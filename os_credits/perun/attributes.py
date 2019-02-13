@@ -2,17 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from logging import getLogger
-from typing import (
-    Any,
-    Callable,
-    Container,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Type,
-    TypeVar,
-)
+from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
 from os_credits.credits.measurements import MeasurementType
 from os_credits.exceptions import DenbiCreditsCurrentError
@@ -29,19 +19,21 @@ _logger = getLogger(__name__)
 CreditsTimestamps = Dict[MeasurementType, datetime]
 ToEmails = List[str]
 
-ValueType = TypeVar("ValueType")
-# Used to ensure type checker, that the classes defined a `.copy` method
-ContainerValueType = TypeVar("ContainerValueType", ToEmails, CreditsTimestamps)
+# ValueType
+VT = TypeVar("VT")
+# ContainerValueType, used to ensure type checker, that the classes defined a `.copy`
+# method
+CVT = TypeVar("CVT", ToEmails, CreditsTimestamps)
 
 
-registered_attributes: Dict[str, Type[PerunAttribute]] = {}
+registered_attributes: Dict[str, Type[PerunAttribute[Any]]] = {}
 
 
-class PerunAttribute(Generic[ValueType]):
+class PerunAttribute(Generic[VT]):
     displayName: str
     description: str
     writable: bool
-    _value: ValueType
+    _value: VT
     valueModifiedAt: datetime
 
     # mapping between the name of a subclass of PerunAttribute and the actual class
@@ -107,10 +99,6 @@ class PerunAttribute(Generic[ValueType]):
             "type": self.type,
         }
 
-    @property
-    def perun_attr_name(self) -> str:
-        return f"{self.namespace}:{self.friendlyName}"
-
     def perun_decode(self, value: Any) -> Any:
         return value
 
@@ -153,7 +141,7 @@ class PerunAttribute(Generic[ValueType]):
 
 
 class _ScalarPerunAttribute(
-    PerunAttribute[ValueType],
+    PerunAttribute[VT],
     perun_id=None,
     perun_friendly_name=None,
     perun_type=None,
@@ -164,14 +152,14 @@ class _ScalarPerunAttribute(
     an `float` or `str`, in contrast to container attributes
     """
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     @property
-    def value(self) -> ValueType:
+    def value(self) -> VT:
         return self._value
 
     @value.setter
@@ -187,7 +175,7 @@ class _ScalarPerunAttribute(
 
 
 class _ContainerPerunAttribute(
-    PerunAttribute[ContainerValueType],
+    PerunAttribute[CVT],
     # class definition must contain the following attributes to allow 'passthrough' from
     # base classes
     perun_id=None,
@@ -204,10 +192,10 @@ class _ContainerPerunAttribute(
     attribute but by updating its contents. Therefore `value` does not have a setter.
     """
 
-    _value: ContainerValueType
-    _value_copy: ContainerValueType
+    _value: CVT
+    _value_copy: CVT
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
 
     def __init__(self, **kwargs: Any) -> None:
@@ -231,7 +219,7 @@ class _ContainerPerunAttribute(
         raise ValueError("Manually setting to true not supported")
 
     @property
-    def value(self) -> ContainerValueType:
+    def value(self) -> CVT:
         return self._value
 
 
