@@ -4,16 +4,13 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 from __future__ import annotations
 
 from asyncio import Lock
-from collections import defaultdict
-from dataclasses import dataclass
 from datetime import datetime
-from hashlib import sha1 as sha_func
+from hashlib import sha1 as sha_func  # nosec, Hash is not used for security purposes
 from logging import LoggerAdapter, getLogger
 from typing import Dict
 
 from aiohttp.web import Application
 from os_credits.exceptions import GroupNotExistsError
-from os_credits.influxdb import InfluxClient
 from os_credits.perun.groupsManager import Group
 
 from .formulas import calculate_credits
@@ -92,7 +89,10 @@ async def process_influx_line(
 
 
 async def update_credits(
-    group: Group, current_measurement: UsageMeasurement, app: Application, _logger
+    group: Group,
+    current_measurement: UsageMeasurement,
+    app: Application,
+    _logger: LoggerAdapter,
 ) -> None:
     await group.connect()
     try:
@@ -149,15 +149,15 @@ async def update_credits(
         await group.save()
         return
 
-    _logger.info(
-        "Usage value of last measurement: %f vs %f (=%f)",
-        project_measurements.loc[last_measurement_timestamp].value,
-        current_measurement.value,
-        project_measurements.loc[last_measurement_timestamp].value
-        - current_measurement.value,
+    last_measurement = UsageMeasurement(
+        timestamp=last_measurement_timestamp,
+        value=last_measurement_value,
+        type=current_measurement.type,
     )
 
-    credits_to_bill = calculate_credits(current_measurement, last_measurement_value)
+    credits_to_bill = calculate_credits(
+        current_measurement=current_measurement, last_measurement=last_measurement
+    )
     group.credits_timestamps.value[
         current_measurement.type
     ] = current_measurement.timestamp
@@ -167,8 +167,3 @@ async def update_credits(
     group.credits_current.value -= credits_to_bill
     _logger.info("New Group credits %f", group.credits_current.value)
     await group.save()
-
-    # check whether the timestamp inside group is inside the influxdb data
-    # if not set timestamp of current measurement and exit, not possible to calculate
-    # usage delta
-    # if set calculate new credits  and save group

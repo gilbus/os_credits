@@ -1,26 +1,38 @@
 from .measurements import MeasurementType, UsageMeasurement
 
 
-def calculate_credits(measurement: UsageMeasurement, usage_last: float) -> float:
+def calculate_credits(
+    *, current_measurement: UsageMeasurement, last_measurement: UsageMeasurement
+) -> float:
     """
-    Calculate the used credits, given the measurement and the usage values.
+    Calculate the used credits, given the current and last measurement.
 
-    This function encapsulates the calculations of every measurement.
-    :return: A positive floating number representing the number of credits to bill.
+    This function encapsulates the calculations of every measurement. Due to the
+    identical types and the dangers of confounding the arguments keyword-arguments are
+    enforced.
+    :return: A non-negative floating number representing the number of credits to bill.
     """
 
-    if measurement.type is MeasurementType.CPU:
-        return _calculate_cpu(usage_last, measurement.value)
-    elif measurement.type is MeasurementType.RAM:
-        return _calculate_memory_mb(usage_last, measurement.value)
-    raise TypeError("Passed measurement is not valid.")
+    if current_measurement.type is MeasurementType.CPU:
+        return _calculate_cpu(
+            current_measurement=current_measurement, last_measurement=last_measurement
+        )
+    elif current_measurement.type is MeasurementType.RAM:
+        return _calculate_memory_mb(
+            current_measurement=current_measurement, last_measurement=last_measurement
+        )
+    raise TypeError("Passed current_measurement is not valid.")
 
 
-def _calculate_memory_mb(usage_last: float, usage_current: float) -> float:
+def _calculate_memory_mb(
+    current_measurement: UsageMeasurement, last_measurement: UsageMeasurement
+) -> float:
     CREDITS_PER_MB_HOUR = 0.3
-    return (usage_current - usage_last) * CREDITS_PER_MB_HOUR
+    return (current_measurement.value - last_measurement.value) * CREDITS_PER_MB_HOUR
 
 
-def _calculate_cpu(usage_last: float, usage_current: float) -> float:
+def _calculate_cpu(
+    current_measurement: UsageMeasurement, last_measurement: UsageMeasurement
+) -> float:
     CREDITS_PER_VCPU_HOUR = 1
-    return (usage_current - usage_last) * CREDITS_PER_VCPU_HOUR
+    return (current_measurement.value - last_measurement.value) * CREDITS_PER_VCPU_HOUR
