@@ -5,11 +5,9 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import datetime
 from functools import lru_cache
 from logging import getLogger
-from typing import Any, Callable, Dict, Hashable, List, Optional, Set, Tuple, Type
+from typing import Any, Dict, List, Type, cast
 
 from os_credits.settings import config
 
@@ -21,8 +19,8 @@ from .attributes import (
     ToEmail,
     registered_attributes,
 )
-from .attributesManager import get_attributes, set_attribute
-from .requests import perun_rpc
+from .attributesManager import get_attributes, set_attributes
+from .requests import perun_get
 
 _logger = getLogger(__name__)
 __url = "groupsManager"
@@ -34,13 +32,16 @@ async def get_all_groups(vo: int = config["vo_id"]) -> Dict[str, Group]:
 
     :return: Dictionary of all groups with their name as index
     """
-    all_groups = await perun_rpc(f"{__url}/getAllGroups", params={"vo": vo})
+    all_groups = await perun_get(f"{__url}/getAllGroups", params={"vo": vo})
     return {group["name"]: await Group(group["name"]).connect() for group in all_groups}
 
 
 async def get_group_by_name(name: str, vo: int = config["vo_id"]) -> Dict[str, Any]:
     """:return: Dictionary of attributes of the requested Group."""
-    return await perun_rpc(f"{__url}/getGroupByName", params={"vo": vo, "name": name})
+    return cast(
+        Dict[str, Any],
+        await perun_get(f"{__url}/getGroupByName", params={"vo": vo, "name": name}),
+    )
 
 
 class Group:
@@ -104,16 +105,14 @@ class Group:
         # not be 'thread-safe' since another class could update the values during the
         # 'await' phase
         _logger.debug("Save of Group %s called", self)
+        changed_attrs: List[PerunAttribute[Any]] = []
         for attribute_name in Group._perun_attributes():
-            if getattr(self, attribute_name).has_changed:
-                _logger.debug(
-                    "Attribute %s of Group %s has changed since construction "
-                    "Sending new values to perun.",
-                    attribute_name,
-                    self,
-                )
-                getattr(self, attribute_name).has_changed = False
-                await set_attribute(self.id, getattr(self, attribute_name))
+            attr = getattr(self, attribute_name)
+            if attr.has_changed:
+                changed_attrs.append(attr)
+        if changed_attrs:
+            _logger.debug("Sending changed attributes to perun %s", changed_attrs)
+            await set_attributes(self.id, changed_attrs)
 
     def __hash__(self) -> int:
         """Override since groups are only identified by their name."""
@@ -147,7 +146,7 @@ class Group:
 
     @staticmethod
     @lru_cache()
-    def _perun_attributes() -> Dict[str, Type[PerunAttribute]]:
+    def _perun_attributes() -> Dict[str, Type[PerunAttribute[Any]]]:
         """
         Return all Group-attributes which are Perun-Attributes.
 

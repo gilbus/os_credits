@@ -22,7 +22,17 @@ async def close_session(_):
     await _client.close()
 
 
-async def perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
+async def perun_set(url: str, params: Optional[Dict[str, Any]] = None) -> None:
+
+    await _perun_rpc(url, params)
+
+
+async def perun_get(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
+
+    return await _perun_rpc(url, params)
+
+
+async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     request_url = f"{config['perun_rpc_base_url']}/{url}"
     _logger.debug("Sending POST request `%s` with data `%s`", request_url, params)
     async with _client.post(request_url, json=params) as response:
