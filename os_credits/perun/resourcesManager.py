@@ -1,6 +1,6 @@
 """
-Implements the RPC-Calls of the AttributesManager
-https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-AttributesManager.html
+Implements the RPC-Calls of the ResourcesManager
+https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-ResourcesManager.html
 """
 
 from __future__ import annotations
@@ -14,8 +14,7 @@ _URL = "resourcesManager"
 
 async def get_assigned_resources(group_id: int) -> List[Dict[str, Any]]:
     """
-    Get a resource-bound attribute by calling
-    https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-AttributesManager.html#AttributesManagergetAttribute5
+    https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-ResourcesManager.html#ResourcesManagergetAssignedResources1
     """
     params = {"group": group_id}
     # cast is only for type checking purposes
