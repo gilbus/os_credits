@@ -1,19 +1,18 @@
 from __future__ import annotations
 
+import logging
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
 from asyncio import Lock, Queue, gather
 from collections import defaultdict
-from logging import getLogger
 from logging.config import dictConfig
 from os import getenv
-from typing import Dict, List, Optional, TextIO
 
 from aiohttp import web
+
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
-from os_credits.perun.groupsManager import Group
 from os_credits.perun.requests import close_session
-from os_credits.settings import config, default_config_path, load_config
+from os_credits.settings import config, default_config_path
 from os_credits.views import influxdb_write_endpoint, ping
 
 __author__ = "gilbus"
@@ -25,8 +24,6 @@ HOST_ENV_VAR = "CREDITS_HOST"
 UNIX_DOMAIN_SOCKET_ENV_VAR = "CREDITS_UNIX_SOCKET"
 
 WORKER_NUMBER = 4
-
-_logger = getLogger(__name__)
 
 
 def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -62,8 +59,10 @@ async def create_app() -> web.Application:
         task_queue=Queue(),
         group_locks=defaultdict(Lock),
     )
+    # task_logger.addFilter(TaskIdFilter(TASK_ID))
     if "logging" in config:
         dictConfig(config["logging"])
+    # basicConfig(level=DEBUG)
 
     app.on_shutdown.append(close_session)
     app.on_shutdown.append(stop_worker)
@@ -88,7 +87,7 @@ def main() -> int:
     host_args.add_argument(
         "--host",
         type=str,
-        default=getenv(HOST_ENV_VAR, "0.0.0.0"),
+        default=getenv(HOST_ENV_VAR, "0.0.0.0"),  # nosec
         help=f"""TCP/IP host. Can also be specified via ${HOST_ENV_VAR}""",
     )
     host_args.add_argument(
@@ -101,15 +100,12 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    _logger = getLogger(__name__)
-    _logger.debug(args)
-
     try:
         web.run_app(create_app(), port=args.port, path=args.path, host=args.host)
-    except OSError as e:
-        _logger.exception("Could not start start application, see stacktrace attached.")
+    except OSError:
+        logging.exception("Could not start start application, see stacktrace attached.")
     except Exception:
-        _logger.exception("Unhandled exception.")
+        logging.exception("Unhandled exception.")
 
     return 0
 

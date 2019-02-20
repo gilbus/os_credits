@@ -1,29 +1,27 @@
 from __future__ import annotations
 
 from datetime import datetime
-from logging import getLogger
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
 from os_credits.credits.measurements import MeasurementType
 from os_credits.exceptions import DenbiCreditsCurrentError
 
-__all__ = ["DenbiCreditsTimestamps", "DenbiCreditsCurrent", "ToEmails"]
+__all__ = ["DenbiCreditTimestamps", "DenbiCreditsCurrent", "ToEmails"]
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 PERUN_NAMESPACE_OPT = "urn:perun:group:attribute-def:opt"
 PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"
+PERUN_NAMESPACE_GROUP_RESOURCE_OPT = "urn:perun:group_resource:attribute-def:opt"
 
-_logger = getLogger(__name__)
 
-
-CreditsTimestamps = Dict[MeasurementType, datetime]
+CreditTimestamps = Dict[MeasurementType, datetime]
 ToEmails = List[str]
 
 # ValueType
 VT = TypeVar("VT")
 # ContainerValueType, used to ensure type checker, that the classes defined a `.copy`
 # method
-CVT = TypeVar("CVT", ToEmails, CreditsTimestamps)
+CVT = TypeVar("CVT", ToEmails, CreditTimestamps)
 
 
 registered_attributes: Dict[str, Type[PerunAttribute[Any]]] = {}
@@ -31,10 +29,9 @@ registered_attributes: Dict[str, Type[PerunAttribute[Any]]] = {}
 
 class PerunAttribute(Generic[VT]):
     displayName: str
-    description: str
-    writable: bool
+    # writable: bool
     _value: VT
-    valueModifiedAt: datetime
+    # valueModifiedAt: datetime
 
     # mapping between the name of a subclass of PerunAttribute and the actual class
     # object, needed to determine the class of a requested attribute of a group, see
@@ -63,6 +60,8 @@ class PerunAttribute(Generic[VT]):
         cls.id = perun_id
         cls.type = perun_type
         cls.namespace = perun_namespace
+        if cls.__name__.startswith("_"):
+            return
         registered_attributes.update({cls.__name__: cls})
 
     def __init__(self, value: Any, **kwargs: str) -> None:
@@ -71,12 +70,12 @@ class PerunAttribute(Generic[VT]):
 
         """
         self._value = self.perun_decode(value)
-        # non-bool value means that the attribute does not exist inside perun so there
-        # are no further subattribute to decode
+        # non-true value means that the attribute does not exist inside perun so there
+        # are no further subattributes to decode
         if not self._value:
             return
         for attribute_attr_name in PerunAttribute.__annotations__:
-            # ignore any non public attributes here, such as _parser_funcs
+            # ignore any non public attributes here, such as _subattr_decoder
             if attribute_attr_name.startswith("_"):
                 continue
             # check whether any parser function is defined and apply it if so
@@ -104,6 +103,14 @@ class PerunAttribute(Generic[VT]):
 
     def perun_encode(self, value: Any) -> Any:
         return value
+
+    @classmethod
+    def is_resource_bound(cls) -> bool:
+        """
+        Whether this attribute is not only bound to one specific group but a combination
+        of group and resource.
+        """
+        return "group_resource" in cls.namespace.split(":")
 
     @property
     def has_changed(self) -> bool:
@@ -142,6 +149,8 @@ class PerunAttribute(Generic[VT]):
 
 class _ScalarPerunAttribute(
     PerunAttribute[VT],
+    # class definition must contain the following attributes to allow 'passthrough' from
+    # child classes
     perun_id=None,
     perun_friendly_name=None,
     perun_type=None,
@@ -177,7 +186,7 @@ class _ScalarPerunAttribute(
 class _ContainerPerunAttribute(
     PerunAttribute[CVT],
     # class definition must contain the following attributes to allow 'passthrough' from
-    # base classes
+    # child classes
     perun_id=None,
     perun_friendly_name=None,
     perun_type=None,
@@ -280,24 +289,23 @@ class ToEmail(
         super().__init__(**kwargs)
 
     def perun_decode(self, value: Optional[List[str]]) -> ToEmails:
-        # see explanation in DenbiCreditsTimestamps why initialising is no problem
+        # see explanation in DenbiCreditTimestamps why initialising is no problem
         toEmails = value if value else []
         self._value_copy = toEmails.copy()
         return toEmails
 
 
-class DenbiCreditsTimestamps(
-    _ContainerPerunAttribute[CreditsTimestamps],
-    # TODO: Currently misusing the project history until we have our real HashMap
-    perun_id=3362,
-    perun_friendly_name="denbiProjectHistory",
+class DenbiCreditTimestamps(
+    _ContainerPerunAttribute[CreditTimestamps],
+    perun_id=3386,
+    perun_friendly_name="denbiCreditTimestamps",
     perun_type="java.util.LinkedHashMap",
-    perun_namespace=PERUN_NAMESPACE_OPT,
+    perun_namespace=PERUN_NAMESPACE_GROUP_RESOURCE_OPT,
 ):
     def __init__(self, **kwargs: str) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[Dict[str, str]]) -> CreditsTimestamps:
+    def perun_decode(self, value: Optional[Dict[str, str]]) -> CreditTimestamps:
         """Decodes the HashMap stored inside Perun and eases setting timestamps in case
         the attribute did not exist yet"""
 
@@ -318,7 +326,7 @@ class DenbiCreditsTimestamps(
         return measurement_timestamps
 
     @classmethod
-    def perun_encode(cls, value: CreditsTimestamps) -> Dict[str, str]:
+    def perun_encode(cls, value: CreditTimestamps) -> Dict[str, str]:
         return {
             measurement.value: timestamp.strftime(PERUN_DATETIME_FORMAT)
             for measurement, timestamp in value.items()

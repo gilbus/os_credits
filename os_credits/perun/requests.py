@@ -1,7 +1,7 @@
-from logging import getLogger
 from typing import Any, Dict, Optional
 
 from aiohttp import BasicAuth, ClientSession
+
 from os_credits.exceptions import (
     AttributeNotExistsError,
     ConsistencyError,
@@ -9,12 +9,12 @@ from os_credits.exceptions import (
     InternalError,
     RequestError,
 )
+from os_credits.log import requests_logger
 from os_credits.settings import config
 
 _client = ClientSession(
     auth=BasicAuth(config["service_user"]["login"], config["service_user"]["password"])
 )
-_logger = getLogger(__name__)
 
 
 async def close_session(_) -> None:
@@ -34,9 +34,14 @@ async def perun_get(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
 
 async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     request_url = f"{config['perun_rpc_base_url']}/{url}"
-    _logger.debug("Sending POST request `%s` with data `%s`", request_url, params)
+    requests_logger.debug(
+        "Sending POST request `%s` with data `%s`", request_url, params
+    )
     async with _client.post(request_url, json=params) as response:
         response_content = await response.json()
+        requests_logger.debug(
+            "Received response %r with content %r", response, response_content
+        )
         if response_content and "errorId" in response_content:
             # Some kind of error has occured
             if response_content["name"] == "GroupNotExistsException":

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from collections import UserDict
-from logging import getLogger
 from pathlib import Path
 from typing import Any, Optional, TextIO
 
 from toml import loads
+
+from os_credits.log import internal_logger
 
 REPO_DIR = Path(__file__).parent.parent
 # Files are read in this order and the first found will be used
@@ -18,8 +19,6 @@ default_config_path: Optional[Path] = None
 for path in default_config_paths:
     if path.is_file():
         default_config_path = path
-
-_logger = getLogger(__name__)
 
 
 class _Config(UserDict):
@@ -34,7 +33,7 @@ class _Config(UserDict):
 
     def __getitem__(self, key: str) -> Any:
         if not self.data:
-            _logger.info(
+            internal_logger.info(
                 "No config file loaded but attribute %s was accessed. Trying to load "
                 "default config from default paths (%s).",
                 key,
