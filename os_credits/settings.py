@@ -24,12 +24,6 @@ for path in default_config_paths:
 class _Config(UserDict):
     def __init__(self, config: Optional[str] = None):
         super().__init__()
-        if config:
-            self.data.update(**loads(config))
-            assert self["vo_id"]
-            assert self["service_user"]
-            assert self["service_user"]["login"]
-            assert self["service_user"]["password"]
 
     def __getitem__(self, key: str) -> Any:
         if not self.data:
@@ -42,7 +36,13 @@ class _Config(UserDict):
             if not default_config_path:
                 raise RuntimeError("Could not load any default config.")
             self.data.update(**loads(default_config_path.read_text()))
-        return super().__getitem__(key)
+        try:
+            return super().__getitem__(key)
+        except KeyError as e:
+            internal_logger.exception(
+                "Config value %s was requested but not known. Appending stacktrace", e
+            )
+            raise
 
 
 def load_config(config_io: TextIO) -> _Config:

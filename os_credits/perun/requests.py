@@ -19,17 +19,15 @@ client_session: ContextVar[ClientSession] = ContextVar("client_session")
 
 
 async def perun_set(url: str, params: Optional[Dict[str, Any]] = None) -> None:
-
     await _perun_rpc(url, params)
 
 
 async def perun_get(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
-
     return await _perun_rpc(url, params)
 
 
 async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
-    request_url = f"{config['perun_rpc_base_url']}/{url}"
+    request_url = f"{config['perun']['rpc_base_url']}/{url}"
     requests_logger.debug(
         "Sending POST request `%s` with data `%s`", request_url, params
     )

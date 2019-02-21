@@ -24,7 +24,7 @@ PORT_ENV_VAR = "CREDITS_PORT"
 HOST_ENV_VAR = "CREDITS_HOST"
 UNIX_DOMAIN_SOCKET_ENV_VAR = "CREDITS_UNIX_SOCKET"
 
-WORKER_NUMBER = 4
+WORKER_NUMBER = config["application"].get("number_of_workers", 10)
 
 
 def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -74,10 +74,8 @@ async def create_app() -> web.Application:
         task_queue=Queue(),
         group_locks=defaultdict(Lock),
     )
-    # task_logger.addFilter(TaskIdFilter(TASK_ID))
     if "logging" in config:
         dictConfig(config["logging"])
-    # basicConfig(level=DEBUG)
 
     app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)

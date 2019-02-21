@@ -1,43 +1,55 @@
+[application]
+number_of_workers = 10
+# precision by which float results should be rounded before saving
+credits_precision = 2
+
+[perun]
 vo_id = your_vo_id_here
-perun_rpc_base_url = "https://perun.elixir-czech.cz/krb/rpc/json"
+rpc_base_url = "https://perun.elixir-czech.cz/krb/rpc/json"
 
 [service_user]
 login = your_login_here
 password = your_password_here
 
+[influxdb]
+host = your_host_here
+port = 8086
+username = your_username_here
+password = your_password_here
+database = your_db_here
+
 [logging]
 version=1
-[logging.formatters.simple]
-format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-[logging.formatters.access]
-format = '%a %t "%r" %s %b "%{Referer}i" "%{User-Agent}i"'
+disable_existing_loggers = false
 
-[logging.handlers.console]
+[logging.formatters.task_handler]
+format = "[%(task_id)s] %(asctime)s: %(message)s"
+
+[logging.filters.task_id_filter]
+'()' = 'os_credits.log._TaskIdFilter'
+
+[logging.handlers.default]
 class = 'logging.StreamHandler'
 level = 'DEBUG'
 stream = 'ext://sys.stdout'
+formatter = 'task_handler'
 
-[logging.loggers."os_credits.credits"]
-level = 'INFO'
-handlers = ['console']
-formatter = 'simple'
-
-[logging.loggers."os_credits.main"]
-level = 'INFO'
-handlers = ['console']
-formatter = 'simple'
-
-[logging.loggers."os_credits.perun.groupsManager"]
+[logging.loggers."os_credits.tasks"]
 level = 'DEBUG'
-handlers = ['console']
-formatter = 'simple'
+handlers = ['default']
+filters = ['task_id_filter']
+
+[logging.loggers."os_credits.internal"]
+level = 'INFO'
+handlers = ['default']
+filters = ['task_id_filter']
+
+[logging.loggers."os_credits.requests"]
+level = 'WARNING'
+handlers = ['default']
+filters = ['task_id_filter']
 
 [logging.loggers."aiohttp.server"]
-level = 'DEBUG'
-handlers = ['console']
-formatter = 'simple'
-
-[logging.loggers."aiohttp.access"]
-level = 'DEBUG'
-handlers = ['console']
-formatter = 'access'
+level = 'INFO'
+handlers = ['default']
+filters = ['task_id_filter']
