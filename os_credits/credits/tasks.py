@@ -113,6 +113,12 @@ async def update_credits(
         group.credits_timestamps.value[current_measurement.type],
     )
 
+    if current_measurement.timestamp < last_measurement_timestamp:
+        task_logger.warning(
+            "Current measurement is OLDER than the last measurement. HOW? Ignoring"
+        )
+        return
+
     project_measurements = await app["influx_client"].entries_by_project_since(
         project_name=group.name,
         since=last_measurement_timestamp,
