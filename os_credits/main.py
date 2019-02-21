@@ -4,6 +4,7 @@ import logging
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
 from asyncio import Lock, Queue, gather
 from collections import defaultdict
+from datetime import datetime
 from logging.config import dictConfig
 from os import getenv
 
@@ -78,6 +79,7 @@ async def create_app() -> web.Application:
         influx_client=InfluxClient(),
         task_queue=Queue(),
         group_locks=defaultdict(Lock),
+        start_time=datetime.now(),
     )
     if "logging" in config:
         dictConfig(config["logging"])

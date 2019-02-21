@@ -1,6 +1,8 @@
 """
 Contains all view function, the routes are specified inside main.py, django style like.
 """
+from datetime import datetime
+
 from aiohttp import web
 
 from os_credits.log import internal_logger
@@ -41,5 +43,6 @@ async def application_stats(request: web.Request) -> web.Response:
         "number_of_workers": request.app["config"]["application"]["number_of_workers"],
         "queue_size": request.app["task_queue"].qsize(),
         "number_of_locks": len(request.app["group_locks"]),
+        "uptime": str(datetime.now() - request.app["start_time"]),
     }
     return web.json_response(stats)
