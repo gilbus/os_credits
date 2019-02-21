@@ -15,7 +15,12 @@ from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
 from os_credits.settings import config, default_config_path
-from os_credits.views import application_stats, influxdb_write_endpoint, ping
+from os_credits.views import (
+    application_stats,
+    influxdb_write_endpoint,
+    ping,
+    update_logging_config,
+)
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"
@@ -71,6 +76,7 @@ async def create_app() -> web.Application:
             web.get("/ping", ping),
             web.post("/write", influxdb_write_endpoint),
             web.get("/stats", application_stats),
+            web.post("/logconfig", update_logging_config),
         ]
     )
     app.update(

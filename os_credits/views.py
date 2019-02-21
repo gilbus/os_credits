@@ -1,7 +1,9 @@
 """
 Contains all view function, the routes are specified inside main.py, django style like.
 """
+import logging.config
 from datetime import datetime
+from json import JSONDecodeError, loads
 
 from aiohttp import web
 
@@ -46,3 +48,19 @@ async def application_stats(request: web.Request) -> web.Response:
         "uptime": str(datetime.now() - request.app["start_time"]),
     }
     return web.json_response(stats)
+
+
+async def update_logging_config(request: web.Request) -> web.Response:
+    """
+    Possibility to update logging configuration without restart
+    """
+    logging_json_text = await request.text()
+    try:
+        logging_config = loads(logging_json_text)
+    except JSONDecodeError as e:
+        raise web.HTTPBadRequest(reason=str(e))
+    try:
+        logging.config.dictConfig(logging_config)
+    except Exception as e:
+        raise web.HTTPBadRequest(reason=str(e))
+    raise web.HTTPNoContent()
