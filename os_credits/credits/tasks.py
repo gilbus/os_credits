@@ -31,8 +31,11 @@ async def worker(name: str, app: Application) -> None:
         influx_line = await task_queue.get()
         task_id = unique_identifier(influx_line)[:12]
         TASK_ID.set(task_id)
+        task_logger.debug("Worker %s starting task `%s`", name, task_id)
 
         await process_influx_line(influx_line, app, group_locks)
+        task_logger.debug("Worker %s finished task `%s`", name, task_id)
+        task_queue.task_done()
 
 
 async def process_influx_line(
