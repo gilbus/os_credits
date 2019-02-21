@@ -31,3 +31,15 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
         )
     # always return 204, even if we do not know whether the lines are valid
     return web.HTTPNoContent()
+
+
+async def application_stats(request: web.Request) -> web.Response:
+    """
+    API-Endpoint returning current stats of the running application
+    """
+    stats = {
+        "number_of_workers": request.app["config"]["application"]["number_of_workers"],
+        "queue_size": request.app["task_queue"].qsize(),
+        "number_of_locks": len(request.app["group_locks"]),
+    }
+    return web.json_response(stats)

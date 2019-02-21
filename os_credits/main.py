@@ -65,7 +65,11 @@ async def create_app() -> web.Application:
 
     app = web.Application()
     app.add_routes(
-        [web.get(r"/ping", ping), web.post("/write", influxdb_write_endpoint)]
+        [
+            web.get("/ping", ping),
+            web.post("/write", influxdb_write_endpoint),
+            web.get("/stats", application_stats),
+        ]
     )
     app.update(
         name="os-credits",
