@@ -62,7 +62,11 @@ async def process_influx_line(
     for field_pair in field_set.split(","):
         field_name, field_value = field_pair.split("=", 1)
         fields.update({field_name: field_value})
-    perun_group = Group(tags["project_name"], int(tags["location_id"]))
+    try:
+        perun_group = Group(tags["project_name"], int(tags["location_id"]))
+    except KeyError as e:
+        task_logger.warning("Missing tag inside measurement. Ignoring: %s", e)
+        return
     measurement = UsageMeasurement(
         measurement_date, measurement_type, float(fields["value"])
     )
