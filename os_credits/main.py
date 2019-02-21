@@ -14,7 +14,7 @@ from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
 from os_credits.settings import config, default_config_path
-from os_credits.views import influxdb_write_endpoint, ping
+from os_credits.views import application_stats, influxdb_write_endpoint, ping
 
 __author__ = "gilbus"
 __license__ = "AGPLv3"
@@ -35,6 +35,7 @@ async def create_worker(app: web.Application) -> None:
     app["task_workers"] = [
         app.loop.create_task(worker(f"worker-{i}", app)) for i in range(WORKER_NUMBER)
     ]
+    internal_logger.info("Created %d workers", WORKER_NUMBER)
 
 
 async def stop_worker(app: web.Application) -> None:
@@ -83,8 +84,8 @@ async def create_app() -> web.Application:
 
     app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)
-    app.on_shutdown.append(stop_worker)
-    app.on_shutdown.append(close_client_session)
+    app.on_cleanup.append(stop_worker)
+    app.on_cleanup.append(close_client_session)
 
     return app
 
