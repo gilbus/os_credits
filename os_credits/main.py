@@ -38,16 +38,17 @@ def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
 
 
 async def create_worker(app: web.Application) -> None:
-    app["task_workers"] = [
-        app.loop.create_task(worker(f"worker-{i}", app)) for i in range(WORKER_NUMBER)
-    ]
+    app["task_workers"] = {
+        f"worker-{i}": app.loop.create_task(worker(f"worker-{i}", app))
+        for i in range(WORKER_NUMBER)
+    }
     internal_logger.info("Created %d workers", WORKER_NUMBER)
 
 
 async def stop_worker(app: web.Application) -> None:
-    for task in app["task_workers"]:
+    for task in app["task_workers"].values():
         task.cancel()
-    await gather(*app["task_workers"], return_exceptions=True)
+    await gather(*app["task_workers"].values(), return_exceptions=True)
 
 
 async def create_client_session(_) -> None:

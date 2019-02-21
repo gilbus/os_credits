@@ -4,6 +4,7 @@ Contains all view function, the routes are specified inside main.py, django styl
 import logging.config
 from datetime import datetime
 from json import JSONDecodeError, loads
+from traceback import format_stack
 
 from aiohttp import web
 
@@ -47,6 +48,18 @@ async def application_stats(request: web.Request) -> web.Response:
         "number_of_locks": len(request.app["group_locks"]),
         "uptime": str(datetime.now() - request.app["start_time"]),
     }
+    if "verbose" in request.query:
+        stats.update(
+            {
+                "task_worker": {
+                    name: [format_stack(stack) for stack in task.get_stack()]
+                    for name, task in request.app["task_workers"].items()
+                },
+                "group_locks": {
+                    key: repr(lock) for key, lock in request.app["group_locks"].items()
+                },
+            }
+        )
     return web.json_response(stats)
 
 
