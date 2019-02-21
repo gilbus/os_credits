@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 from typing import Any, Dict, Optional
 
 from aiohttp import BasicAuth, ClientSession
@@ -12,14 +13,9 @@ from os_credits.exceptions import (
 from os_credits.log import requests_logger
 from os_credits.settings import config
 
-_client = ClientSession(
-    auth=BasicAuth(config["service_user"]["login"], config["service_user"]["password"])
-)
-
-
-async def close_session(_) -> None:
-    "Close session with grace."
-    await _client.close()
+# will be instantiated/set it in the context of the aiohttp.web.application on
+# startup to have its lifetime bound to the application
+client_session: ContextVar[ClientSession] = ContextVar("client_session")
 
 
 async def perun_set(url: str, params: Optional[Dict[str, Any]] = None) -> None:
@@ -37,6 +33,18 @@ async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
     requests_logger.debug(
         "Sending POST request `%s` with data `%s`", request_url, params
     )
+    try:
+        _client = client_session.get()
+    except LookupError:
+        # in case of not running inside the application, i.e. inside an ipython console for
+        # testing purposes
+        # not nice to create a new session per request but ok for testing
+        _client = ClientSession(
+            auth=BasicAuth(
+                config["service_user"]["login"], config["service_user"]["password"]
+            )
+        )
+
     async with _client.post(request_url, json=params) as response:
         response_content = await response.json()
         requests_logger.debug(

@@ -7,11 +7,12 @@ from collections import defaultdict
 from logging.config import dictConfig
 from os import getenv
 
-from aiohttp import web
+from aiohttp import BasicAuth, ClientSession, web
 
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
-from os_credits.perun.requests import close_session
+from os_credits.log import internal_logger
+from os_credits.perun.requests import client_session
 from os_credits.settings import config, default_config_path
 from os_credits.views import influxdb_write_endpoint, ping
 
@@ -42,6 +43,20 @@ async def stop_worker(app: web.Application) -> None:
     await gather(*app["task_workers"], return_exceptions=True)
 
 
+async def create_client_session(_) -> None:
+    client_session.set(
+        ClientSession(
+            auth=BasicAuth(
+                config["service_user"]["login"], config["service_user"]["password"]
+            )
+        )
+    )
+
+
+async def close_client_session(_) -> None:
+    await client_session.get().close()
+
+
 async def create_app() -> web.Application:
     """
     Separated from main function to be usable via `python -m aiohttp.web [...]`. Takes
@@ -64,9 +79,10 @@ async def create_app() -> web.Application:
         dictConfig(config["logging"])
     # basicConfig(level=DEBUG)
 
-    app.on_shutdown.append(close_session)
-    app.on_shutdown.append(stop_worker)
+    app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)
+    app.on_shutdown.append(stop_worker)
+    app.on_shutdown.append(close_client_session)
 
     return app
 
