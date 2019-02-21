@@ -140,8 +140,8 @@ class Group:
         if self.resource_id not in self.assigned_resource_ids:
             internal_logger.warning(
                 "Group `%s` is not connected with resource with id `%s`. "
-                "Skipping retrival of resource bound attributes",
-                self,
+                "Skipping retrival of resource bound attributes such as credits_timestamps",
+                self.name,
                 self.resource_id,
             )
             return
@@ -220,7 +220,7 @@ class Group:
         return f"Group[{','.join(param_repr)}]"
 
     def __str__(self) -> str:
-        return self.name
+        return f"{self.name}@{self.resource_id}"
 
     def __eq__(self, value: Any) -> bool:
         if not isinstance(value, Group):
