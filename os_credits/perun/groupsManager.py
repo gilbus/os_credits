@@ -6,7 +6,7 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Set, Type, cast
+from typing import Any, Dict, List, Set, Type, cast
 
 from os_credits.log import internal_logger
 from os_credits.settings import config
@@ -76,7 +76,7 @@ class Group:
     atomically.
     """
 
-    def __init__(self, name: str, resource_id: Optional[int] = None) -> None:
+    def __init__(self, name: str, resource_id: int = 0) -> None:
         """
         Calling this method only creates the object, but does not query perun yet. Call
         .connect() which returns the object itself to support method chaining and is
@@ -106,7 +106,6 @@ class Group:
             # `group_attributes` does not contain any resource-bound attributes
             if attr_class.is_resource_bound():
                 requested_resource_bound_attributes.add(attr_name)
-                continue
             # only save attributes which are requested via class annotations
             attr_friendly_name = attr_class.friendlyName
             try:
@@ -117,19 +116,9 @@ class Group:
                 self.__setattr__(attr_name, attr_class(value=None))
 
         if requested_resource_bound_attributes:
-            if not self.resource_id:
-                internal_logger.warning(
-                    "No resource id passed to constructor, values of resource-bound "
-                    "attributes will not be fetched"
-                )
-                for attr_name in requested_resource_bound_attributes:
-                    self.__setattr__(
-                        attr_name, Group._perun_attributes()[attr_name](value=None)
-                    )
-            else:
-                await self._retrieve_resource_bound_attributes(
-                    requested_resource_bound_attributes
-                )
+            await self._retrieve_resource_bound_attributes(
+                requested_resource_bound_attributes
+            )
 
         return self
 
