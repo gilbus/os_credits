@@ -47,12 +47,11 @@ async def process_influx_line(
         measurement_type = MeasurementType(measurement_name)
     except ValueError:
         task_logger.debug(
-            "Closing task for influx line `%s` since its measurement is not"
-            " needed/billable",
+            "Dropping influx line `%s` since its measurement `%s` is not needed/billable",
             line,
+            measurement_name,
         )
         return
-    task_logger.debug("Continuing with influx line %s", line)
     measurement_date = datetime.fromtimestamp(int(timestamp) / 1e9)
     tags: Dict[str, str] = {}
     for tag_pair in tag_set.split(","):
@@ -74,17 +73,9 @@ async def process_influx_line(
         "Processing Measurement `%s` - Group `%s`", measurement, perun_group
     )
     try:
-        task_logger.debug(
-            "Awaiting async lock for Group %s to process measurement %s",
-            perun_group,
-            measurement,
-        )
+        task_logger.debug("Awaiting async lock for Group %s", perun_group)
         async with group_locks[perun_group]:
-            task_logger.debug(
-                "Acquired async lock for Group %s, measurement %s",
-                perun_group,
-                measurement,
-            )
+            task_logger.debug("Acquired async lock for Group %s", perun_group)
             await update_credits(perun_group, measurement, app)
     except GroupNotExistsError as e:
         task_logger.warning(
@@ -117,7 +108,7 @@ async def update_credits(
         ] = current_measurement.timestamp
         await group.save()
         return
-    task_logger.info(
+    task_logger.debug(
         "Last time credits were billed: %s",
         group.credits_timestamps.value[current_measurement.type],
     )
@@ -166,8 +157,11 @@ async def update_credits(
         current_measurement.type
     ] = current_measurement.timestamp
 
-    task_logger.info("Credits to bill: %f", credits_to_bill)
-
     group.credits_current.value -= credits_to_bill
-    task_logger.info("New Group credits %f", group.credits_current.value)
+    task_logger.info(
+        "Credits: %f - %f = %f",
+        group.credits_current.value + credits_to_bill,
+        credits_to_bill,
+        group.credits_current.value,
+    )
     await group.save()
