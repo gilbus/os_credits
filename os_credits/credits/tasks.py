@@ -73,9 +73,9 @@ async def process_influx_line(
         "Processing Measurement `%s` - Group `%s`", measurement, perun_group
     )
     try:
-        task_logger.debug("Awaiting async lock for Group %s", perun_group)
+        task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
         async with group_locks[perun_group]:
-            task_logger.debug("Acquired async lock for Group %s", perun_group)
+            task_logger.debug("Acquired async lock for Group %s", perun_group.name)
             await update_credits(perun_group, measurement, app)
     except GroupNotExistsError as e:
         task_logger.warning(

@@ -208,7 +208,11 @@ class Group:
                 )
 
     def __hash__(self) -> int:
-        """Override since groups are only identified by their name."""
+        """Override since groups are only identified by their name. Their
+        resource_id is not part of the hash since one group/project does only
+        have one credits_current value. Since this function is responsible of
+        identifying a group when requesting an async lock to modify its
+        credits_current value if must only use the name as identifier"""
         return hash((self.name))
 
     def __repr__(self) -> str:
