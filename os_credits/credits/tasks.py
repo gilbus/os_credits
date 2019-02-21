@@ -39,7 +39,7 @@ async def worker(name: str, app: Application) -> None:
 
 
 async def process_influx_line(
-    line: str, app: Application, group_locks: Dict[Group, Lock]
+    line: str, app: Application, group_locks: Dict[str, Lock]
 ) -> None:
     measurement_and_tag, field_set, timestamp = line.split()
     measurement_name, tag_set = measurement_and_tag.split(",", 1)
@@ -74,7 +74,7 @@ async def process_influx_line(
     )
     try:
         task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
-        async with group_locks[perun_group]:
+        async with group_locks[perun_group.name]:
             task_logger.debug("Acquired async lock for Group %s", perun_group.name)
             await update_credits(perun_group, measurement, app)
     except GroupNotExistsError as e:

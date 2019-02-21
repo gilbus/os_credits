@@ -196,14 +196,6 @@ class Group:
                     self.resource_id,
                 )
 
-    def __hash__(self) -> int:
-        """Override since groups are only identified by their name. Their
-        resource_id is not part of the hash since one group/project does only
-        have one credits_current value. Since this function is responsible of
-        identifying a group when requesting an async lock to modify its
-        credits_current value if must only use the name as identifier"""
-        return hash((self.name))
-
     def __repr__(self) -> str:
         # in case Group has not been connected yet
         if not getattr(self, "id", None):
@@ -216,11 +208,6 @@ class Group:
 
     def __str__(self) -> str:
         return f"{self.name}@{self.resource_id}"
-
-    def __eq__(self, value: Any) -> bool:
-        if not isinstance(value, Group):
-            raise NotImplementedError
-        return hash(self) == hash(value)
 
     @classmethod
     async def get_all_groups(
