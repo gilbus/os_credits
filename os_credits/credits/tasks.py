@@ -33,9 +33,15 @@ async def worker(name: str, app: Application) -> None:
         TASK_ID.set(task_id)
         task_logger.debug("Worker %s starting task `%s`", name, task_id)
 
-        await process_influx_line(influx_line, app, group_locks)
-        task_logger.debug("Worker %s finished task `%s`", name, task_id)
-        task_queue.task_done()
+        try:
+            await process_influx_line(influx_line, app, group_locks)
+            task_logger.debug(
+                "Worker %s finished task `%s` successfully", name, task_id
+            )
+        except Exception:
+            task_logger.exception("%s threw an exception:", name)
+        finally:
+            task_queue.task_done()
 
 
 async def process_influx_line(
