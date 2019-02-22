@@ -2,6 +2,8 @@
 number_of_workers = 10
 # precision by which float results should be rounded before saving
 credits_precision = 2
+# if present only groups whose exact name is part of the list will be processed
+project_whitelist = ['credits']
 
 [perun]
 vo_id = your_vo_id_here

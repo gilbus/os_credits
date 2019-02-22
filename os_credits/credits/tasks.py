@@ -72,6 +72,13 @@ async def process_influx_line(
     except KeyError as e:
         task_logger.warning("Missing tag inside measurement. Ignoring: %s", e)
         return
+    if "project_whitelist" in app["config"]["application"]:
+        if perun_group.name not in app["config"]["application"]["project_whitelist"]:
+            task_logger.info(
+                "Group `%s` is not part of given whitelist. Ignoring measurement",
+                perun_group.name,
+            )
+            return
     measurement = UsageMeasurement(
         measurement_date, measurement_type, float(fields["value"])
     )
