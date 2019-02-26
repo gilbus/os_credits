@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-import logging
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
 from asyncio import Lock, Queue, gather
 from collections import defaultdict
 from datetime import datetime
 from logging.config import dictConfig
-from os import getenv
 
 from aiohttp import BasicAuth, ClientSession, web
-
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
-from os_credits.settings import config, default_config_path
+from os_credits.settings import config
 from os_credits.views import (
     application_stats,
     influxdb_write_endpoint,
@@ -22,19 +18,7 @@ from os_credits.views import (
     update_logging_config,
 )
 
-__author__ = "gilbus"
-__license__ = "AGPLv3"
-
-CONFIG_FILE_ENV_VAR = "CREDITS_SETTINGS_FILE"
-PORT_ENV_VAR = "CREDITS_PORT"
-HOST_ENV_VAR = "CREDITS_HOST"
-UNIX_DOMAIN_SOCKET_ENV_VAR = "CREDITS_UNIX_SOCKET"
-
 WORKER_NUMBER = config["application"].get("number_of_workers", 10)
-
-
-def setup_app_internals_parser(parser: ArgumentParser) -> ArgumentParser:
-    return parser
 
 
 async def create_worker(app: web.Application) -> None:
@@ -97,46 +81,3 @@ async def create_app() -> web.Application:
     app.on_cleanup.append(close_client_session)
 
     return app
-
-
-def main() -> int:
-    parser = ArgumentParser(
-        epilog=f"{__author__} @ {__license__}",
-        formatter_class=ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=getenv(PORT_ENV_VAR, 8080),
-        help=f"""TCP/IP port (plain HTTP). Use a reverse proxy for HTTPS. Can also be
-        specified via ${PORT_ENV_VAR}""",
-    )
-    host_args = parser.add_mutually_exclusive_group()
-    host_args.add_argument(
-        "--host",
-        type=str,
-        default=getenv(HOST_ENV_VAR, "0.0.0.0"),  # nosec
-        help=f"""TCP/IP host. Can also be specified via ${HOST_ENV_VAR}""",
-    )
-    host_args.add_argument(
-        "--path",
-        type=str,
-        default=getenv(UNIX_DOMAIN_SOCKET_ENV_VAR, None),
-        help="""""",
-    )
-    parser.add_argument("-c", "--config", type=FileType(), default=default_config_path)
-
-    args = parser.parse_args()
-
-    try:
-        web.run_app(create_app(), port=args.port, path=args.path, host=args.host)
-    except OSError:
-        logging.exception("Could not start start application, see stacktrace attached.")
-    except Exception:
-        logging.exception("Unhandled exception.")
-
-    return 0
-
-
-if __name__ == "__main__":
-    exit(main())

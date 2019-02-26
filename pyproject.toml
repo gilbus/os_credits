@@ -17,6 +17,9 @@ aiohttp-devtools = "^0.11.0"
 ipython = "^7.2"
 mypy-mypyc = "^0.670.0"
 
+[tool.poetry.scripts]
+os-credits="os_credits.cli:main"
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

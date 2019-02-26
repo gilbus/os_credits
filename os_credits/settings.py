@@ -4,7 +4,7 @@ from collections import UserDict
 from pathlib import Path
 from typing import Any, Optional, TextIO
 
-from toml import loads
+import toml
 
 from os_credits.log import internal_logger
 
@@ -23,19 +23,19 @@ for path in default_config_paths:
 
 class _Config(UserDict):
     def __init__(self, config: Optional[str] = None):
-        super().__init__()
+        super().__init__(toml.loads(config) if config else None)
 
     def __getitem__(self, key: str) -> Any:
         if not self.data:
-            internal_logger.info(
-                "No config file loaded but attribute %s was accessed. Trying to load "
-                "default config from default paths (%s).",
+            internal_logger.warning(
+                "No config file loaded but attribute `%s` was accessed. Trying to load "
+                "default config from default path (%s).",
                 key,
-                default_config_paths,
+                default_config_path,
             )
             if not default_config_path:
                 raise RuntimeError("Could not load any default config.")
-            self.data.update(**loads(default_config_path.read_text()))
+            self.data.update(**toml.loads(default_config_path.read_text()))
         try:
             return super().__getitem__(key)
         except KeyError as e:
@@ -43,6 +43,9 @@ class _Config(UserDict):
                 "Config value %s was requested but not known. Appending stacktrace", e
             )
             raise
+
+
+config = _Config()
 
 
 def load_config(config_io: TextIO) -> _Config:
@@ -53,8 +56,11 @@ def load_config(config_io: TextIO) -> _Config:
     """
     global config
     config_str = config_io.read()
-    config = _Config(config_str)
+    try:
+        config.data = toml.loads(config_str)  # type: ignore
+    except toml.decoder.TomlDecodeError:  # type: ignore
+        internal_logger.exception(
+            "Could not parse provided settings file (%s). Aborting, see attached stacktrace",
+            config_io.name,
+        )
     return config
-
-
-config = _Config()
