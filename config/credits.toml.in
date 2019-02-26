@@ -25,33 +25,37 @@ version=1
 disable_existing_loggers = false
 
 [logging.formatters.task_handler]
-format = "[%(task_id)s] %(asctime)s: %(message)s"
+format = "[%(task_id)s] %(levelname)-8s %(asctime)s: %(message)s"
+
+[logging.formatters.simple_handler]
+format = "%(asctime)s %(levelname)-8s %(name)-15s %(message)s"
 
 [logging.filters.task_id_filter]
 '()' = 'os_credits.log._TaskIdFilter'
 
-[logging.handlers.default]
+[logging.handlers.with_task_id]
 class = 'logging.StreamHandler'
 level = 'DEBUG'
 stream = 'ext://sys.stdout'
 formatter = 'task_handler'
 
-[logging.loggers."os_credits.tasks"]
+[logging.handlers.simple]
+class = 'logging.StreamHandler'
 level = 'DEBUG'
-handlers = ['default']
+stream = 'ext://sys.stdout'
+formatter = 'simple_handler'
+
+[logging.loggers."os_credits.tasks"]
+level = 'INFO'
+handlers = ['with_task_id']
 filters = ['task_id_filter']
 
 [logging.loggers."os_credits.internal"]
 level = 'INFO'
-handlers = ['default']
+handlers = ['with_task_id']
 filters = ['task_id_filter']
 
 [logging.loggers."os_credits.requests"]
-level = 'WARNING'
-handlers = ['default']
-filters = ['task_id_filter']
-
-[logging.loggers."aiohttp.server"]
 level = 'INFO'
-handlers = ['default']
+handlers = ['with_task_id']
 filters = ['task_id_filter']
