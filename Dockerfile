@@ -1,18 +1,18 @@
-FROM python:3.7-alpine
-
-ADD src /code/src
-ADD config/credits.toml /etc/credits.toml
-ADD pyproject.toml poetry.lock /code/
+FROM python:3.7-alpine as builder
 WORKDIR /code
-# pip>19 is required for pyproject.toml
-RUN pip install --no-cache --upgrade pip
-# RUN pip install --no-cache .
-# usage of --no-cache does lead to breakage currently
-# see https://github.com/pypa/pip/issues/6197
-RUN pip install .
+ADD pyproject.toml poetry.lock /code/
+ADD os_credits /code/os_credits
+# no virtual necessary for building a wheel but would be create nevertheless
+RUN pip install poetry && poetry config settings.virtualenvs.create false && poetry build -f wheel
 
+
+FROM python:3.7
+ARG OS_CREDITS_VERSION
+ARG WHEEL_NAME=os_credits-$OS_CREDITS_VERSION-py3-none-any.whl
 ENV CREDITS_PORT 80
 ENV CREDITS_HOST 0.0.0.0
+COPY --from=builder /code/dist/$WHEEL_NAME /tmp/
 
-EXPOSE 80
-CMD python -m aiohttp.web -H $CREDITS_HOST -P $CREDITS_PORT os_project_usage_processor.main:app_init
+RUN pip install --no-cache /tmp/$WHEEL_NAME && rm /tmp/$WHEEL_NAME
+
+CMD os-credits --version
