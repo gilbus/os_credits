@@ -16,6 +16,8 @@ black = {version = "^18.3-alpha.0",allows-prereleases = true}
 aiohttp-devtools = "^0.11.0"
 ipython = "^7.2"
 mypy-mypyc = "^0.670.0"
+httpie = "^1.0"
+remarshal = "^0.9.0"
 
 [tool.poetry.scripts]
 os-credits="os_credits.cli:main"
