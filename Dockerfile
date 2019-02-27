@@ -13,7 +13,8 @@ ENV CREDITS_PORT 80
 ENV CREDITS_HOST 0.0.0.0
 COPY --from=builder /code/dist/$WHEEL_NAME /tmp/
 
-RUN apt update && apt install -y gcc
+# wget to perform healthcheck against /ping endpoint
+RUN apt-get update && apt-get install -y gcc wget
 RUN pip install --no-cache /tmp/$WHEEL_NAME && rm /tmp/$WHEEL_NAME
 
-CMD os-credits --version
+CMD os-credits
