@@ -1,8 +1,9 @@
-FROM python:3.7
+FROM python:3.7-slim
 
 ADD os_credits /code/os_credits
 ADD pyproject.toml poetry.lock /code/
 WORKDIR /code
+RUN apt-get update && apt-get install -y gcc wget && apt-get clean
 RUN pip install --no-cache poetry
 # install to system
 RUN poetry config settings.virtualenvs.create false
