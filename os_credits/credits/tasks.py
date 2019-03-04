@@ -82,24 +82,22 @@ async def process_influx_line(
     task_logger.info(
         "Processing Measurement `%s` - Group `%s`", measurement, perun_group
     )
-    try:
-        task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
-        async with group_locks[perun_group.name]:
-            task_logger.debug("Acquired async lock for Group %s", perun_group.name)
-            await update_credits(perun_group, measurement, app)
-    except GroupNotExistsError as e:
-        task_logger.warning(
-            "Could not resolve group with name `%s` against perun. %r",
-            tags["project_name"],
-            e,
-        )
-        return
+    task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
+    async with group_locks[perun_group.name]:
+        task_logger.debug("Acquired async lock for Group %s", perun_group.name)
+        await update_credits(perun_group, measurement, app)
 
 
 async def update_credits(
     group: Group, current_measurement: Measurement, app: Application
 ) -> None:
-    await group.connect()
+    try:
+        await group.connect()
+    except GroupNotExistsError as e:
+        task_logger.warning(
+            "Could not resolve group with name `%s` against perun. %r", group.name, e
+        )
+        return
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
             current_measurement.prometheus_name
