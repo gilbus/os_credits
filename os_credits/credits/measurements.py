@@ -36,13 +36,13 @@ class Measurement:
     def calculate_credits(self, *, older_measurement: Measurement) -> float:
         if not isinstance(older_measurement, type(self)):
             raise TypeError("Measurements must be of same type")
-        if self.timestamp < older_measurement.timestamp:
-            raise ValueError("Passed measurement must be older")
         if self.CREDITS_PER_HOUR is None:
             raise ValueError(
                 f"Measurement type {type(self)} does neither define "
                 "`CREDITS_PER_HOUR` nor overwrites `calculate_credits`"
             )
+        if self.timestamp < older_measurement.timestamp:
+            raise ValueError("Passed measurement must be older")
         return (self.value - older_measurement.value) * self.CREDITS_PER_HOUR
 
     def __str__(self) -> str:
