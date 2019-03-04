@@ -206,6 +206,9 @@ class _ContainerPerunAttribute(
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        # the super class will set self._value and we will save a copy here
+        # also ensures that `value` of a container attribute will never be None
+        self._value_copy = self._value.copy()
 
     @property
     def has_changed(self) -> bool:
@@ -278,9 +281,7 @@ class ToEmail(
 
     def perun_decode(self, value: Optional[List[str]]) -> ToEmails:
         # see explanation in DenbiCreditTimestamps why initialising is no problem
-        toEmails = value if value else []
-        self._value_copy = toEmails.copy()
-        return toEmails
+        return value if value else []
 
 
 class DenbiCreditTimestamps(
@@ -310,7 +311,6 @@ class DenbiCreditTimestamps(
                         )
                     }
                 )
-        self._value_copy = measurement_timestamps.copy()
         return measurement_timestamps
 
     @classmethod
