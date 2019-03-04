@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from aioinflux.client import InfluxDBClient
 from pandas import DataFrame
 
-from aioinflux.client import InfluxDBClient
-
-from .credits.measurements import MeasurementType
 from .settings import config
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
@@ -21,7 +19,7 @@ class InfluxClient(InfluxDBClient):
     async def entries_by_project_since(
         self,
         project_name: str,
-        measurement_type: MeasurementType,
+        measurement_name: str,
         since: datetime = _DEFINITELY_PAST,
     ) -> DataFrame:
         """
@@ -38,6 +36,6 @@ class InfluxClient(InfluxDBClient):
         query = query_template.format(
             project_name=project_name,
             since=since.strftime(INFLUX_QUERY_DATE_FORMAT),
-            measurement=measurement_type.value,
+            measurement=measurement_name,
         )
         return await self.query(query)

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
-from os_credits.credits.measurements import MeasurementType
 from os_credits.exceptions import DenbiCreditsCurrentError
 
 __all__ = ["DenbiCreditTimestamps", "DenbiCreditsCurrent", "ToEmails"]
@@ -14,7 +13,7 @@ PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"
 PERUN_NAMESPACE_GROUP_RESOURCE_OPT = "urn:perun:group_resource:attribute-def:opt"
 
 
-CreditTimestamps = Dict[MeasurementType, datetime]
+CreditTimestamps = Dict[str, datetime]
 ToEmails = List[str]
 
 # ValueType
@@ -317,7 +316,7 @@ class DenbiCreditTimestamps(
             for measurement_str, timestamp_str in value.items():
                 measurement_timestamps.update(
                     {
-                        MeasurementType(measurement_str): datetime.strptime(
+                        measurement_str: datetime.strptime(
                             timestamp_str, PERUN_DATETIME_FORMAT
                         )
                     }
@@ -328,6 +327,6 @@ class DenbiCreditTimestamps(
     @classmethod
     def perun_encode(cls, value: CreditTimestamps) -> Dict[str, str]:
         return {
-            measurement.value: timestamp.strftime(PERUN_DATETIME_FORMAT)
+            measurement: timestamp.strftime(PERUN_DATETIME_FORMAT)
             for measurement, timestamp in value.items()
         }

@@ -14,8 +14,7 @@ from os_credits.exceptions import GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
 
-from .formulas import calculate_credits
-from .measurements import MeasurementType, UsageMeasurement
+from .measurements import Measurement, calculate_credits
 
 
 def unique_identifier(content: str) -> str:
@@ -49,9 +48,7 @@ async def process_influx_line(
 ) -> None:
     measurement_and_tag, field_set, timestamp = line.split()
     measurement_name, tag_set = measurement_and_tag.split(",", 1)
-    try:
-        measurement_type = MeasurementType(measurement_name)
-    except ValueError:
+    if not Measurement.is_supported(measurement_name):
         task_logger.debug(
             "Dropping influx line `%s` since its measurement `%s` is not needed/billable",
             line,
@@ -79,8 +76,8 @@ async def process_influx_line(
                 perun_group.name,
             )
             return
-    measurement = UsageMeasurement(
-        measurement_date, measurement_type, float(fields["value"])
+    measurement = Measurement.create_measurement(
+        measurement_name, float(fields["value"]), measurement_date
     )
     task_logger.info(
         "Processing Measurement `%s` - Group `%s`", measurement, perun_group
@@ -100,30 +97,30 @@ async def process_influx_line(
 
 
 async def update_credits(
-    group: Group, current_measurement: UsageMeasurement, app: Application
+    group: Group, current_measurement: Measurement, app: Application
 ) -> None:
     await group.connect()
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
-            current_measurement.type
+            current_measurement.prometheus_name
         ]
     except KeyError:
         task_logger.info(
             "Group %s has no timestamp of most recent measurement of %s. "
             "Setting it to the timestamp of the current measurement.",
             group,
-            current_measurement.type,
+            current_measurement.prometheus_name,
         )
         # set timestamp of current measurement so we can start billing the group once
         # the next measurements are submitted
         group.credits_timestamps.value[
-            current_measurement.type
+            current_measurement.prometheus_name
         ] = current_measurement.timestamp
         await group.save()
         return
     task_logger.debug(
         "Last time credits were billed: %s",
-        group.credits_timestamps.value[current_measurement.type],
+        group.credits_timestamps.value[current_measurement.prometheus_name],
     )
 
     if current_measurement.timestamp < last_measurement_timestamp:
@@ -135,7 +132,7 @@ async def update_credits(
     project_measurements = await app["influx_client"].entries_by_project_since(
         project_name=group.name,
         since=last_measurement_timestamp,
-        measurement_type=current_measurement.type,
+        measurement_name=current_measurement.prometheus_name,
     )
     try:
         last_measurement_value = project_measurements.loc[
@@ -147,7 +144,7 @@ async def update_credits(
         ).index.to_pydatetime()[0]
 
         group.credits_timestamps.value[
-            current_measurement.type
+            current_measurement.prometheus_name
         ] = oldest_measurement_timestamp
         task_logger.warning(
             "InfluxDB does not contains usage values for Group %s for measurement %s "
@@ -156,24 +153,22 @@ async def update_credits(
             "oldest measurement between now and the last time measurements were billed "
             "inside InfluxDB (%s)",
             group,
-            current_measurement.type,
+            current_measurement.prometheus_name,
             last_measurement_timestamp,
             oldest_measurement_timestamp,
         )
         await group.save()
         return
 
-    last_measurement = UsageMeasurement(
+    last_measurement = Measurement.create_measurement(
+        prometheus_name=current_measurement.prometheus_name,
         timestamp=last_measurement_timestamp,
         value=last_measurement_value,
-        type=current_measurement.type,
     )
 
-    credits_to_bill = calculate_credits(
-        current_measurement=current_measurement, last_measurement=last_measurement
-    )
+    credits_to_bill = calculate_credits(current_measurement, last_measurement)
     group.credits_timestamps.value[
-        current_measurement.type
+        current_measurement.prometheus_name
     ] = current_measurement.timestamp
 
     group.credits_current.value -= credits_to_bill
