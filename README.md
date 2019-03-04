@@ -47,3 +47,8 @@ If the application misbehaves and you would like to set a lower log level or get
 	toml2json -i config/credits.toml | jq '.logging' | http $IP_ADDR/logconfig
 	```
 2. Query the `/stats` endpoint, optionally with `?verbose=1`
+
+## Tests
+
+Tests are written against [`pytest`](https://pytest.org) and can be executed from the
+project directory via `python -m pytest`, respectively `poetry run python -m pytest`.
