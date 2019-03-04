@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
-from os_credits.exceptions import DenbiCreditsCurrentError
-
 __all__ = ["DenbiCreditTimestamps", "DenbiCreditsCurrent", "ToEmails"]
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
@@ -232,7 +230,7 @@ class _ContainerPerunAttribute(
 
 
 class DenbiCreditsCurrent(
-    _ScalarPerunAttribute[float],
+    _ScalarPerunAttribute[Optional[float]],
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
     perun_type="java.lang.String",
@@ -241,21 +239,12 @@ class DenbiCreditsCurrent(
     def __init__(self, **kwargs: str) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> float:
+    def perun_decode(self, value: Optional[str]) -> Optional[float]:
         """Stored as str inside perun, unfortunately"""
-        if not value:
-            raise DenbiCreditsCurrentError()
-        try:
-            float_value = float(value)
-        except ValueError as e:
-            raise DenbiCreditsCurrentError(e)
-        if float_value < 0:
-            # TODO determine how to handle this case
-            pass
-        return float_value
+        return float(value) if value else None
 
-    def perun_encode(self, value: float) -> str:
-        return str(value)
+    def perun_encode(self, value: Optional[float]) -> Optional[str]:
+        return str(value) if value else None
 
 
 class DenbiCreditsGranted(

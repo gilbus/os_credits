@@ -10,7 +10,7 @@ from typing import Dict
 
 from aiohttp.web import Application
 
-from os_credits.exceptions import GroupNotExistsError
+from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
 
@@ -98,6 +98,22 @@ async def update_credits(
             "Could not resolve group with name `%s` against perun. %r", group.name, e
         )
         return
+    if group.credits_current.value is None:
+        # let's check whether any measurement timestamps are present, if so we are
+        # having a problem since this means that this group has been processed before!
+        if group.credits_timestamps:
+            raise DenbiCreditsCurrentError(
+                f"Group {group.name} has been billed before but is missing "
+                "`credits_current` now. "
+                "Did someone modify the values by hand? Aborting"
+            )
+        else:
+            task_logger.info(
+                "Group %s does not have `credits_current` and hasn't been billed before"
+                "copying the value of `credits_granted`",
+                group,
+            )
+            group.credits_current.value = group.credits_granted.value
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
             current_measurement.prometheus_name

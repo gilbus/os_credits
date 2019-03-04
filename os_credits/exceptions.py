@@ -5,19 +5,19 @@ received by it.
 
 
 class CreditsError(Exception):
-    """Base Exception for any exceptions defined by this module"""
-
+    "Base Exception for any exceptions defined by this module"
     pass
 
 
 class GroupAttributeError(CreditsError):
-    """Base Exception if any Group-Attribute has an invalid value"""
-
+    "Base Exception if any Group-Attribute has an invalid value"
     pass
 
 
 class DenbiCreditsCurrentError(GroupAttributeError):
-    "Raised if a group does not have any value for DenbiCreditsCurrent"
+    """Raised if a group does not have any value for DenbiCreditsCurrent and has been
+    billed before"""
+
     pass
 
 
