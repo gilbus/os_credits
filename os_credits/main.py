@@ -6,6 +6,7 @@ from datetime import datetime
 from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
+from aiohttp_swagger import setup_swagger
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
@@ -79,5 +80,7 @@ async def create_app() -> web.Application:
     app.on_startup.append(create_worker)
     app.on_cleanup.append(stop_worker)
     app.on_cleanup.append(close_client_session)
+
+    setup_swagger(app)
 
     return app

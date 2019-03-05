@@ -7,7 +7,6 @@ from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
-
 from os_credits.log import internal_logger
 
 
@@ -15,6 +14,17 @@ async def ping(_) -> web.Response:
     """
     Simple ping endpoint to be able to determine whether the application is up and
     running.
+    ---
+    description: This end-point allow to test that service is up.
+    tags:
+    - Health check
+    produces:
+    - text/plain
+    responses:
+        "200":
+            description: successful operation. Return "pong" text
+        "405":
+            description: invalid HTTP Method
     """
     return web.Response(text="Pong")
 
@@ -41,6 +51,54 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
 async def application_stats(request: web.Request) -> web.Response:
     """
     API-Endpoint returning current stats of the running application
+    ---
+    description: Allows querying the application state. Should not be public accessible.
+    tags:
+      - Health check
+      - Monitoring
+    produces:
+      - application/json
+    parameters:
+      - in: query
+        name: verbose
+        type: boolean
+        default: false
+        description: Include extended (computationally expensive) information
+    responses:
+      200:
+        description: Stats object
+        schema:
+          type: object
+          required: [number_of_workers, queue_size, number_of_locks, uptime]
+          properties:
+            number_of_workers:
+              type: integer
+              description: Number of worker tasks as specified in config file
+            queue_size:
+              type: integer
+              description: Number of tasks currently pending
+            number_of_locks:
+              type: integer
+              description: Number of group/project locks inside the application, should
+                correspond to the number of billed/groups/projects
+            uptime:
+              type: string
+              description: Uptime, string representation of a python [`timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects)
+                object
+            task_stacks:
+              type: object
+              required: [worker-n]
+              properties:
+                worker-n:
+                  type: str
+                  description: Stack of the worker task
+            group_locks:
+              type: object
+              required: [group_name]
+              properties:
+                group_name:
+                  type: str
+                  description: State of the group/project async-lock
     """
     stats = {
         "number_of_workers": request.app["config"]["application"]["number_of_workers"],
@@ -48,11 +106,16 @@ async def application_stats(request: web.Request) -> web.Response:
         "number_of_locks": len(request.app["group_locks"]),
         "uptime": str(datetime.now() - request.app["start_time"]),
     }
-    if "verbose" in request.query:
+    if (
+        "verbose" in request.query
+        and request.query["verbose"]
+        and request.query["verbose"] != "false"
+    ):
+        print(request.query)
         stats.update(
             {
-                "task_worker": {
-                    name: [format_stack(stack) for stack in task.get_stack()]
+                "task_stacks": {
+                    name: [format_stack(stack)[0] for stack in task.get_stack()][0]
                     for name, task in request.app["task_workers"].items()
                 },
                 "group_locks": {
