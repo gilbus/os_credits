@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Dict, Optional, Type, TypeVar
 
+from os_credits.exceptions import CalculationResultError, MeasurementError
+
 
 class Measurement:
     timestamp: datetime
@@ -33,7 +35,7 @@ class Measurement:
     def is_supported(cls, prometheus_name: str) -> bool:
         return prometheus_name in cls._measurement_types
 
-    def calculate_credits(self, *, older_measurement: Measurement) -> float:
+    def _calculate_credits(self, *, older_measurement: Measurement) -> float:
         if not isinstance(older_measurement, type(self)):
             raise TypeError("Measurements must be of same type")
         if self.CREDITS_PER_HOUR is None or self.CREDITS_PER_HOUR <= 0:
@@ -42,16 +44,21 @@ class Measurement:
                 "`CREDITS_PER_HOUR` nor overwrites `calculate_credits`"
             )
         if self.timestamp < older_measurement.timestamp:
-            raise ValueError("Passed measurement must be older")
+            raise MeasurementError(
+                "Passed measurement must be older. Use the top-level "
+                "`calculate_credits` function to prevent this error."
+            )
         return (self.value - older_measurement.value) * self.CREDITS_PER_HOUR
 
     def __str__(self) -> str:
         return (
-            f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')} "
-            f"{self.prometheus_name} '{self.value}'"
+            f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}-"
+            f"{self.prometheus_name}:'{self.value}'"
         )
 
 
+# The TypeVar shows mypy that measurement{1,2} have to of the same type, the
+# bound-parameter specifies that this type must be a Measurement or a subclass
 MT = TypeVar("MT", bound=Measurement)
 
 
@@ -61,7 +68,13 @@ def calculate_credits(measurement1: MT, measurement2: MT) -> float:
     else:
         older_measurement, new_measurement = measurement2, measurement1
 
-    return new_measurement.calculate_credits(older_measurement=older_measurement)
+    credits = new_measurement._calculate_credits(older_measurement=older_measurement)
+    if credits < 0:
+        raise CalculationResultError(
+            f"Credits calculation of {measurement1} and {measurement2} returned a "
+            "negative amount of credits."
+        )
+    return credits
 
 
 class _VCPUUsage(

@@ -21,6 +21,16 @@ class DenbiCreditsCurrentError(GroupAttributeError):
     pass
 
 
+class MeasurementError(CreditsError):
+    "Raised if the given measurements cannot be used to calculate credits usage"
+    pass
+
+
+class CalculationResultError(CreditsError):
+    "Raised if the result of credits calculation does not meet constraints"
+    pass
+
+
 class RequestError(CreditsError):
     "Generic Exception in case no specific exception has been thrown"
     pass
