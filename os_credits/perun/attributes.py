@@ -61,7 +61,7 @@ class PerunAttribute(Generic[VT]):
             return
         registered_attributes.update({cls.__name__: cls})
 
-    def __init__(self, value: Any, **kwargs: str) -> None:
+    def __init__(self, value: Any, **kwargs: Any) -> None:
         """
         lala
 
@@ -239,7 +239,7 @@ class DenbiCreditsCurrent(
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs: str) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_decode(self, value: Optional[str]) -> Optional[float]:
@@ -257,7 +257,7 @@ class DenbiCreditsGranted(
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
-    def __init__(self, **kwargs: str) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_decode(self, value: Optional[str]) -> Optional[int]:
@@ -276,7 +276,7 @@ class ToEmail(
     perun_type="java.util.ArrayList",
     perun_namespace=PERUN_NAMESPACE_DEF,
 ):
-    def __init__(self, **kwargs: str) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_decode(self, value: Optional[List[str]]) -> ToEmails:
@@ -291,7 +291,7 @@ class DenbiCreditTimestamps(
     perun_type="java.util.LinkedHashMap",
     perun_namespace=PERUN_NAMESPACE_GROUP_RESOURCE_OPT,
 ):
-    def __init__(self, **kwargs: str) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_decode(self, value: Optional[Dict[str, str]]) -> CreditTimestamps:
