@@ -33,19 +33,38 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
     """
     Consumes the Line Protocol of InfluxDB, see
     https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/
+    ---
+    description: Used by InfluxDB to post subscription updates
+    tags:
+      - Service
+    consumes:
+      - text/plain
+    parameters:
+      - in: body
+        name: line
+        description: Point in [`Line Protocol format`](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial)
+        type: string
+    responses:
+      202:
+        description: A corresponding task object will be created. See application log
+          for further information
+      400:
+        description: Empty content provided
     """
     # .text() performs automatic decoding from bytes
     influxdb_lines = await request.text()
     # an unknown number of lines will be send, create separate tasks for all of them
     for line in influxdb_lines.splitlines():
+        if not line.strip():
+            return web.HTTPBadRequest(reason="No content provided")
         await request.app["task_queue"].put(line)
         internal_logger.debug(
             "Put influx_line %s into queue (%s)",
             line,
             request.app["task_queue"].qsize(),
         )
-    # always return 204, even if we do not know whether the lines are valid
-    return web.HTTPNoContent()
+    # always return 202
+    return web.HTTPAccepted()
 
 
 async def application_stats(request: web.Request) -> web.Response:
