@@ -43,7 +43,10 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
       - in: body
         name: line
         description: Point in [`Line Protocol format`](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial)
-        type: string
+        schema:
+          type: string
+          example: weather,location=us-midwest temperature=82 1465839830100400200
+        required: true
     responses:
       202:
         description: A corresponding task object will be created. See application log
