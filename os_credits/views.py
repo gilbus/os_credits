@@ -125,7 +125,7 @@ async def application_stats(request: web.Request) -> web.Response:
                   description: State of the group/project async-lock
     """
     stats = {
-        "number_of_workers": request.app["config"]["application"]["number_of_workers"],
+        "number_of_workers": request.app["config"]["number_of_workers"],
         "queue_size": request.app["task_queue"].qsize(),
         "number_of_locks": len(request.app["group_locks"]),
         "uptime": str(datetime.now() - request.app["start_time"]),

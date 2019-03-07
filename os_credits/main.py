@@ -7,12 +7,11 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
-
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
-from os_credits.settings import config
+from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
 from os_credits.views import (
     CreditsPerHour,
     application_stats,
@@ -21,7 +20,7 @@ from os_credits.views import (
     update_logging_config,
 )
 
-WORKER_NUMBER = config["application"].get("number_of_workers", 10)
+WORKER_NUMBER = config["number_of_workers"]
 
 
 async def create_worker(app: web.Application) -> None:
@@ -41,9 +40,7 @@ async def stop_worker(app: web.Application) -> None:
 async def create_client_session(_) -> None:
     client_session.set(
         ClientSession(
-            auth=BasicAuth(
-                config["service_user"]["login"], config["service_user"]["password"]
-            )
+            auth=BasicAuth(config["perun"]["login"], config["perun"]["password"])
         )
     )
 
@@ -77,7 +74,19 @@ async def create_app() -> web.Application:
         start_time=datetime.now(),
     )
     if "logging" in config:
-        dictConfig(config["logging"])
+        try:
+            dictConfig(config["logging"])
+            internal_logger.info("Applied given logging config")
+        except ValueError as e:
+            dictConfig(DEFAULT_LOGGING_CONFIG)
+            internal_logger.error(
+                "Could not apply given logging config, error %s occurred. "
+                "Using default config",
+                e,
+            )
+    else:
+        dictConfig(DEFAULT_LOGGING_CONFIG)
+        internal_logger.info("Applied default logging config")
 
     app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)

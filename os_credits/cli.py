@@ -60,8 +60,10 @@ def main() -> int:
         internal_logger.exception(
             "Could not start start application, see stacktrace attached."
         )
+        return 1
     except Exception:
         internal_logger.exception("Unhandled exception.")
+        return 1
 
     return 0
 

@@ -21,6 +21,11 @@ class DenbiCreditsCurrentError(GroupAttributeError):
     pass
 
 
+class MissingConfigError(CreditsError):
+    "Raised if a non-set config value without default value is requested"
+    pass
+
+
 class MeasurementError(CreditsError):
     "Raised if the given measurements cannot be used to calculate credits usage"
     pass

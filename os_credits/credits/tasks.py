@@ -9,7 +9,6 @@ from hashlib import sha1 as sha_func  # nosec, Hash is not used for security pur
 from typing import Dict
 
 from aiohttp.web import Application
-
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
@@ -69,8 +68,8 @@ async def process_influx_line(
     except KeyError as e:
         task_logger.warning("Missing tag inside measurement. Ignoring: %s", e)
         return
-    if "project_whitelist" in app["config"]["application"]:
-        if perun_group.name not in app["config"]["application"]["project_whitelist"]:
+    if "project_whitelist" in app["config"]:
+        if perun_group.name not in app["config"]["project_whitelist"]:
             task_logger.info(
                 "Group `%s` is not part of given whitelist. Ignoring measurement",
                 perun_group.name,
