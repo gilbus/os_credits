@@ -7,6 +7,8 @@ from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
+
+from os_credits.credits.measurements import Measurement
 from os_credits.log import internal_logger
 
 
@@ -133,7 +135,6 @@ async def application_stats(request: web.Request) -> web.Response:
         and request.query["verbose"]
         and request.query["verbose"] != "false"
     ):
-        print(request.query)
         stats.update(
             {
                 "task_stacks": {
@@ -162,3 +163,17 @@ async def update_logging_config(request: web.Request) -> web.Response:
     except Exception as e:
         raise web.HTTPBadRequest(reason=str(e))
     raise web.HTTPNoContent()
+
+
+class CreditsPerHour(web.View):
+    async def get(request: web.Request) -> web.Response:
+        """
+        Returns a JSON object describing the currently supported measurements and
+        therefore the supported values when interested in the per-hour usage of given
+        machines.
+        """
+        measurement_information = {
+            m.friendly_name: m.api_information()
+            for m in Measurement._measurement_types.values()
+        }
+        return web.json_response(measurement_information)

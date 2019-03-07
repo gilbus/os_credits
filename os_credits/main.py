@@ -7,12 +7,14 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
+
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
 from os_credits.settings import config
 from os_credits.views import (
+    CreditsPerHour,
     application_stats,
     influxdb_write_endpoint,
     ping,
@@ -60,9 +62,10 @@ async def create_app() -> web.Application:
     app.add_routes(
         [
             web.get("/ping", ping),
-            web.post("/write", influxdb_write_endpoint),
             web.get("/stats", application_stats),
+            web.post("/write", influxdb_write_endpoint),
             web.post("/logconfig", update_logging_config),
+            web.view("/credits", CreditsPerHour),
         ]
     )
     app.update(

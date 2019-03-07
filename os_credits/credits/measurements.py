@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar
 
 from os_credits.exceptions import CalculationResultError, MeasurementError
 
@@ -12,10 +12,12 @@ class Measurement:
     _measurement_types: Dict[str, Type[Measurement]] = {}
 
     CREDITS_PER_HOUR: Optional[float] = None
+    property_description = ""
 
     def __init_subclass__(cls, prometheus_name: str, friendly_name: str) -> None:
         Measurement._measurement_types.update({prometheus_name: cls})
         cls.prometheus_name = prometheus_name
+        cls.friendly_name = friendly_name
 
     @classmethod
     def create_measurement(
@@ -50,6 +52,21 @@ class Measurement:
             )
         return (self.value - older_measurement.value) * self.CREDITS_PER_HOUR
 
+    @classmethod
+    def api_information(cls) -> Dict[str, Any]:
+        """
+        Returns a dictionary containing the description and type information of this
+        measurement.
+
+        This is just a simple base implementation and should be overriden by subclasses
+        if necessary.
+        """
+        # if not self.CREDITS_PER_HOUR:
+        #    raise NotImplementedError(
+        #        "Not setting CREDITS_PER_HOUR requires overwriting `api_information`"
+        #    )
+        return {"type": "int", "description": cls.property_description}
+
     def __str__(self) -> str:
         return (
             f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}-"
@@ -82,8 +99,10 @@ class _VCPUUsage(
 ):
 
     CREDITS_PER_HOUR = 1
+    property_description = "Amount of vCPUs."
 
 
 class _RAMUsage(Measurement, prometheus_name="project_mb_usage", friendly_name="ram"):
 
     CREDITS_PER_HOUR = 0.3
+    property_description = "Amount of RAM in MB."
