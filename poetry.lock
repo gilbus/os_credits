@@ -450,6 +450,18 @@ python = ">2.7"
 version = ">=4.0.0"
 
 [[package]]
+category = "dev"
+description = "pytest plugin for aiohttp support"
+name = "pytest-aiohttp"
+optional = false
+python-versions = "*"
+version = "0.3.0"
+
+[package.dependencies]
+aiohttp = ">=2.3.5"
+pytest = "*"
+
+[[package]]
 category = "main"
 description = "Extensions to the standard Python datetime module"
 name = "python-dateutil"
@@ -540,7 +552,7 @@ pbr = ">=2.0.0,<2.1.0 || >2.1.0"
 six = ">=1.10.0"
 
 [[package]]
-category = "main"
+category = "dev"
 description = "Python Library for Tom's Obvious, Minimal Language"
 name = "toml"
 optional = false
@@ -605,7 +617,7 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [metadata]
-content-hash = "9951f278927a38caa232dcc442be83717bb0f55245c6cfed636571285f35c72f"
+content-hash = "27e98d6db25f57b30430829a1669a45ffd3acb372116f4ad097f49a77ce62a5a"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -653,6 +665,7 @@ ptyprocess = ["923f299cc5ad920c68f2bc0bc98b75b9f838b93b599941a6b63ddbc2476394c0"
 py = ["64f65755aee5b381cea27766a3a147c3f15b9b6b9ac88676de66ba2ae36793fa", "dc639b046a6e2cff5bbe40194ad65936d6ba360b52b3c3fe1d08a82dd50b5e53"]
 pygments = ["5ffada19f6203563680669ee7f53b64dabbeb100eb51b61996085e99c03b284a", "e8218dd399a61674745138520d0d4cf2621d7e032439341bc3f647bff125818d"]
 pytest = ["067a1d4bf827ffdd56ad21bd46674703fce77c5957f6c1eef731f6146bfcef1c", "9687049d53695ad45cf5fdc7bbd51f0c49f1ea3ecfc4b7f3fde7501b541f17f4"]
+pytest-aiohttp = ["0b9b660b146a65e1313e2083d0d2e1f63047797354af9a28d6b7c9f0726fa33d", "c929854339637977375838703b62fef63528598bc0a9d451639eba95f4aaa44f"]
 python-dateutil = ["7e6584c74aeed623791615e26efd690f29817a27c73085b78e4bad02493df2fb", "c89805f6f4d64db21ed966fda138f8a5ed7a4fdbc1a8ee329ce1b74e3c74da9e"]
 pytoml = ["ca2d0cb127c938b8b76a9a0d0f855cf930c1d50cc3a0af6d3595b566519a1013"]
 pytz = ["32b0891edff07e28efe91284ed9c31e123d84bea3fd98e1f72be2508f43ef8d9", "d5f05e487007e29e03409f9398d074e158d920d36eb82eaf66fb1136b0c5374c"]

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "os_credits"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["gilbus"]
 
@@ -20,6 +20,7 @@ httpie = "^1.0"
 remarshal = "^0.9.0"
 pytest = "^4.3"
 bandit = "^1.5"
+pytest-aiohttp = "^0.3.0"
 
 [tool.poetry.scripts]
 os-credits="os_credits.cli:main"

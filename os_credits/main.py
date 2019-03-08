@@ -47,7 +47,11 @@ async def create_client_session(_) -> None:
 
 
 async def close_client_session(_) -> None:
-    await client_session.get().close()
+    try:
+        await client_session.get().close()
+    except LookupError:
+        # no session: no need to close a session
+        pass
 
 
 async def create_app() -> web.Application:
