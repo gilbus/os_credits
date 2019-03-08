@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
 DEFAULT_LOG_LEVEL = {
     "os_credits.tasks": "INFO",
     "os_credits.internal": "INFO",
-    "os_credits.requested": "INFO",
+    "os_credits.requests": "INFO",
 }
 
 DEFAULT_LOGGING_CONFIG = {
