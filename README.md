@@ -39,13 +39,7 @@ If the application misbehaves and you would like to set a lower log level or get
 **without restarting** it you have two possibilities:
 
 1. Use the `/logconfig` endpoint to change the logging settings of the running
-   application, by first editing or providing a `credits.toml` file and then uploading
-   it via `http`, but you can of course just use `curl`. All commands are available
-   after `poetry install`
-	```bash
-	IP_ADDR="$( docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' portal_credits)"
-	toml2json -i config/credits.toml | jq '.logging' | http $IP_ADDR/logconfig
-	```
+   application.
 2. Query the `/stats` endpoint, optionally with `?verbose=1`
 
 ### Tests

@@ -7,6 +7,7 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
+
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
@@ -20,15 +21,13 @@ from os_credits.views import (
     update_logging_config,
 )
 
-WORKER_NUMBER = config["number_of_workers"]
-
 
 async def create_worker(app: web.Application) -> None:
     app["task_workers"] = {
         f"worker-{i}": app.loop.create_task(worker(f"worker-{i}", app))
-        for i in range(WORKER_NUMBER)
+        for i in range(config["OS_CREDITS_WORKERS"])
     }
-    internal_logger.info("Created %d workers", WORKER_NUMBER)
+    internal_logger.info("Created %d workers", config["OS_CREDITS_WORKERS"])
 
 
 async def stop_worker(app: web.Application) -> None:
@@ -40,7 +39,9 @@ async def stop_worker(app: web.Application) -> None:
 async def create_client_session(_) -> None:
     client_session.set(
         ClientSession(
-            auth=BasicAuth(config["perun"]["login"], config["perun"]["password"])
+            auth=BasicAuth(
+                config["OS_CREDITS_PERUN_LOGIN"], config["OS_CREDITS_PERUN_PASSWORD"]
+            )
         )
     )
 
@@ -67,26 +68,13 @@ async def create_app() -> web.Application:
     )
     app.update(
         name="os-credits",
-        config=config,
         influx_client=InfluxClient(),
         task_queue=Queue(),
         group_locks=defaultdict(Lock),
         start_time=datetime.now(),
     )
-    if "logging" in config:
-        try:
-            dictConfig(config["logging"])
-            internal_logger.info("Applied given logging config")
-        except ValueError as e:
-            dictConfig(DEFAULT_LOGGING_CONFIG)
-            internal_logger.error(
-                "Could not apply given logging config, error %s occurred. "
-                "Using default config",
-                e,
-            )
-    else:
-        dictConfig(DEFAULT_LOGGING_CONFIG)
-        internal_logger.info("Applied default logging config")
+    dictConfig(DEFAULT_LOGGING_CONFIG)
+    internal_logger.info("Applied default logging config")
 
     app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)

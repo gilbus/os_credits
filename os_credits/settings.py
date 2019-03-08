@@ -1,27 +1,23 @@
 from __future__ import annotations
 
 from collections import ChainMap, UserDict
-from pathlib import Path
-from typing import Any, Optional, TextIO
-
-import toml
+from os import environ
 
 from os_credits.exceptions import MissingConfigError
 from os_credits.log import internal_logger
 
-REPO_DIR = Path(__file__).parent.parent
-# Files are read in this order and the first found will be used
-default_config_paths = [
-    # config inside repo
-    REPO_DIR / "config" / "credits.toml",
-    Path("/etc/credits.toml"),
-]
-default_config_path: Optional[Path] = None
-for path in default_config_paths:
-    if path.is_file():
-        default_config_path = path
+DEFAULT_CONFIG = {
+    "OS_CREDITS_WORKERS": 10,
+    "OS_CREDITS_PRECISION": 2,
+    "INFLUXDB_PORT": 8086,
+}
 
-DEFAULT_CONFIG = {"number_of_workers": 10, "credits_precision": 2}
+
+DEFAULT_LOG_LEVEL = {
+    "os_credits.tasks": "INFO",
+    "os_credits.internal": "INFO",
+    "os_credits.requested": "INFO",
+}
 
 DEFAULT_LOGGING_CONFIG = {
     "version": 1,
@@ -51,40 +47,22 @@ DEFAULT_LOGGING_CONFIG = {
     },
     "loggers": {
         "os_credits.tasks": {
-            "level": "INFO",
+            "level": DEFAULT_LOG_LEVEL["os_credits.tasks"],
             "handlers": ["with_task_id"],
             "filters": ["task_id_filter"],
         },
         "os_credits.internal": {
-            "level": "INFO",
+            "level": DEFAULT_LOG_LEVEL["os_credits.internal"],
             "handlers": ["with_task_id"],
             "filters": ["task_id_filter"],
         },
         "os_credits.requests": {
-            "level": "INFO",
+            "level": DEFAULT_LOG_LEVEL["os_credits.requests"],
             "handlers": ["with_task_id"],
             "filters": ["task_id_filter"],
         },
     },
 }
-
-
-class _Config(UserDict):
-    def __init__(self, config: Optional[str] = None):
-        super().__init__(toml.loads(config) if config else None)
-
-    def __getitem__(self, key: str) -> Any:
-        if not self.data:
-            internal_logger.warning(
-                "No config file loaded but attribute `%s` was accessed. Trying to load "
-                "default config from default path (%s).",
-                key,
-                default_config_path,
-            )
-            if not default_config_path:
-                raise RuntimeError("Could not load any default config.")
-            self.data.update(**toml.loads(default_config_path.read_text()))
-        return super().__getitem__(key)
 
 
 class _EmptyConfig(UserDict):
@@ -93,31 +71,11 @@ class _EmptyConfig(UserDict):
     requested value is set nowhere and we have to exit.
     """
 
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key):
         internal_logger.exception(
             "Config value %s was requested but not known. Appending stacktrace", key
         )
         raise MissingConfigError(f"Missing value for key {key}")
 
 
-custom_config = _Config()
-
-config = ChainMap(custom_config, DEFAULT_CONFIG, _EmptyConfig())
-
-
-def load_config(config_io: TextIO) -> _Config:
-    """
-    Loads the given config. Raises an AssertionError in case a critical value is not
-    given.
-    :return: Config instance loaded
-    """
-    global custom_config
-    config_str = config_io.read()
-    try:
-        custom_config.data = toml.loads(config_str)  # type: ignore
-    except toml.decoder.TomlDecodeError:  # type: ignore
-        internal_logger.exception(
-            "Could not parse provided settings file (%s). Aborting, see attached stacktrace",
-            config_io.name,
-        )
-    return custom_config
+config = ChainMap(environ, DEFAULT_CONFIG, _EmptyConfig())

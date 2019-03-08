@@ -2,9 +2,9 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
 from os import getenv
 
 from aiohttp import web
+
 from os_credits import __author__, __license__, __version__
 from os_credits.log import internal_logger
-from os_credits.settings import default_config_path, default_config_paths, load_config
 
 CONFIG_FILE_ENV_VAR = "CREDITS_SETTINGS_FILE"
 PORT_ENV_VAR = "CREDITS_PORT"
@@ -37,20 +37,9 @@ def main() -> int:
         default=getenv(UNIX_DOMAIN_SOCKET_ENV_VAR, None),
         help="""""",
     )
-    parser.add_argument(
-        "-c",
-        "--config",
-        type=FileType(),
-        default=getenv(CONFIG_FILE_ENV_VAR, str(default_config_path)),
-        help=f"""Config file to use, default locations are
-        {[str(p) for p in default_config_paths]}, first existing file is chosen
-        as default. Can also be set via ${CONFIG_FILE_ENV_VAR}""",
-    )
     parser.add_argument("--version", action="version", version=__version__)
 
     args = parser.parse_args()
-    if args.config:
-        load_config(args.config)
 
     try:
         from os_credits.main import create_app

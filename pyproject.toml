@@ -7,7 +7,6 @@ authors = ["gilbus"]
 [tool.poetry.dependencies]
 python = "^3.7"
 aiohttp = "^3.5"
-toml = "^0.10.0"
 aioinflux = "^0.5.1"
 pandas = "^0.24.0"
 aiohttp-swagger = "^1.0"

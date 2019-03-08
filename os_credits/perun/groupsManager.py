@@ -31,7 +31,9 @@ from .resourcesManager import get_assigned_resources
 __url = "groupsManager"
 
 
-async def get_all_groups(vo: int = config["perun"]["vo_id"]) -> Dict[str, Group]:
+async def get_all_groups(
+    vo: int = config["OS_CREDITS_PERUN_VO_ID"]
+) -> Dict[str, Group]:
     """
     Return all groups in the given VO.
 
@@ -42,7 +44,7 @@ async def get_all_groups(vo: int = config["perun"]["vo_id"]) -> Dict[str, Group]
 
 
 async def get_group_by_name(
-    name: str, vo: int = config["perun"]["vo_id"]
+    name: str, vo: int = config["OS_CREDITS_PERUN_VO_ID"]
 ) -> Dict[str, Any]:
     """:return: Dictionary of attributes of the requested Group."""
     return cast(
@@ -211,7 +213,7 @@ class Group:
 
     @classmethod
     async def get_all_groups(
-        cls, vo: int = config["perun"]["vo_id"]
+        cls, vo: int = config["OS_CREDITS_PERUN_VO_ID"]
     ) -> Dict[str, Group]:
         """
         Returns all groups in the given VO.

@@ -2,6 +2,7 @@ from contextvars import ContextVar
 from typing import Any, Dict, Optional
 
 from aiohttp import BasicAuth, ClientSession
+
 from os_credits.exceptions import (
     AttributeNotExistsError,
     ConsistencyError,
@@ -39,7 +40,9 @@ async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
         # for testing purposes
         # not nice to create a new session per request but ok for testing
         _client = ClientSession(
-            auth=BasicAuth(config["perun"]["login"], config["perun"]["password"])
+            auth=BasicAuth(
+                config["OS_CREDITS_PERUN_LOGIN"], config["OS_CREDITS_PERUN_PASSWORD"]
+            )
         )
 
     async with _client.post(request_url, json=params) as response:
