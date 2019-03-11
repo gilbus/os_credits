@@ -1,5 +1,6 @@
 ---
 repos:
+  # required linters/fixers are already part of poetry dev-setup
   - repo: local
     hooks:
       - id: pytest
@@ -10,7 +11,6 @@ repos:
         types: [python]
       - id: black
         name: Blacken code
-        entry: poetry run black os_credits
-        pass_filenames: false
+        entry: poetry run black
         language: system
         types: [python]
