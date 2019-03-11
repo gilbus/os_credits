@@ -2,8 +2,15 @@ FROM python:3.7-slim as builder
 WORKDIR /code
 ADD pyproject.toml poetry.lock /code/
 ADD os_credits /code/os_credits
+ADD tests /code/tests
 # no virtual necessary for building a wheel but would be create nevertheless
-RUN pip install poetry && poetry config settings.virtualenvs.create false && poetry build -f wheel
+RUN apt-get update && apt-get install -y gcc && apt-get clean \
+	&& pip install poetry \
+	&& poetry config settings.virtualenvs.create false \
+	&& poetry install \
+	&& poetry run python -m pytest -v \
+# actually build the wheel if tests are ok
+	&& poetry build -f wheel
 
 
 FROM python:3.7-slim
