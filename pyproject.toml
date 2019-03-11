@@ -14,10 +14,8 @@ aiohttp-swagger = "^1.0"
 [tool.poetry.dev-dependencies]
 black = {version = "^18.3-alpha.0",allows-prereleases = true}
 aiohttp-devtools = "^0.11.0"
-ipython = "^7.2"
 mypy-mypyc = "^0.670.0"
 httpie = "^1.0"
-remarshal = "^0.9.0"
 pytest = "^4.3"
 bandit = "^1.5"
 pytest-aiohttp = "^0.3.0"
