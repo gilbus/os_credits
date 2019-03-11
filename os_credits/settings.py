@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import ChainMap, UserDict
 from os import environ
+from typing import Any, Dict
 
 from os_credits.exceptions import MissingConfigError
 from os_credits.log import internal_logger
@@ -13,19 +14,28 @@ DEFAULT_CONFIG = {
 }
 
 # for environment variables that need to be processed
-PROCESSED_ENV_CONFIG = {}
+PROCESSED_ENV_CONFIG: Dict[str, Any] = {}
 
 try:
     PROCESSED_ENV_CONFIG.update(
         {
             "OS_CREDITS_PROJECT_WHITELIST": set(
-                environ["OS_CREDITS_PROJECT_WHITELIST"].split()
+                environ["OS_CREDITS_PROJECT_WHITELIST"].split(";")
             )
         }
     )
 except KeyError:
     # Environment variable not set, that's ok
     pass
+
+for int_value in ("OS_CREDITS_PRECISION", "OS_CREDITS_WORKERS", "INFLUXDB_PORT"):
+    try:
+        PROCESSED_ENV_CONFIG.update({int_value: int(environ[int_value])})
+    except KeyError:
+        # Environment variable not set, that's ok
+        pass
+    except ValueError:
+        internal_logger.warning("Could not convert value of $%s to int", int_value)
 
 DEFAULT_LOG_LEVEL = {
     "os_credits.tasks": "INFO",
