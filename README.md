@@ -11,27 +11,11 @@ The service is integrated into the docker-compose setup of
 [`project_usage`](https://github.com/deNBI/project_usage), please refer to its wiki for
 setup instructions.
 
-## Developing
+## Configuration
 
-The project and its dependencies are managed via
-[*Poetry*](https://pypi.org/project/poetry/), so you'll have to install it and then
-execute `poetry install` to get up and running. To run the code use the provided
-`Dockerfile.dev` and integrate it into the `project_usage` stack:
-
-1. Stop the original `portal_credits` container (and optionally remove it from the
-   `docker-compose stack` to prevent it from launching accidentally)
-2. Build the development container via `docker build -f Dockerfile.dev -t credits-dev
-   .`
-3. Start it
-	```bash
-	docker run --publish=8000:80 --name portal_credits --network \
-	project_usage_portal -v $PWD/os_credits:/code/os_credits:ro -v \
-	$PWD/config:/code/config:ro credits-dev
-	```
-The container is using the `adev runserver` command from the
-[`aiohttp-devtools`](https://github.com/aio-libs/aiohttp-devtools) which will restart
-your app on any code change. But since the code is bind mounted inside the container you
-can simply continue editing and have it restart on any change.
+Take a look at `.default.env` to see all possible configuration variables. Copy it over
+to `.env` (included in `.gitignore`) and insert your values. The latter will be used
+automatically, i.e. by `make docker-run`.
 
 ### Monitoring/Debugging
 
@@ -40,12 +24,39 @@ If the application misbehaves and you would like to set a lower log level or get
 
 1. Use the `/logconfig` endpoint to change the logging settings of the running
    application.
-2. Query the `/stats` endpoint, optionally with `?verbose=1`
+2. Query the `/stats` endpoint, optionally with `?verbose=true`
+
+## Building
+
+Use the provided `Makefile` via `make build-docker`. This will build `$USER/os_credits`
+and use the version of the project as version of the image. To modify this values call
+`make build-docker DOCKER_USERNAME=<your_username>`.
+
+## Developing
+
+The project and its dependencies are managed via
+[*Poetry*](https://pypi.org/project/poetry/), so you'll have to install it and then
+execute `poetry install` to get up and running.
+Your first action should be `poetry run pre-commit install` to install [*Pre-Commit
+Hooks*](https://pre-commit.com/), to make sure that every of your commits results in
+a running application.
+
+### Stack integration
+
+To run the code use the provided `Dockerfile.dev` which you can build via `make
+docker-build-dev`. Afterward use `make docker-run` to integrate the development
+container into the `project_usage` stack.
+
+The development container is using the `adev runserver` command from the
+[`aiohttp-devtools`](https://github.com/aio-libs/aiohttp-devtools) which will restart
+your app on any code change. But since the code is bind mounted inside the container you
+can simply continue editing and have it restart on any change.
+
 
 ### Tests
 
 Tests are written against [`pytest`](https://pytest.org) and can be executed from the
-project directory via `python -m pytest`, respectively `poetry run python -m pytest`.
+project directory via `make test`.
 
 ### Security Tests
 
