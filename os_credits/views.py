@@ -7,9 +7,9 @@ from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
-
 from os_credits.credits.measurements import Measurement
 from os_credits.log import internal_logger
+from os_credits.settings import config
 
 
 async def ping(_) -> web.Response:
@@ -125,7 +125,7 @@ async def application_stats(request: web.Request) -> web.Response:
                   description: State of the group/project async-lock
     """
     stats = {
-        "number_of_workers": request.app["config"]["number_of_workers"],
+        "number_of_workers": config["OS_CREDITS_WORKERS"],
         "queue_size": request.app["task_queue"].qsize(),
         "number_of_locks": len(request.app["group_locks"]),
         "uptime": str(datetime.now() - request.app["start_time"]),

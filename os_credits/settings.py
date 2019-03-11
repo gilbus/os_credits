@@ -12,6 +12,20 @@ DEFAULT_CONFIG = {
     "INFLUXDB_PORT": 8086,
 }
 
+# for environment variables that need to be processed
+PROCESSED_ENV_CONFIG = {}
+
+try:
+    PROCESSED_ENV_CONFIG.update(
+        {
+            "OS_CREDITS_PROJECT_WHITELIST": set(
+                environ["OS_CREDITS_PROJECT_WHITELIST"].split()
+            )
+        }
+    )
+except KeyError:
+    # Environment variable not set, that's ok
+    pass
 
 DEFAULT_LOG_LEVEL = {
     "os_credits.tasks": "INFO",
@@ -78,4 +92,4 @@ class _EmptyConfig(UserDict):
         raise MissingConfigError(f"Missing value for key {key}")
 
 
-config = ChainMap(environ, DEFAULT_CONFIG, _EmptyConfig())
+config = ChainMap(PROCESSED_ENV_CONFIG, environ, DEFAULT_CONFIG, _EmptyConfig())

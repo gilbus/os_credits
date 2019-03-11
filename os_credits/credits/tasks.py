@@ -12,6 +12,7 @@ from aiohttp.web import Application
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
+from os_credits.settings import config
 
 from .measurements import Measurement, calculate_credits
 
@@ -68,8 +69,8 @@ async def process_influx_line(
     except KeyError as e:
         task_logger.warning("Missing tag inside measurement. Ignoring: %s", e)
         return
-    if "project_whitelist" in app["config"]:
-        if perun_group.name not in app["config"]["project_whitelist"]:
+    if "OS_CREDITS_PROJECT_WHITELIST" in config:
+        if perun_group.name not in config["OS_CREDITS_PROJECT_WHITELIST"]:
             task_logger.info(
                 "Group `%s` is not part of given whitelist. Ignoring measurement",
                 perun_group.name,
