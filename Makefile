@@ -20,7 +20,7 @@ docker-build:
 
 docker-build-dev:
 	find . -type d -name '__pycache__' -prune -exec rm -rf {} \;
-	docker build -f Dockerfile.dev -t os_credits-dev
+	docker build -f Dockerfile.dev -t os_credits-dev .
 
 docker-run:
 	docker stop portal_credits || true
