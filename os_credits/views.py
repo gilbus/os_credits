@@ -165,15 +165,39 @@ async def update_logging_config(request: web.Request) -> web.Response:
     raise web.HTTPNoContent()
 
 
-class CreditsPerHour(web.View):
-    async def get(request: web.Request) -> web.Response:
-        """
-        Returns a JSON object describing the currently supported measurements and
-        therefore the supported values when interested in the per-hour usage of given
-        machines.
-        """
-        measurement_information = {
-            m.friendly_name: m.api_information()
-            for m in Measurement._measurement_types.values()
-        }
-        return web.json_response(measurement_information)
+# Usage of class-based views would be nicer, unfortunately not yet supported by
+# aiohttp-swagger
+async def get_credits_measurements(_: web.Request) -> web.Response:
+    """
+    Returns a JSON object describing the currently supported measurements and
+    therefore the supported values when interested in the per-hour usage of given
+    machines.
+    ---
+    description: Get type and description of currently needed/supported measurements.
+    tags:
+      - Service
+    produces:
+      - application/json
+    responses:
+      200:
+        description: Information object
+        schema:
+          type: object
+          required: [measurements]
+          properties:
+            measurements:
+              type: object
+              required: [name]
+              properties:
+                description:
+                  type: str
+                  description: Description of the measurement
+                type:
+                  type: str
+                  description: Type information
+    """
+    measurement_information = {
+        m.friendly_name: m.api_information()
+        for m in Measurement._measurement_types.values()
+    }
+    return web.json_response(measurement_information)
