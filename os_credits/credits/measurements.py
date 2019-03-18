@@ -58,7 +58,7 @@ class Measurement:
         Returns a dictionary containing the description and type information of this
         measurement.
 
-        This is just a simple base implementation and should be overriden by subclasses
+        This is just a simple base implementation and should be overridden by subclasses
         if necessary.
         """
         # if not self.CREDITS_PER_HOUR:
