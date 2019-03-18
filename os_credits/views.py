@@ -2,12 +2,13 @@
 Contains all view function, the routes are specified inside main.py, django style like.
 """
 import logging.config
-from datetime import datetime
+from datetime import datetime, timedelta
 from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
-from os_credits.credits.measurements import Measurement
+
+from os_credits.credits.measurements import Measurement, calculate_credits
 from os_credits.log import internal_logger
 from os_credits.settings import config
 
@@ -170,10 +171,12 @@ async def update_logging_config(request: web.Request) -> web.Response:
 async def get_credits_measurements(_: web.Request) -> web.Response:
     """
     Returns a JSON object describing the currently supported measurements and
-    therefore the supported values when interested in the per-hour usage of given
-    machines.
+    therefore the supported values when interested in the potential per-hour usage of
+    given machines.
     ---
     description: Get type and description of currently needed/supported measurements.
+      Also describes the structure of the corresponding POST API to calculate the per
+      hour-usage of a given machine constellation.
     tags:
       - Service
     produces:
@@ -187,7 +190,7 @@ async def get_credits_measurements(_: web.Request) -> web.Response:
           properties:
             measurements:
               type: object
-              required: [name]
+              required: [description, type, prometheus_name]
               properties:
                 description:
                   type: str
@@ -195,9 +198,43 @@ async def get_credits_measurements(_: web.Request) -> web.Response:
                 type:
                   type: str
                   description: Type information
+                prometheus_name:
+                  type: str
+                  description: Name/Identifier of the metric inside prometheus and InfluxDB
     """
     measurement_information = {
-        m.friendly_name: m.api_information()
-        for m in Measurement._measurement_types.values()
+        friendly_name: measurement.api_information()
+        for friendly_name, measurement in Measurement.friendly_name_to_measurement().items()
     }
     return web.json_response(measurement_information)
+
+
+async def costs_per_hour(request: web.Request) -> web.Response:
+    """
+    ---
+    description: Given the submitted specs of one or multiple machines combined
+      calculate the expected costs per hour. See the corresponding GET API to retrieve
+      information about the supported specs.
+    tags:
+      - Service
+    consumes:
+      - application/json
+    produces:
+      - application/json
+    responses:
+      200:
+        description: Costs per hour
+        schema:
+          type: float
+    """
+    # TODO error on empty body
+    machine_specs = await request.json()
+    costs_per_hour = 0.0
+    for friendly_name, spec in machine_specs.items():
+        try:
+            costs_per_hour += Measurement.friendly_name_to_measurement()[
+                friendly_name
+            ].costs_per_hour(spec)
+        except KeyError:
+            raise web.HTTPNotFound(f"Unknown measurement {friendly_name}.")
+    return web.json_response(costs_per_hour)

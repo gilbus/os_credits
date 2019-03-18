@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from functools import lru_cache
 from typing import Any, Dict, Optional, Type, TypeVar
 
 from os_credits.exceptions import CalculationResultError, MeasurementError
@@ -65,7 +66,29 @@ class Measurement:
         #    raise NotImplementedError(
         #        "Not setting CREDITS_PER_HOUR requires overwriting `api_information`"
         #    )
-        return {"type": "int", "description": cls.property_description}
+        return {
+            "type": "int",
+            "description": cls.property_description,
+            "prometheus_name": cls.prometheus_name,
+        }
+
+    @classmethod
+    @lru_cache()
+    def friendly_name_to_measurement(cls) -> Dict[str, Type[Measurement]]:
+        return {m.friendly_name: m for m in Measurement._measurement_types.values()}
+
+    @classmethod
+    def costs_per_hour(cls, spec: int) -> float:
+        """
+        Simple base implementation according to _calculate_credits. Expected to be
+        overwritten in more complex measurement classes.
+        """
+        if cls.CREDITS_PER_HOUR is None or cls.CREDITS_PER_HOUR <= 0:
+            raise ValueError(
+                f"Measurement type {cls.__name__} does neither define a positive "
+                "`CREDITS_PER_HOUR` nor overwrites `calculate_credits`"
+            )
+        return spec * cls.CREDITS_PER_HOUR
 
     def __str__(self) -> str:
         return (
