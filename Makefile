@@ -37,3 +37,5 @@ lint:
 
 run:
 	poetry run os-credits --port $(PORT) --host $(HOST)
+run-dev:
+	poetry run adev runserver --port $(PORT) --host $(HOST) os_credits 
