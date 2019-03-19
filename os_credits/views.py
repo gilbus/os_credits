@@ -236,5 +236,5 @@ async def costs_per_hour(request: web.Request) -> web.Response:
                 friendly_name
             ].costs_per_hour(spec)
         except KeyError:
-            raise web.HTTPNotFound(f"Unknown measurement {friendly_name}.")
+            raise web.HTTPNotFound(reason=f"Unknown measurement `{friendly_name}`.")
     return web.json_response(costs_per_hour)
