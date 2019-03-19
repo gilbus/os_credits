@@ -61,3 +61,6 @@ class TestMeasurements:
             # this fails due to the custom `calculate_credits` function returning a
             # negative amount of credits to bill
             calculate_credits(m1, m2)
+
+    def test_costs_per_hour(self):
+        assert TestMeasurements.Measurement1.costs_per_hour(5) == 5

@@ -1,7 +1,5 @@
 from pytest import fixture
 
-from os_credits.credits.measurements import Measurement
-
 
 @fixture(name="credits_env")
 def fixture_credits_env(monkeypatch):
@@ -38,6 +36,14 @@ async def test_startup(aiohttp_client, credits_env):
     assert resp.status == 200 and text == "Pong", "/ping endpoint failed"
     # check for correct parsing and processing of settings via env vars
 
+
+async def test_credits_endpoint(aiohttp_client, credits_env):
+    from os_credits.main import create_app
+    from os_credits.credits.measurements import Measurement
+
+    app = await create_app()
+    client = await aiohttp_client(app)
+
     class _MeasurementA(
         Measurement, prometheus_name="measurement_a", friendly_name="measurement_a"
     ):
@@ -46,11 +52,28 @@ async def test_startup(aiohttp_client, credits_env):
 
         @classmethod
         def api_information(cls):
-            return {"type": "str", "description": cls.property_description}
+            return {
+                "type": "str",
+                "description": cls.property_description,
+                "prometheus_name": cls.prometheus_name,
+            }
+
+    class Measurement1(Measurement, prometheus_name="test2", friendly_name="test2"):
+        CREDITS_PER_HOUR = 1
 
     resp = await client.get("/credits")
     measurements = await resp.json()
     assert resp.status == 200 and measurements["measurement_a"] == {
         "description": "Test measurement A",
         "type": "str",
-    }
+        "prometheus_name": "measurement_a",
+    }, "GET /credits returned wrong body"
+
+    resp = await client.post("/credits", json={"DefinitelyNotExisting": "test"})
+    assert resp.status == 404, "POST /credits accepted invalid data"
+
+    resp = await client.post("/credits", json={"test2": 2, "measurement_a": 3})
+    json = await resp.json()
+    assert (
+        resp.status == 200 and json == 2 * 1 + 3 * 1.3
+    ), "POST /credits returned wrong result"
