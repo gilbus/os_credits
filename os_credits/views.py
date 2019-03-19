@@ -227,8 +227,10 @@ async def costs_per_hour(request: web.Request) -> web.Response:
         schema:
           type: float
     """
-    # TODO error on empty body
-    machine_specs = await request.json()
+    try:
+        machine_specs = await request.json()
+    except JSONDecodeError:
+        raise web.HTTPBadRequest(reason="Invalid JSON")
     costs_per_hour = 0.0
     for friendly_name, spec in machine_specs.items():
         try:
@@ -237,4 +239,8 @@ async def costs_per_hour(request: web.Request) -> web.Response:
             ].costs_per_hour(spec)
         except KeyError:
             raise web.HTTPNotFound(reason=f"Unknown measurement `{friendly_name}`.")
+        except TypeError:
+            raise web.HTTPBadRequest(
+                reason=f"Parameter {friendly_name} had wrong type."
+            )
     return web.json_response(costs_per_hour)
