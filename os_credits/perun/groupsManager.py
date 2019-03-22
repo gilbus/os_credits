@@ -6,7 +6,7 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Dict, List, Set, Type, cast
+from typing import Any, Dict, List, Set, Tuple, Type, cast
 
 from os_credits.log import internal_logger
 from os_credits.settings import config
@@ -72,6 +72,11 @@ class Group:
     credits_current: DenbiCreditsCurrent
     credits_timestamps: DenbiCreditTimestamps
 
+    _dummy_mode_group_attributes: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    _dummy_mode_resource_attributes: Dict[
+        Tuple[str, int], Dict[str, Dict[str, Any]]
+    ] = {}
+
     """
     Since we process every measurement indenpendently but store the results in the same
     group object inside perun we need to make sure that all transactions are performed
@@ -91,6 +96,42 @@ class Group:
         self.assigned_resource_ids = set()
 
     async def connect(self) -> Group:
+        if not config["OS_CREDITS_DUMMY_MODE"]:
+            return await self._online_connect()
+        for (attr_name, attr_class) in Group._perun_attributes().items():
+            attr_friendly_name = attr_class.friendlyName
+            try:
+                if attr_class.is_resource_bound():
+                    self.__setattr__(
+                        attr_name,
+                        attr_class(
+                            **Group._dummy_mode_resource_attributes[
+                                (self.name, self.resource_id)
+                            ][attr_friendly_name]
+                        ),
+                    )
+                else:
+                    setattr(
+                        self,
+                        attr_name,
+                        attr_class(
+                            **Group._dummy_mode_group_attributes[self.name][
+                                attr_friendly_name
+                            ]
+                        ),
+                    )
+            except KeyError:
+                self.__setattr__(attr_name, attr_class(value=None))
+                # inject dummy default value for credits_granted
+                if attr_class is DenbiCreditsGranted:
+                    self.__setattr__(
+                        attr_name,
+                        attr_class(value=config["OS_CREDITS_DUMMY_CREDITS_GRANTED"]),
+                    )
+        internal_logger.warning("%r %r", self.credits_granted, self.credits_current)
+        return self
+
+    async def _online_connect(self) -> Group:
         group_response = await get_group_by_name(self.name)
         self.id = int(group_response["id"])
 
@@ -99,7 +140,7 @@ class Group:
             for attribute in await get_attributes(self.id)
         }
         internal_logger.debug(
-            "Found Group '%s' in Perun and retrived attributes", self.name
+            "Found Group '%s' in Perun and retrieved attributes", self.name
         )
 
         requested_resource_bound_attributes: Set[str] = set()
@@ -108,7 +149,7 @@ class Group:
             # `group_attributes` does not contain any resource-bound attributes
             if attr_class.is_resource_bound():
                 requested_resource_bound_attributes.add(attr_name)
-            # only save attributes which are requested via class annotations
+            # only store attributes which are requested via class annotations
             attr_friendly_name = attr_class.friendlyName
             try:
                 self.__setattr__(
@@ -161,20 +202,41 @@ class Group:
                 self.__setattr__(attr_name, attr_class(value=None))
 
     async def save(self) -> None:
-        """Save all changed attribute values to Perun."""
-        # If this class is shared among multiple coroutines the following approach might
-        # not be 'thread-safe' since another class could update the values during the
-        # 'await' phase
         internal_logger.debug("Save of Group %s called", self)
         changed_attrs: List[PerunAttribute[Any]] = []
         changed_resource_bound_attrs: List[PerunAttribute[Any]] = []
         for attribute_name in Group._perun_attributes():
             attr = getattr(self, attribute_name)
-            if attr.has_changed:
+            # save all attributes in offline/dummy since we will not get non-stored back
+            # from Perun
+            if attr.has_changed or config["OS_CREDITS_DUMMY_MODE"]:
                 if not attr.is_resource_bound():
                     changed_attrs.append(attr)
                 else:
                     changed_resource_bound_attrs.append(attr)
+        if not config["OS_CREDITS_DUMMY_MODE"]:
+            # we are in online mode
+            await self._online_save(changed_attrs, changed_resource_bound_attrs)
+        else:
+            # offline mode
+            Group._dummy_mode_group_attributes[self.name] = {
+                attr.friendlyName: attr.to_perun_dict() for attr in changed_attrs
+            }
+            Group._dummy_mode_resource_attributes[(self.name, self.resource_id)] = {
+                attr.friendlyName: attr.to_perun_dict()
+                for attr in changed_resource_bound_attrs
+            }
+
+    async def _online_save(
+        self,
+        changed_attrs: List[PerunAttribute[Any]],
+        changed_resource_bound_attrs: List[PerunAttribute[Any]],
+    ) -> None:
+        """Save all changed attribute values to Perun."""
+        # If this class is shared among multiple coroutines the following approach might
+        # not be 'thread-safe' since another class could update the values during the
+        # 'await' phase
+        internal_logger.debug("Online save of Group %s called", self)
         if changed_attrs:
             internal_logger.debug(
                 "Sending modified regular attributes to perun %s", changed_attrs
@@ -210,6 +272,14 @@ class Group:
 
     def __str__(self) -> str:
         return f"{self.name}@{self.resource_id}"
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in Group._perun_attributes() and not isinstance(value, PerunAttribute):
+            raise AttributeError(
+                "PerunAttributes must not be replaced by non-PerunAttributes. Update the"
+                " attribute's `value` attribute instead."
+            )
+        object.__setattr__(self, name, value)
 
     @classmethod
     async def get_all_groups(

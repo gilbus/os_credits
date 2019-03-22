@@ -76,12 +76,17 @@ class PerunAttribute(Generic[VT]):
             if attribute_attr_name.startswith("_"):
                 continue
             # check whether any parser function is defined and apply it if so
-            if attribute_attr_name in PerunAttribute._subattr_decoder:
-                attribute_attr_value = PerunAttribute._subattr_decoder[
-                    attribute_attr_name
-                ](kwargs[attribute_attr_name])
-            else:
-                attribute_attr_value = kwargs[attribute_attr_name]
+            try:
+                if attribute_attr_name in PerunAttribute._subattr_decoder:
+                    attribute_attr_value = PerunAttribute._subattr_decoder[
+                        attribute_attr_name
+                    ](kwargs[attribute_attr_name])
+                else:
+                    attribute_attr_value = kwargs[attribute_attr_name]
+            except KeyError:
+                # should only happen in offline mode where e.g. displayMode is not
+                # transmitted by Perun
+                attribute_attr_value = None
             self.__setattr__(attribute_attr_name, attribute_attr_value)
 
     def to_perun_dict(self) -> Dict[str, Any]:
@@ -136,7 +141,9 @@ class PerunAttribute(Generic[VT]):
         for attribute in filter(
             lambda attribute: not attribute.startswith("_"), self.__annotations__.keys()
         ):
-            param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
+            # None of the values are set in offline mode
+            if attribute in dir(self):
+                param_repr.append(f"{attribute}={repr(getattr(self, attribute))}")
 
         return f"{type(self).__name__}({','.join(param_repr)})"
 

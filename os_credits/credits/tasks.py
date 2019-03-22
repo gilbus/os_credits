@@ -9,6 +9,7 @@ from hashlib import sha1 as sha_func  # nosec, Hash is not used for security pur
 from typing import Dict
 
 from aiohttp.web import Application
+
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
@@ -101,7 +102,7 @@ async def update_credits(
     if group.credits_current.value is None:
         # let's check whether any measurement timestamps are present, if so we are
         # having a problem since this means that this group has been processed before!
-        if group.credits_timestamps:
+        if group.credits_timestamps.value:
             raise DenbiCreditsCurrentError(
                 f"Group {group.name} has been billed before but is missing "
                 "`credits_current` now. "
@@ -109,7 +110,7 @@ async def update_credits(
             )
         else:
             task_logger.info(
-                "Group %s does not have `credits_current` and hasn't been billed before"
+                "Group %s does not have `credits_current` and hasn't been billed before "
                 "copying the value of `credits_granted`",
                 group,
             )
