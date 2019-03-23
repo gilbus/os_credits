@@ -6,7 +6,7 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Dict, List, Set, Tuple, Type, cast
+from typing import Any, Dict, List, Set, Type, cast
 
 from os_credits.log import internal_logger
 from os_credits.settings import config
@@ -31,6 +31,8 @@ from .resourcesManager import get_assigned_resources
 __url = "groupsManager"
 
 
+# groupsManager functions and the Group class are in the same file to prevent a modular
+# import
 async def get_all_groups(
     vo: int = config["OS_CREDITS_PERUN_VO_ID"]
 ) -> Dict[str, Group]:
@@ -47,10 +49,30 @@ async def get_group_by_name(
     name: str, vo: int = config["OS_CREDITS_PERUN_VO_ID"]
 ) -> Dict[str, Any]:
     """:return: Dictionary of attributes of the requested Group."""
-    return cast(
-        Dict[str, Any],
-        await perun_get(f"{__url}/getGroupByName", params={"vo": vo, "name": name}),
-    )
+    if not config["OS_CREDITS_DUMMY_MODE"]:
+        return cast(
+            Dict[str, Any],
+            await perun_get(f"{__url}/getGroupByName", params={"vo": vo, "name": name}),
+        )
+    else:
+        # create fake 8 digit id from name, must not be random since used as key in
+        # _dummy_mode_group_attributes
+        group_id = abs(hash(name) % (10 ** 8))
+        return {
+            "id": group_id,
+            "createdAt": "2000-01-01 00:00:00.000000",
+            "createdBy": "unknown@example.com",
+            "modifiedAt": "2000-01-01 00:00:00.000000",
+            "modifiedBy": "unknown@example.com",
+            "createdByUid": 0,
+            "modifiedByUid": 0,
+            "voId": vo,
+            "parentGroupId": None,
+            "name": name,
+            "description": f"Dummy offline group ({group_id})",
+            "shortName": name,
+            "beanName": "Group",
+        }
 
 
 class Group:
@@ -72,13 +94,8 @@ class Group:
     credits_current: DenbiCreditsCurrent
     credits_timestamps: DenbiCreditTimestamps
 
-    _dummy_mode_group_attributes: Dict[str, Dict[str, Dict[str, Any]]] = {}
-    _dummy_mode_resource_attributes: Dict[
-        Tuple[str, int], Dict[str, Dict[str, Any]]
-    ] = {}
-
     """
-    Since we process every measurement indenpendently but store the results in the same
+    Since we process every measurement independently but store the results in the same
     group object inside perun we need to make sure that all transactions are performed
     atomically.
     """
@@ -96,42 +113,6 @@ class Group:
         self.assigned_resource_ids = set()
 
     async def connect(self) -> Group:
-        if not config["OS_CREDITS_DUMMY_MODE"]:
-            return await self._online_connect()
-        for (attr_name, attr_class) in Group._perun_attributes().items():
-            attr_friendly_name = attr_class.friendlyName
-            try:
-                if attr_class.is_resource_bound():
-                    self.__setattr__(
-                        attr_name,
-                        attr_class(
-                            **Group._dummy_mode_resource_attributes[
-                                (self.name, self.resource_id)
-                            ][attr_friendly_name]
-                        ),
-                    )
-                else:
-                    setattr(
-                        self,
-                        attr_name,
-                        attr_class(
-                            **Group._dummy_mode_group_attributes[self.name][
-                                attr_friendly_name
-                            ]
-                        ),
-                    )
-            except KeyError:
-                self.__setattr__(attr_name, attr_class(value=None))
-                # inject dummy default value for credits_granted
-                if attr_class is DenbiCreditsGranted:
-                    self.__setattr__(
-                        attr_name,
-                        attr_class(value=config["OS_CREDITS_DUMMY_CREDITS_GRANTED"]),
-                    )
-        internal_logger.warning("%r %r", self.credits_granted, self.credits_current)
-        return self
-
-    async def _online_connect(self) -> Group:
         group_response = await get_group_by_name(self.name)
         self.id = int(group_response["id"])
 
@@ -166,19 +147,31 @@ class Group:
         return self
 
     async def _retrieve_resource_bound_attributes(
-        self, attribute_names: Set[str]
+        self,
+        attribute_names: Set[str],
+        _skip_resource_connected_check: bool = config["OS_CREDITS_DUMMY_MODE"],
     ) -> None:
-        self.assigned_resource_ids = {
-            resource["id"] for resource in await get_assigned_resources(self.id)
-        }
-        if self.resource_id not in self.assigned_resource_ids:
-            internal_logger.warning(
-                "Group `%s` is not connected with resource with id `%s`. "
-                "Skipping retrival of resource bound attributes such as credits_timestamps",
-                self.name,
-                self.resource_id,
-            )
-            return
+        """
+        :param _skip_resource_connected_check: Should not be set by hand but only used
+        for offline/dummy mode. Do not check whether this group is actually connected
+        with the Resource identified by self.resource_id
+        """
+        # Necessary since Perun returns attributes for non-existing combinations of
+        # group and resource ids instead of throwing an error...
+        if not _skip_resource_connected_check:
+            self.assigned_resource_ids = {
+                resource["id"] for resource in await get_assigned_resources(self.id)
+            }
+            if self.resource_id not in self.assigned_resource_ids:
+                internal_logger.warning(
+                    "Group `%s` is not connected with resource with id `%s`. "
+                    "Skipping retrieval of resource bound attributes such as credits_timestamps",
+                    self.name,
+                    self.resource_id,
+                )
+                return
+        else:
+            self.assigned_resource_ids.add(self.resource_id)
         resource_bound_attributes = {
             attribute["friendlyName"]: attribute
             for attribute in await get_resource_bound_attributes(
@@ -201,42 +194,24 @@ class Group:
             except KeyError:
                 self.__setattr__(attr_name, attr_class(value=None))
 
-    async def save(self) -> None:
+    async def save(self, _save_all: bool = config["OS_CREDITS_DUMMY_MODE"]) -> None:
+        """
+        :param _save_all: Save all attributes regardless whether their value was
+        actually changed since retrieval. Primarily needed for offline/dummy mode.
+        """
         internal_logger.debug("Save of Group %s called", self)
         changed_attrs: List[PerunAttribute[Any]] = []
         changed_resource_bound_attrs: List[PerunAttribute[Any]] = []
+        # collect all attributes whose value has changed since retrieval
         for attribute_name in Group._perun_attributes():
             attr = getattr(self, attribute_name)
             # save all attributes in offline/dummy since we will not get non-stored back
             # from Perun
-            if attr.has_changed or config["OS_CREDITS_DUMMY_MODE"]:
+            if attr.has_changed or _save_all:
                 if not attr.is_resource_bound():
                     changed_attrs.append(attr)
                 else:
                     changed_resource_bound_attrs.append(attr)
-        if not config["OS_CREDITS_DUMMY_MODE"]:
-            # we are in online mode
-            await self._online_save(changed_attrs, changed_resource_bound_attrs)
-        else:
-            # offline mode
-            Group._dummy_mode_group_attributes[self.name] = {
-                attr.friendlyName: attr.to_perun_dict() for attr in changed_attrs
-            }
-            Group._dummy_mode_resource_attributes[(self.name, self.resource_id)] = {
-                attr.friendlyName: attr.to_perun_dict()
-                for attr in changed_resource_bound_attrs
-            }
-
-    async def _online_save(
-        self,
-        changed_attrs: List[PerunAttribute[Any]],
-        changed_resource_bound_attrs: List[PerunAttribute[Any]],
-    ) -> None:
-        """Save all changed attribute values to Perun."""
-        # If this class is shared among multiple coroutines the following approach might
-        # not be 'thread-safe' since another class could update the values during the
-        # 'await' phase
-        internal_logger.debug("Online save of Group %s called", self)
         if changed_attrs:
             internal_logger.debug(
                 "Sending modified regular attributes to perun %s", changed_attrs
