@@ -10,10 +10,10 @@ class TestMeasurements:
     class MeasurementToFail(
         Measurement, prometheus_name="test_fail1", friendly_name="test_fail1"
     ):
-        CREDITS_PER_HOUR = None
+        CREDITS_PER_VIRTUAL_HOUR = None
 
     class Measurement1(Measurement, prometheus_name="test2", friendly_name="test2"):
-        CREDITS_PER_HOUR = 1
+        CREDITS_PER_VIRTUAL_HOUR = 1
 
     class Measurement2(Measurement, prometheus_name="test3", friendly_name="test3"):
         def _calculate_credits(self, *, older_measurement):
@@ -40,12 +40,12 @@ class TestMeasurements:
         now = datetime.now()
         m1 = Measurement.create_measurement("test_fail1", None, now)
         with pytest.raises(ValueError):
-            # This fails due to CREDITS_PER_HOUR being None, which is also the default
+            # This fails due to CREDITS_PER_VIRTUAL_HOUR being None, which is also the default
             # value as per base class
             calculate_credits(m1, m1)
-        m1.CREDITS_PER_HOUR = 0
+        m1.CREDITS_PER_VIRTUAL_HOUR = 0
         with pytest.raises(ValueError):
-            # This fails due to CREDITS_PER_HOUR being non-positive
+            # This fails due to CREDITS_PER_VIRTUAL_HOUR being non-positive
             calculate_credits(m1, m1)
         now = datetime.now()
         m1 = Measurement.create_measurement("test2", 100.0, now)

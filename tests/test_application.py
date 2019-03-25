@@ -47,7 +47,7 @@ async def test_credits_endpoint(aiohttp_client, credits_env):
     class _MeasurementA(
         Measurement, prometheus_name="measurement_a", friendly_name="measurement_a"
     ):
-        CREDITS_PER_HOUR = 1.3
+        CREDITS_PER_VIRTUAL_HOUR = 1.3
         property_description = "Test measurement A"
 
         @classmethod
@@ -59,7 +59,7 @@ async def test_credits_endpoint(aiohttp_client, credits_env):
             }
 
     class Measurement1(Measurement, prometheus_name="test2", friendly_name="test2"):
-        CREDITS_PER_HOUR = 1
+        CREDITS_PER_VIRTUAL_HOUR = 1
 
     resp = await client.get("/credits")
     measurements = await resp.json()

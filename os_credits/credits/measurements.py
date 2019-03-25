@@ -12,7 +12,7 @@ class Measurement:
     value: float
     _measurement_types: Dict[str, Type[Measurement]] = {}
 
-    CREDITS_PER_HOUR: Optional[float] = None
+    CREDITS_PER_VIRTUAL_HOUR: Optional[float] = None
     property_description = ""
 
     def __init_subclass__(cls, prometheus_name: str, friendly_name: str) -> None:
@@ -41,17 +41,17 @@ class Measurement:
     def _calculate_credits(self, *, older_measurement: Measurement) -> float:
         if not isinstance(older_measurement, type(self)):
             raise TypeError("Measurements must be of same type")
-        if self.CREDITS_PER_HOUR is None or self.CREDITS_PER_HOUR <= 0:
+        if self.CREDITS_PER_VIRTUAL_HOUR is None or self.CREDITS_PER_VIRTUAL_HOUR <= 0:
             raise ValueError(
                 f"Measurement type {type(self)} does neither define a positive "
-                "`CREDITS_PER_HOUR` nor overwrites `calculate_credits`"
+                "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
             )
         if self.timestamp < older_measurement.timestamp:
             raise MeasurementError(
                 "Passed measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."
             )
-        return (self.value - older_measurement.value) * self.CREDITS_PER_HOUR
+        return (self.value - older_measurement.value) * self.CREDITS_PER_VIRTUAL_HOUR
 
     @classmethod
     def api_information(cls) -> Dict[str, Any]:
@@ -62,10 +62,6 @@ class Measurement:
         This is just a simple base implementation and should be overridden by subclasses
         if necessary.
         """
-        # if not self.CREDITS_PER_HOUR:
-        #    raise NotImplementedError(
-        #        "Not setting CREDITS_PER_HOUR requires overwriting `api_information`"
-        #    )
         return {
             "type": "int",
             "description": cls.property_description,
@@ -83,12 +79,12 @@ class Measurement:
         Simple base implementation according to _calculate_credits. Expected to be
         overwritten in more complex measurement classes.
         """
-        if cls.CREDITS_PER_HOUR is None or cls.CREDITS_PER_HOUR <= 0:
+        if cls.CREDITS_PER_VIRTUAL_HOUR is None or cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
             raise ValueError(
                 f"Measurement type {cls.__name__} does neither define a positive "
-                "`CREDITS_PER_HOUR` nor overwrites `calculate_credits`"
+                "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
             )
-        return spec * cls.CREDITS_PER_HOUR
+        return spec * cls.CREDITS_PER_VIRTUAL_HOUR
 
     def __str__(self) -> str:
         return (
@@ -121,11 +117,11 @@ class _VCPUUsage(
     Measurement, prometheus_name="project_vcpu_usage", friendly_name="cpu"
 ):
 
-    CREDITS_PER_HOUR = 1
+    CREDITS_PER_VIRTUAL_HOUR = 1
     property_description = "Amount of vCPUs."
 
 
 class _RAMUsage(Measurement, prometheus_name="project_mb_usage", friendly_name="ram"):
 
-    CREDITS_PER_HOUR = 0.3
+    CREDITS_PER_VIRTUAL_HOUR = 0.3
     property_description = "Amount of RAM in MB."
