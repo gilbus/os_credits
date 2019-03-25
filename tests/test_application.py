@@ -1,4 +1,14 @@
+from datetime import datetime, timedelta
+from importlib import reload
+
 from pytest import fixture
+
+from os_credits import settings
+
+
+@fixture(autouse=True)
+def reload_conf_module():
+    reload(settings)
 
 
 @fixture(name="credits_env")
@@ -6,6 +16,7 @@ def fixture_credits_env(monkeypatch):
     monkeypatch.setenv("OS_CREDITS_PERUN_VO_ID", "0")
     monkeypatch.setenv("OS_CREDITS_PERUN_LOGIN", "0")
     monkeypatch.setenv("OS_CREDITS_PERUN_PASSWORD", "0")
+    monkeypatch.setenv("OS_CREDITS_DUMMY_MODE", "1")
     monkeypatch.setenv("INFLUXDB_HOST", "0")
     monkeypatch.setenv("INFLUXDB_USER", "0")
     monkeypatch.setenv("INFLUXDB_USER_PASSWORD", "0")
@@ -15,6 +26,8 @@ def fixture_credits_env(monkeypatch):
 async def test_settings(monkeypatch):
     monkeypatch.setenv("OS_CREDITS_PROJECT_WHITELIST", "ProjectA;ProjectB")
     monkeypatch.setenv("OS_CREDITS_PRECISION", "98")
+    # necessary to pickup different environment variables
+    reload(settings)
     from os_credits.settings import config
 
     assert config["OS_CREDITS_PROJECT_WHITELIST"] == {
@@ -77,3 +90,61 @@ async def test_credits_endpoint(aiohttp_client, credits_env):
     assert (
         resp.status == 200 and json == 2 * 1 + 3 * 1.3
     ), "POST /credits returned wrong result"
+
+
+# actual influx line `project_mb_usage,__name__=project_mb_usage,domain_id=e049ffa7b625b12f,domain_name=elixir,instance=usage_exporter:8080,job=project_usages,lo
+# cation=site-a,location_id=8487,project_id=815070460d3a32ef,project_name=credits_2 value=555.3362602666667 1553342599293000000`
+
+
+async def test_whole_run(aiohttp_client, credits_env, monkeypatch):
+    from os_credits.main import create_app
+    from os_credits.credits.measurements import Measurement
+    from os_credits.perun.groupsManager import Group
+
+    start_date = datetime.now()
+
+    test_initial_credits = 200
+    test_measurent_name = "whole_run_test_1"
+    test_group_name = "test_run_1"
+    test_location_id = 1111
+    test_group = Group(test_group_name, test_location_id)
+
+    monkeypatch.setenv("OS_CREDITS_DUMMY_CREDITS_GRANTED", f"{test_initial_credits}")
+    reload(settings)
+
+    class _TestMeasurement1(
+        Measurement,
+        prometheus_name=test_measurent_name,
+        friendly_name=test_measurent_name,
+    ):
+        CREDITS_PER_VIRTUAL_HOUR = 1
+        property_description = "Test Measurement 1 for whole run test"
+
+    influx_line_template = (
+        "{measurement_name},location_id={location_id},"
+        "project_name={group_name} value={value} {timestamp_ns:.0f}"
+    )
+
+    initial_line = influx_line_template.format(
+        value=100,
+        timestamp_ns=start_date.timestamp() * 1e9,
+        group_name=test_group_name,
+        location_id=test_location_id,
+        measurement_name=test_measurent_name,
+    )
+    app = await create_app()
+    client = await aiohttp_client(app)
+    resp = await client.post("/write", data=initial_line)
+    assert resp.status == 202
+    # wait until request has been processed, indicated by the task finally calling
+    # `task_done`
+    await app["task_queue"].join()
+    await test_group.connect()
+    assert (
+        test_group.credits_granted.value
+        == test_group.credits_current.value
+        == test_initial_credits
+    ), "Initial copy from credits_granted to credits_current failed"
+    assert (
+        test_group.credits_timestamps.value[test_measurent_name] == start_date
+    ), "Timestamp from measurement was not stored correctly in group"
