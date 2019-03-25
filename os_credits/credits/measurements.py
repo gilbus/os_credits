@@ -10,6 +10,7 @@ from os_credits.exceptions import CalculationResultError, MeasurementError
 class Measurement:
     timestamp: datetime
     value: float
+    name: str
     _measurement_types: Dict[str, Type[Measurement]] = {}
 
     CREDITS_PER_VIRTUAL_HOUR: Optional[float] = None
@@ -32,6 +33,7 @@ class Measurement:
             )
         measurement.value = value
         measurement.timestamp = timestamp
+        measurement.name = prometheus_name
         return measurement
 
     @classmethod
@@ -39,6 +41,12 @@ class Measurement:
         return prometheus_name in cls._measurement_types
 
     def _calculate_credits(self, *, older_measurement: Measurement) -> float:
+        """
+        Base implementation how to bill two measurements of the same type. Expected to
+        be overwritten by subclasses whose billing logic goes beyond subtracting usage
+        values, e.g. if your measurement values are not continuously increasing but
+        fluctuating, i.e. being a delta instead of a total sum.
+        """
         if not isinstance(older_measurement, type(self)):
             raise TypeError("Measurements must be of same type")
         if self.CREDITS_PER_VIRTUAL_HOUR is None or self.CREDITS_PER_VIRTUAL_HOUR <= 0:

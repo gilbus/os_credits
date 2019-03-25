@@ -9,7 +9,6 @@ from hashlib import sha1 as sha_func  # nosec, Hash is not used for security pur
 from typing import Dict
 
 from aiohttp.web import Application
-
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
@@ -56,6 +55,11 @@ async def process_influx_line(
             measurement_name,
         )
         return
+    task_logger.debug("Processing influx line `%s`", line)
+    # influx stores timestamps in nanoseconds, but last 6 digits are always zero due to
+    # prometheus input data
+    # convert to unix timestamp by division without losing any information since those
+    # are stored in the `microseconds` attribute of the datetime object
     measurement_date = datetime.fromtimestamp(int(timestamp) / 1e9)
     tags: Dict[str, str] = {}
     for tag_pair in tag_set.split(","):
@@ -73,8 +77,9 @@ async def process_influx_line(
     if "OS_CREDITS_PROJECT_WHITELIST" in config:
         if perun_group.name not in config["OS_CREDITS_PROJECT_WHITELIST"]:
             task_logger.info(
-                "Group `%s` is not part of given whitelist. Ignoring measurement",
+                "Group `%s` is not part of given whitelist (%s). Ignoring measurement",
                 perun_group.name,
+                config["OS_CREDITS_PROJECT_WHITELIST"],
             )
             return
     measurement = Measurement.create_measurement(
