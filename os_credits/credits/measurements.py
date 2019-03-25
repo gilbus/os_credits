@@ -23,17 +23,15 @@ class Measurement:
 
     @classmethod
     def create_measurement(
-        cls, prometheus_name: str, value: float, timestamp: datetime
+        cls, name: str, value: float, timestamp: datetime
     ) -> Measurement:
         try:
-            measurement = cls._measurement_types[prometheus_name]()
+            measurement = cls._measurement_types[name]()
         except KeyError:
-            raise ValueError(
-                f"Measurement `{prometheus_name}` it not supported/needed."
-            )
+            raise ValueError(f"Measurement `{name}` it not supported/needed.")
         measurement.value = value
         measurement.timestamp = timestamp
-        measurement.name = prometheus_name
+        measurement.name = name
         return measurement
 
     @classmethod

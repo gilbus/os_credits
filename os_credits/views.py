@@ -2,13 +2,13 @@
 Contains all view function, the routes are specified inside main.py, django style like.
 """
 import logging.config
-from datetime import datetime, timedelta
+from datetime import datetime
 from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
 
-from os_credits.credits.measurements import Measurement, calculate_credits
+from os_credits.credits.measurements import Measurement
 from os_credits.log import internal_logger
 from os_credits.settings import config
 
@@ -60,16 +60,14 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
     # .text() performs automatic decoding from bytes
     influxdb_lines = await request.text()
     # an unknown number of lines will be send, create separate tasks for all of them
-    for line in influxdb_lines.splitlines():
-        if not line.strip():
-            return web.HTTPBadRequest(reason="No content provided")
-        await request.app["task_queue"].put(line)
+    for influx_line in influxdb_lines.splitlines():
+        await request.app["task_queue"].put(influx_line)
         internal_logger.debug(
-            "Put influx_line %s into queue (%s)",
-            line,
+            "Put %s into queue (%s elements)",
+            influx_line,
             request.app["task_queue"].qsize(),
         )
-    # always return 202
+    # always answer 202, even if some lines may be invalid/not needed
     return web.HTTPAccepted()
 
 

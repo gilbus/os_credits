@@ -9,7 +9,9 @@ from hashlib import sha1 as sha_func  # nosec, Hash is not used for security pur
 from typing import Dict
 
 from aiohttp.web import Application
+
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
+from os_credits.influxdb import InfluxDBPoint
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
 from os_credits.settings import config
@@ -27,7 +29,7 @@ async def worker(name: str, app: Application) -> None:
     group_locks = app["group_locks"]
     task_queue = app["task_queue"]
     while True:
-        influx_line = await task_queue.get()
+        influx_line: str = await task_queue.get()
         task_id = unique_identifier(influx_line)[:12]
         TASK_ID.set(task_id)
         task_logger.debug("Worker %s starting task `%s`", name, task_id)
@@ -44,36 +46,17 @@ async def worker(name: str, app: Application) -> None:
 
 
 async def process_influx_line(
-    line: str, app: Application, group_locks: Dict[str, Lock]
+    influx_line: str, app: Application, group_locks: Dict[str, Lock]
 ) -> None:
-    measurement_and_tag, field_set, timestamp = line.split()
-    measurement_name, tag_set = measurement_and_tag.split(",", 1)
-    if not Measurement.is_supported(measurement_name):
-        task_logger.debug(
-            "Dropping influx line `%s` since its measurement `%s` is not needed/billable",
-            line,
-            measurement_name,
+    try:
+        influx_point = InfluxDBPoint.from_influx_line(influx_line)
+    except (KeyError, ValueError):
+        task_logger.exception(
+            "Could not convert influx line %s to InfluxDBPoint. Appending stacktrace",
+            influx_line,
         )
         return
-    task_logger.debug("Processing influx line `%s`", line)
-    # influx stores timestamps in nanoseconds, but last 6 digits are always zero due to
-    # prometheus input data
-    # convert to unix timestamp by division without losing any information since those
-    # are stored in the `microseconds` attribute of the datetime object
-    measurement_date = datetime.fromtimestamp(int(timestamp) / 1e9)
-    tags: Dict[str, str] = {}
-    for tag_pair in tag_set.split(","):
-        tag_name, tag_value = tag_pair.split("=", 1)
-        tags.update({tag_name: tag_value})
-    fields: Dict[str, str] = {}
-    for field_pair in field_set.split(","):
-        field_name, field_value = field_pair.split("=", 1)
-        fields.update({field_name: field_value})
-    try:
-        perun_group = Group(tags["project_name"], int(tags["location_id"]))
-    except KeyError as e:
-        task_logger.warning("Missing tag inside measurement. Ignoring: %s", e)
-        return
+    perun_group = Group(influx_point.project_name, influx_point.location_id)
     if "OS_CREDITS_PROJECT_WHITELIST" in config:
         if perun_group.name not in config["OS_CREDITS_PROJECT_WHITELIST"]:
             task_logger.info(
@@ -82,9 +65,15 @@ async def process_influx_line(
                 config["OS_CREDITS_PROJECT_WHITELIST"],
             )
             return
-    measurement = Measurement.create_measurement(
-        measurement_name, float(fields["value"]), measurement_date
-    )
+    try:
+        measurement = Measurement.create_measurement(
+            influx_point.measurement_name, influx_point.value, influx_point.timestamp
+        )
+    except ValueError:
+        task_logger.info(
+            "Ignoring %s since the measurement is not needed/billable", influx_point
+        )
+        return
     task_logger.info(
         "Processing Measurement `%s` - Group `%s`", measurement, perun_group
     )
