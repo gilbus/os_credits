@@ -177,10 +177,11 @@ async def update_credits(
         current_measurement.prometheus_name
     ] = current_measurement.timestamp
 
+    previous_group_credits = group.credits_current.value
     group.credits_current.value -= credits_to_bill
     task_logger.info(
         "Credits: %f - %f = %f",
-        group.credits_current.value + credits_to_bill,
+        previous_group_credits,
         credits_to_bill,
         group.credits_current.value,
     )
