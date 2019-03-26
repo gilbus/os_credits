@@ -7,7 +7,6 @@ from asyncio import Lock
 from typing import Dict
 
 from aiohttp.web import Application
-
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.influxdb import InfluxDBPoint
 from os_credits.log import TASK_ID, task_logger
@@ -45,6 +44,13 @@ async def worker(name: str, app: Application) -> None:
 async def process_influx_line(
     influx_line: str, app: Application, group_locks: Dict[str, Lock]
 ) -> None:
+    task_logger.debug("Processing Influx Line `%s`", influx_line)
+    # we want to end this task as quickly as possible if the InfluxDB Point is not
+    # needed
+    measurement_name = influx_line.split(",")[0]
+    if not Measurement.is_supported(measurement_name):
+        task_logger.debug("Ignoring since the measurement is not needed/billable")
+        return
     try:
         influx_point = InfluxDBPoint.from_influx_line(influx_line)
     except (KeyError, ValueError):
@@ -62,15 +68,9 @@ async def process_influx_line(
                 config["OS_CREDITS_PROJECT_WHITELIST"],
             )
             return
-    try:
-        measurement = Measurement.create_measurement(
-            influx_point.measurement_name, influx_point.value, influx_point.timestamp
-        )
-    except ValueError:
-        task_logger.info(
-            "Ignoring %s since the measurement is not needed/billable", influx_point
-        )
-        return
+    measurement = Measurement.create_measurement(
+        influx_point.measurement_name, influx_point.value, influx_point.timestamp
+    )
     task_logger.info(
         "Processing Measurement `%s` - Group `%s`", measurement, perun_group
     )
@@ -167,7 +167,7 @@ async def update_credits(
         return
 
     last_measurement = Measurement.create_measurement(
-        prometheus_name=current_measurement.prometheus_name,
+        name=current_measurement.prometheus_name,
         timestamp=last_measurement_timestamp,
         value=last_measurement_value,
     )
