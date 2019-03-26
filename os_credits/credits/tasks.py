@@ -4,8 +4,6 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 from __future__ import annotations
 
 from asyncio import Lock
-from datetime import datetime
-from hashlib import sha1 as sha_func  # nosec, Hash is not used for security purposes
 from typing import Dict
 
 from aiohttp.web import Application
@@ -19,10 +17,9 @@ from os_credits.settings import config
 from .measurements import Measurement, calculate_credits
 
 
-def unique_identifier(content: str) -> str:
-    s = sha_func()
-    s.update(content.encode())
-    return s.hexdigest()
+def unique_identifier(influx_line: str) -> str:
+    # insert leading zeros if less numbers than 12 but don't use more
+    return format(abs(hash(influx_line)), ">012")[:12]
 
 
 async def worker(name: str, app: Application) -> None:
@@ -30,7 +27,7 @@ async def worker(name: str, app: Application) -> None:
     task_queue = app["task_queue"]
     while True:
         influx_line: str = await task_queue.get()
-        task_id = unique_identifier(influx_line)[:12]
+        task_id = unique_identifier(influx_line)
         TASK_ID.set(task_id)
         task_logger.debug("Worker %s starting task `%s`", name, task_id)
 
