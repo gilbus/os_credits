@@ -4,9 +4,7 @@ from dataclasses import dataclass, field, fields
 from datetime import datetime
 from typing import Any, Dict, Mapping
 
-from aioinflux import lineprotocol
 from aioinflux.client import InfluxDBClient
-from aioinflux.serialization.usertype import FLOAT, MEASUREMENT, STR, TAG, TIMEDT
 from pandas import DataFrame
 
 from .log import internal_logger
@@ -53,15 +51,6 @@ class InfluxClient(InfluxDBClient):
         return await self.query(query)
 
 
-@lineprotocol(
-    schema={
-        "measurement_name": MEASUREMENT,
-        "timestamp": TIMEDT,
-        "location_id": TAG,
-        "project_name": TAG,
-        "value": FLOAT,
-    }
-)
 @dataclass(frozen=True)
 class InfluxDBPoint:
     # this two properties are always present
@@ -74,15 +63,17 @@ class InfluxDBPoint:
     timestamp: datetime = field(
         metadata={
             "component": "timestamp",
-            "converter": lambda ts: datetime.fromtimestamp(int(ts) / 1e9),
+            "decoder": lambda ts: datetime.fromtimestamp(int(ts) / 1e9),
+            # does lose some preciseness unfortunately
+            "encoder": lambda ts: f"{ts.timestamp() * 1e9:.0f}",
         }
     )
     # properties will be extracted from influx line protocol as specified
     # if your chosen name for any attribute differs from the key inside the InfluxDB
     # Line specify the key via `name` inside the metadata
-    location_id: int = field(metadata={"component": "tag", "converter": int})
+    location_id: int = field(metadata={"component": "tag", "decoder": int})
     project_name: str = field(metadata={"component": "tag"})
-    value: float = field(metadata={"component": "field", "converter": float})
+    value: float = field(metadata={"component": "field", "decoder": float})
 
     @classmethod
     def from_influx_line(cls, influx_line: str) -> InfluxDBPoint:
@@ -111,17 +102,15 @@ class InfluxDBPoint:
                     " least component must be specified."
                 )
             if f.metadata["component"] == "measurement":
-                args[f.name] = f.metadata.get("converter", lambda x: x)(
-                    measurement_name
-                )
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(measurement_name)
             elif f.metadata["component"] == "timestamp":
-                args[f.name] = f.metadata.get("converter", lambda x: x)(timestamp_str)
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(timestamp_str)
             elif f.metadata["component"] == "tag":
-                args[f.name] = f.metadata.get("converter", lambda x: x)(
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(
                     tag_dict[f.metadata.get("key", f.name)]
                 )
             elif f.metadata["component"] == "field":
-                args[f.name] = f.metadata.get("converter", lambda x: x)(
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(
                     field_dict[f.metadata.get("key", f.name)]
                 )
             else:
@@ -132,3 +121,34 @@ class InfluxDBPoint:
         new_point = cls(**args)
         internal_logger.debug("Constructed %s", new_point)
         return new_point
+
+    def to_influxdb_line(self) -> str:
+        tag_dict: Dict[str, str] = {}
+        field_dict: Dict[str, str] = {}
+        measurement = ""
+        timestamp = ""
+        for f in fields(self):
+            # should not be possible
+            if not f.metadata:
+                internal_logger.error(
+                    "Could not insert attribute into InfluxDB Line representation, "
+                    "missing metadata"
+                )
+                continue
+            if f.metadata["component"] == "measurement":
+                measurement = f.metadata.get("encoder", str)(getattr(self, f.name))
+
+            elif f.metadata["component"] == "timestamp":
+                timestamp = f.metadata.get("encoder", str)(getattr(self, f.name))
+            elif f.metadata["component"] == "tag":
+                tag_dict[f.metadata.get("key", f.name)] = f.metadata.get(
+                    "encoder", str
+                )(getattr(self, f.name))
+            elif f.metadata["component"] == "field":
+                field_dict[f.metadata.get("key", f.name)] = f.metadata.get(
+                    "encoder", str
+                )(getattr(self, f.name))
+        tag_str = ",".join(f"{key}={value}" for key, value in tag_dict.items())
+        field_str = ",".join(f"{key}={value}" for key, value in field_dict.items())
+        influx_line = " ".join([",".join([measurement, tag_str]), field_str, timestamp])
+        return influx_line
