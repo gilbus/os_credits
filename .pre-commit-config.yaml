@@ -17,5 +17,6 @@ repos:
       - id: mypy
         name: Static type checker
         entry: poetry run mypy .
+        pass_filenames: false
         language: system
         types: [python]

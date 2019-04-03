@@ -3,6 +3,11 @@ PORT=8080
 DOCKER_USERNAME=$(USER)
 DOCKER_IMAGENAME=os_credits
 
+.PHONY: clean-pyc docker-build docker-build-dev docker-run test mypy coverage lint run run-dev
+
+rule all:
+	@echo 'Please provide a Phony target'
+
 clean-pyc:
 	find . -name '*.pyc' -exec rm --force {} +
 	find . -name '*.pyo' -exec rm --force {} +
@@ -28,14 +33,17 @@ docker-run:
 	  project_usage_portal -v $(PWD)/os_credits:/code/os_credits:ro \
 	  --env-file .env os_credits-dev:latest
 
-
 test:
 	poetry run python -m pytest -v --color=yes
 
-lint:
-	flake8 --exclude=.tox
+mypy:
+	poetry run mypy .
+
+coverage:
+	poetry run python -m pytest --cov
 
 run:
 	poetry run os-credits --port $(PORT) --host $(HOST)
+
 run-dev:
 	poetry run adev runserver --port $(PORT) --host $(HOST) os_credits 
