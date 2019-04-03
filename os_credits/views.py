@@ -8,12 +8,12 @@ from traceback import format_stack
 
 from aiohttp import web
 
-from os_credits.credits.measurements import Measurement
+from os_credits.credits.measurements import Metric
 from os_credits.log import internal_logger
 from os_credits.settings import config
 
 
-async def ping(_) -> web.Response:
+async def ping(_: web.Request) -> web.Response:
     """
     Simple ping endpoint to be able to determine whether the application is up and
     running.
@@ -202,7 +202,7 @@ async def get_credits_measurements(_: web.Request) -> web.Response:
     """
     measurement_information = {
         friendly_name: measurement.api_information()
-        for friendly_name, measurement in Measurement.friendly_name_to_measurement().items()
+        for friendly_name, measurement in Metric.friendly_name_to_usage().items()
     }
     return web.json_response(measurement_information)
 
@@ -232,7 +232,7 @@ async def costs_per_hour(request: web.Request) -> web.Response:
     costs_per_hour = 0.0
     for friendly_name, spec in machine_specs.items():
         try:
-            costs_per_hour += Measurement.friendly_name_to_measurement()[
+            costs_per_hour += Metric.friendly_name_to_usage()[
                 friendly_name
             ].costs_per_hour(spec)
         except KeyError:

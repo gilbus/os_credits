@@ -4,16 +4,16 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 from __future__ import annotations
 
 from asyncio import Lock
+from dataclasses import replace
 from typing import Dict
 
 from aiohttp.web import Application
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
-from os_credits.influxdb import InfluxDBPoint
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
 from os_credits.settings import config
 
-from .measurements import Measurement, calculate_credits
+from .measurements import Metric, UsageMeasurement, calculate_credits
 
 
 def unique_identifier(influx_line: str) -> str:
@@ -48,18 +48,18 @@ async def process_influx_line(
     # we want to end this task as quickly as possible if the InfluxDB Point is not
     # needed
     measurement_name = influx_line.split(",")[0]
-    if not Measurement.is_supported(measurement_name):
+    if not Metric.is_supported(measurement_name):
         task_logger.debug("Ignoring since the measurement is not needed/billable")
         return
     try:
-        influx_point = InfluxDBPoint.from_influx_line(influx_line)
+        measurement = UsageMeasurement.from_influx_line(influx_line)
     except (KeyError, ValueError):
         task_logger.exception(
-            "Could not convert influx line %s to InfluxDBPoint. Appending stacktrace",
+            "Could not convert influx line %s to UsageMeasurement. Appending stacktrace",
             influx_line,
         )
         return
-    perun_group = Group(influx_point.project_name, influx_point.location_id)
+    perun_group = Group(measurement.project_name, measurement.location_id)
     if "OS_CREDITS_PROJECT_WHITELIST" in config:
         if perun_group.name not in config["OS_CREDITS_PROJECT_WHITELIST"]:
             task_logger.info(
@@ -68,11 +68,8 @@ async def process_influx_line(
                 config["OS_CREDITS_PROJECT_WHITELIST"],
             )
             return
-    measurement = Measurement.create_measurement(
-        influx_point.measurement_name, influx_point.value, influx_point.timestamp
-    )
     task_logger.info(
-        "Processing Measurement `%s` - Group `%s`", measurement, perun_group
+        "Processing UsageMeasurement `%s` - Group `%s`", measurement, perun_group
     )
     task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
     async with group_locks[perun_group.name]:
@@ -81,7 +78,7 @@ async def process_influx_line(
 
 
 async def update_credits(
-    group: Group, current_measurement: Measurement, app: Application
+    group: Group, current_measurement: UsageMeasurement, app: Application
 ) -> None:
     try:
         await group.connect()
@@ -108,25 +105,25 @@ async def update_credits(
             group.credits_current.value = group.credits_granted.value
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
-            current_measurement.prometheus_name
+            current_measurement.measurement
         ]
     except KeyError:
         task_logger.info(
             "Group %s has no timestamp of most recent measurement of %s. "
             "Setting it to the timestamp of the current measurement.",
             group,
-            current_measurement.prometheus_name,
+            current_measurement.measurement,
         )
         # set timestamp of current measurement so we can start billing the group once
         # the next measurements are submitted
         group.credits_timestamps.value[
-            current_measurement.prometheus_name
+            current_measurement.measurement
         ] = current_measurement.timestamp
         await group.save()
         return
     task_logger.debug(
         "Last time credits were billed: %s",
-        group.credits_timestamps.value[current_measurement.prometheus_name],
+        group.credits_timestamps.value[current_measurement.measurement],
     )
 
     if current_measurement.timestamp < last_measurement_timestamp:
@@ -138,7 +135,7 @@ async def update_credits(
     project_measurements = await app["influx_client"].entries_by_project_since(
         project_name=group.name,
         since=last_measurement_timestamp,
-        measurement_name=current_measurement.prometheus_name,
+        measurement_name=current_measurement.measurement,
     )
     try:
         last_measurement_value = project_measurements.loc[
@@ -150,7 +147,7 @@ async def update_credits(
         ).index.to_pydatetime()[0]
 
         group.credits_timestamps.value[
-            current_measurement.prometheus_name
+            current_measurement.measurement
         ] = oldest_measurement_timestamp
         task_logger.warning(
             "InfluxDB does not contains usage values for Group %s for measurement %s "
@@ -159,22 +156,22 @@ async def update_credits(
             "oldest measurement between now and the last time measurements were billed "
             "inside InfluxDB (%s)",
             group,
-            current_measurement.prometheus_name,
+            current_measurement.measurement,
             last_measurement_timestamp,
             oldest_measurement_timestamp,
         )
         await group.save()
         return
 
-    last_measurement = Measurement.create_measurement(
-        name=current_measurement.prometheus_name,
+    last_measurement = replace(
+        current_measurement,
         timestamp=last_measurement_timestamp,
         value=last_measurement_value,
     )
 
     credits_to_bill = calculate_credits(current_measurement, last_measurement)
     group.credits_timestamps.value[
-        current_measurement.prometheus_name
+        current_measurement.measurement
     ] = current_measurement.timestamp
 
     previous_group_credits = group.credits_current.value

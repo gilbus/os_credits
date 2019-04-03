@@ -1,63 +1,67 @@
 from __future__ import annotations
 
-from datetime import datetime
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any, Dict, Optional, Type, TypeVar
 
 from os_credits.exceptions import CalculationResultError, MeasurementError
+from os_credits.influxdb import InfluxDBPoint
 
 
-class Measurement:
-    timestamp: datetime
-    value: float
-    name: str
-    _measurement_types: Dict[str, Type[Measurement]] = {}
+class Metric:
+    _metrics: Dict[str, Type[Metric]] = {}
 
     CREDITS_PER_VIRTUAL_HOUR: Optional[float] = None
     property_description = ""
 
-    def __init_subclass__(cls, prometheus_name: str, friendly_name: str) -> None:
-        Measurement._measurement_types.update({prometheus_name: cls})
-        cls.prometheus_name = prometheus_name
+    measurement_name: str
+    friendly_name: str
+
+    def __init_subclass__(cls, measurement_name: str, friendly_name: str) -> None:
+        Metric._metrics.update({measurement_name: cls})
+        cls.measurement_name = measurement_name
         cls.friendly_name = friendly_name
 
     @classmethod
-    def create_measurement(
-        cls, name: str, value: float, timestamp: datetime
-    ) -> Measurement:
-        try:
-            measurement = cls._measurement_types[name]()
-        except KeyError:
-            raise ValueError(f"Measurement `{name}` it not supported/needed.")
-        measurement.value = value
-        measurement.timestamp = timestamp
-        measurement.name = name
-        return measurement
-
-    @classmethod
-    def is_supported(cls, prometheus_name: str) -> bool:
-        return prometheus_name in cls._measurement_types
-
-    def _calculate_credits(self, *, older_measurement: Measurement) -> float:
+    def _calculate_credits(
+        cls,
+        *,
+        current_measurement: UsageMeasurement,
+        older_measurement: UsageMeasurement,
+    ) -> float:
         """
         Base implementation how to bill two measurements of the same type. Expected to
         be overwritten by subclasses whose billing logic goes beyond subtracting usage
-        values, e.g. if your measurement values are not continuously increasing but
-        fluctuating, i.e. being a delta instead of a total sum.
+        values, e.g. if your current_measurement values are not continuously increasing
+        but fluctuating, i.e. being a delta instead of a total sum.
         """
-        if not isinstance(older_measurement, type(self)):
+        if current_measurement.metric is not older_measurement.metric:
             raise TypeError("Measurements must be of same type")
-        if self.CREDITS_PER_VIRTUAL_HOUR is None or self.CREDITS_PER_VIRTUAL_HOUR <= 0:
+        if cls.CREDITS_PER_VIRTUAL_HOUR is None or cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
             raise ValueError(
-                f"Measurement type {type(self)} does neither define a positive "
+                f"UsageMeasurement type {type(cls)} does neither define a positive "
                 "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
             )
-        if self.timestamp < older_measurement.timestamp:
+        if current_measurement.timestamp < older_measurement.timestamp:
             raise MeasurementError(
-                "Passed measurement must be older. Use the top-level "
+                "Passed current_measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."
             )
-        return (self.value - older_measurement.value) * self.CREDITS_PER_VIRTUAL_HOUR
+        return (
+            float(current_measurement.value - older_measurement.value)
+            * cls.CREDITS_PER_VIRTUAL_HOUR
+        )
+
+    @classmethod
+    def from_measurement(cls, name: str) -> Type[Metric]:
+        try:
+            return cls._metrics[name]
+        except KeyError:
+            raise ValueError(f"UsageMeasurement `{name}` it not supported/needed.")
+
+    @classmethod
+    def is_supported(cls, measurement_name: str) -> bool:
+        return measurement_name in cls._metrics
 
     @classmethod
     def api_information(cls) -> Dict[str, Any]:
@@ -71,13 +75,13 @@ class Measurement:
         return {
             "type": "int",
             "description": cls.property_description,
-            "prometheus_name": cls.prometheus_name,
+            "measurement_name": cls.measurement_name,
         }
 
     @classmethod
     @lru_cache()
-    def friendly_name_to_measurement(cls) -> Dict[str, Type[Measurement]]:
-        return {m.friendly_name: m for m in Measurement._measurement_types.values()}
+    def friendly_name_to_usage(cls) -> Dict[str, Type[Metric]]:
+        return {m.friendly_name: m for m in Metric._metrics.values()}
 
     @classmethod
     def costs_per_hour(cls, spec: int) -> float:
@@ -87,47 +91,71 @@ class Measurement:
         """
         if cls.CREDITS_PER_VIRTUAL_HOUR is None or cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
             raise ValueError(
-                f"Measurement type {cls.__name__} does neither define a positive "
+                f"Metric type {cls.__name__} does neither define a positive "
                 "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
             )
         return spec * cls.CREDITS_PER_VIRTUAL_HOUR
 
-    def __str__(self) -> str:
-        return (
-            f"{self.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')}-"
-            f"{self.prometheus_name}:'{self.value}'"
-        )
+
+class _DummyMetric(
+    Metric, measurement_name="_dummy_placeholder", friendly_name="_dummy_placeholder"
+):
+    "Not thought for actual usage, only as default argument for UsageMeasurement"
+    pass
+
+
+class _VCPUUsage(Metric, measurement_name="project_vcpu_usage", friendly_name="cpu"):
+
+    CREDITS_PER_VIRTUAL_HOUR = 1
+    property_description = "Amount of vCPUs."
+
+
+class _RAMUsage(Metric, measurement_name="project_mb_usage", friendly_name="ram"):
+
+    CREDITS_PER_VIRTUAL_HOUR = 0.3
+    property_description = "Amount of RAM in MB."
+
+
+@dataclass
+class UsageMeasurement(InfluxDBPoint):
+    location_id: int = field(metadata={"component": "tag", "decoder": int})
+    project_name: str = field(metadata={"component": "tag"})
+    value: float = field(metadata={"component": "field", "decoder": float})
+    metric: Type[Metric] = field(
+        repr=False, init=False, compare=False, default=_DummyMetric
+    )
+
+    def __post_init__(self) -> None:
+        self.metric = Metric.from_measurement(self.measurement)
 
 
 # The TypeVar shows mypy that measurement{1,2} have to of the same type, the
-# bound-parameter specifies that this type must be a Measurement or a subclass
-MT = TypeVar("MT", bound=Measurement)
+# bound-parameter specifies that this type must be a UsageMeasurement or a subclass
+MT = TypeVar("MT", bound=UsageMeasurement)
 
 
 def calculate_credits(measurement1: MT, measurement2: MT) -> float:
+    """
+    High-level function to calculate the credits based on the differences of the two
+    usage measurements.
+
+    Will sort the two measurements according to their timestamp and use the `usage_type`
+    instance of the **more recent** measurement to calculate the credits.
+
+    :return: Non-negative amount of credits
+    :raises CalculationResultError: If the amount credits would be negative
+    """
     if measurement1.timestamp < measurement2.timestamp:
         older_measurement, new_measurement = measurement1, measurement2
     else:
         older_measurement, new_measurement = measurement2, measurement1
 
-    credits = new_measurement._calculate_credits(older_measurement=older_measurement)
+    credits = new_measurement.metric._calculate_credits(
+        current_measurement=new_measurement, older_measurement=older_measurement
+    )
     if credits < 0:
         raise CalculationResultError(
             f"Credits calculation of {measurement1} and {measurement2} returned a "
             "negative amount of credits."
         )
     return credits
-
-
-class _VCPUUsage(
-    Measurement, prometheus_name="project_vcpu_usage", friendly_name="cpu"
-):
-
-    CREDITS_PER_VIRTUAL_HOUR = 1
-    property_description = "Amount of vCPUs."
-
-
-class _RAMUsage(Measurement, prometheus_name="project_mb_usage", friendly_name="ram"):
-
-    CREDITS_PER_VIRTUAL_HOUR = 0.3
-    property_description = "Amount of RAM in MB."
