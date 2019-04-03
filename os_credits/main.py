@@ -7,7 +7,6 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
-
 from os_credits.credits.tasks import worker
 from os_credits.influxdb import InfluxClient
 from os_credits.log import internal_logger
@@ -37,7 +36,7 @@ async def stop_worker(app: web.Application) -> None:
     await gather(*app["task_workers"].values(), return_exceptions=True)
 
 
-async def create_client_session(_) -> None:
+async def create_client_session(_: web.Application) -> None:
     client_session.set(
         ClientSession(
             auth=BasicAuth(
@@ -47,7 +46,7 @@ async def create_client_session(_) -> None:
     )
 
 
-async def close_client_session(_) -> None:
+async def close_client_session(_: web.Application) -> None:
     try:
         await client_session.get().close()
     except LookupError:
