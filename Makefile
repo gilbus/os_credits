@@ -34,7 +34,7 @@ docker-run:
 	  --env-file .env os_credits-dev:latest
 
 test:
-	poetry run python -m pytest -v --color=yes
+	poetry run python -m pytest -v --color=yes tests
 
 mypy:
 	poetry run mypy .
