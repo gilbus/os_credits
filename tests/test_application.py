@@ -17,10 +17,10 @@ def fixture_credits_env(monkeypatch):
     monkeypatch.setenv("OS_CREDITS_PERUN_LOGIN", "0")
     monkeypatch.setenv("OS_CREDITS_PERUN_PASSWORD", "0")
     monkeypatch.setenv("OS_CREDITS_DUMMY_MODE", "1")
-    monkeypatch.setenv("INFLUXDB_HOST", "0")
-    monkeypatch.setenv("INFLUXDB_USER", "0")
-    monkeypatch.setenv("INFLUXDB_USER_PASSWORD", "0")
-    monkeypatch.setenv("INFLUXDB_DB", "0")
+    monkeypatch.setenv("INFLUXDB_HOST", "")
+    monkeypatch.setenv("INFLUXDB_USER", "")
+    monkeypatch.setenv("INFLUXDB_USER_PASSWORD", "")
+    monkeypatch.setenv("INFLUXDB_DB", "")
 
 
 async def test_settings(monkeypatch):

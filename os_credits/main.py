@@ -94,3 +94,4 @@ async def create_app() -> web.Application:
     setup_swagger(app)
 
     return app
+    return app

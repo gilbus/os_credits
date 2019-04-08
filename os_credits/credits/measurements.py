@@ -42,7 +42,7 @@ class Metric:
                 f"UsageMeasurement type {type(cls)} does neither define a positive "
                 "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
             )
-        if current_measurement.timestamp < older_measurement.timestamp:
+        if current_measurement.time < older_measurement.time:
             raise MeasurementError(
                 "Passed current_measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."
@@ -139,13 +139,13 @@ def calculate_credits(measurement1: MT, measurement2: MT) -> float:
     High-level function to calculate the credits based on the differences of the two
     usage measurements.
 
-    Will sort the two measurements according to their timestamp and use the `usage_type`
+    Will sort the two measurements according to their time and use the `usage_type`
     instance of the **more recent** measurement to calculate the credits.
 
     :return: Non-negative amount of credits
     :raises CalculationResultError: If the amount credits would be negative
     """
-    if measurement1.timestamp < measurement2.timestamp:
+    if measurement1.time < measurement2.time:
         older_measurement, new_measurement = measurement1, measurement2
     else:
         older_measurement, new_measurement = measurement2, measurement1

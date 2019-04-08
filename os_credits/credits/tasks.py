@@ -118,7 +118,7 @@ async def update_credits(
         # the next measurements are submitted
         group.credits_timestamps.value[
             current_measurement.measurement
-        ] = current_measurement.timestamp
+        ] = current_measurement.time
         await group.save()
         return
     task_logger.debug(
@@ -126,7 +126,7 @@ async def update_credits(
         group.credits_timestamps.value[current_measurement.measurement],
     )
 
-    if current_measurement.timestamp < last_measurement_timestamp:
+    if current_measurement.time < last_measurement_timestamp:
         task_logger.warning(
             "Current measurement is OLDER than the last measurement. HOW? Ignoring"
         )
@@ -172,7 +172,7 @@ async def update_credits(
     credits_to_bill = calculate_credits(current_measurement, last_measurement)
     group.credits_timestamps.value[
         current_measurement.measurement
-    ] = current_measurement.timestamp
+    ] = current_measurement.time
 
     previous_group_credits = group.credits_current.value
     group.credits_current.value -= credits_to_bill

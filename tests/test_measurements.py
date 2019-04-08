@@ -23,15 +23,15 @@ class _TestMetric3(Metric, measurement_name="test3", friendly_name="test3"):
 now = datetime.now()
 
 m1 = UsageMeasurement(
-    measurement="test_fail1", location_id=0, timestamp=now, project_name="", value=0.0
+    measurement="test_fail1", location_id=0, time=now, project_name="", value=0.0
 )
 m21 = UsageMeasurement(
-    measurement="test2", value=100.0, timestamp=now, project_name="", location_id=0
+    measurement="test2", value=100.0, time=now, project_name="", location_id=0
 )
 m22 = UsageMeasurement(
     measurement="test2",
     value=110.0,
-    timestamp=now + timedelta(hours=1),
+    time=now + timedelta(hours=1),
     project_name="",
     location_id=0,
 )
@@ -70,12 +70,12 @@ def test_public_calculate_credits(monkeypatch):
     ), "Actual credits calculation, automatically determining older measurement"
 
     m31 = UsageMeasurement(
-        measurement="test3", value=100.0, timestamp=now, project_name="", location_id=0
+        measurement="test3", value=100.0, time=now, project_name="", location_id=0
     )
     m32 = UsageMeasurement(
         measurement="test3",
         value=110.0,
-        timestamp=now + timedelta(hours=1),
+        time=now + timedelta(hours=1),
         project_name="",
         location_id=0,
     )

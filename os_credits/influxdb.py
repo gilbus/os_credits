@@ -4,8 +4,9 @@ from dataclasses import MISSING, dataclass, field, fields
 from datetime import datetime
 from typing import Any, Dict, Type, TypeVar, Union
 
-from aioinflux.client import InfluxDBClient
 from pandas import DataFrame
+
+from aioinflux.client import InfluxDBClient
 
 from .log import internal_logger
 from .settings import config
@@ -62,14 +63,12 @@ P = TypeVar("P", bound="InfluxDBPoint")
 class InfluxDBPoint:
     measurement: str = field(metadata={"component": "measurement"})
 
-    timestamp: datetime = field(
+    time: datetime = field(
         metadata={
-            "component": "timestamp",
-            # influx stores timestamps in nanoseconds, but last 6 digits are always zero
+            "component": "time",
+            # influx stores times in nanoseconds, but last 6 digits are always zero
             # due to prometheus input data (which is using milliseconds)
-            "decoder": lambda timestamp_str: datetime.fromtimestamp(
-                int(timestamp_str) / 1e9
-            ),
+            "decoder": lambda time_str: datetime.fromtimestamp(int(time_str) / 1e9),
             # does lose some preciseness unfortunately, but only nanoseconds
             "encoder": lambda ts: format(ts.timestamp() * 1e9, ".0f"),
         }
@@ -88,7 +87,7 @@ class InfluxDBPoint:
         else:
             influx_line = influx_line_
         internal_logger.debug("Converting InfluxDB Line `%s`")
-        measurement_and_tag, field_set, timestamp_str = influx_line.strip().split()
+        measurement_and_tag, field_set, time_str = influx_line.strip().split()
         measurement_name, tag_set = measurement_and_tag.split(",", 1)
         tag_dict: Dict[str, str] = {}
         field_dict: Dict[str, str] = {}
@@ -111,15 +110,16 @@ class InfluxDBPoint:
                 )
             if f.metadata["component"] == "measurement":
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(measurement_name)
-            elif f.metadata["component"] == "timestamp":
-                args[f.name] = f.metadata.get("decoder", lambda x: x)(timestamp_str)
+            elif f.metadata["component"] == "time":
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(time_str)
             elif f.metadata["component"] == "tag":
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
                     tag_dict[f.metadata.get("key", f.name)]
                 )
+            # string field values are quoted, strip them
             elif f.metadata["component"] == "field":
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
-                    field_dict[f.metadata.get("key", f.name)]
+                    field_dict[f.metadata.get("key", f.name)].strip('"')
                 )
             else:
                 raise SyntaxError(
@@ -134,7 +134,7 @@ class InfluxDBPoint:
         tag_dict: Dict[str, str] = {}
         field_dict: Dict[str, str] = {}
         measurement = ""
-        timestamp = ""
+        time = ""
         for f in fields(self):
             # not raising an error since this would be raised every time for e.g.
             # `metric` of `UsageMeasurement`
@@ -147,17 +147,17 @@ class InfluxDBPoint:
             if f.metadata["component"] == "measurement":
                 measurement = f.metadata.get("encoder", str)(getattr(self, f.name))
 
-            elif f.metadata["component"] == "timestamp":
-                timestamp = f.metadata.get("encoder", str)(getattr(self, f.name))
+            elif f.metadata["component"] == "time":
+                time = f.metadata.get("encoder", str)(getattr(self, f.name))
             elif f.metadata["component"] == "tag":
                 tag_dict[f.metadata.get("key", f.name)] = f.metadata.get(
                     "encoder", str
                 )(getattr(self, f.name))
             elif f.metadata["component"] == "field":
                 field_dict[f.metadata.get("key", f.name)] = f.metadata.get(
-                    "encoder", str
+                    "encoder", lambda x: f'"{x}"'
                 )(getattr(self, f.name))
         tag_str = ",".join(f"{key}={value}" for key, value in tag_dict.items())
         field_str = ",".join(f"{key}={value}" for key, value in field_dict.items())
-        influx_line = " ".join([",".join([measurement, tag_str]), field_str, timestamp])
+        influx_line = " ".join([",".join([measurement, tag_str]), field_str, time])
         return influx_line.encode()

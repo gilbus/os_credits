@@ -19,6 +19,7 @@ pytest-aiohttp = "^0.3.0"
 pre-commit = "^1.14"
 black = {version = "^19.3-alpha.0",allows-prereleases = true}
 mypy = "^0.700.0"
+pytest-docker-compose = "^1.0"
 
 [tool.poetry.scripts]
 os-credits="os_credits.cli:main"
