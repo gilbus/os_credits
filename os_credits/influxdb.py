@@ -75,7 +75,7 @@ class InfluxDBPoint:
     )
 
     @classmethod
-    def from_influx_line(cls: Type[P], influx_line_: Union[str, bytes]) -> P:
+    def from_lineprotocol(cls: Type[P], influx_line_: Union[str, bytes]) -> P:
         """
         Creates a point from an InfluxDB Line, see
         https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/

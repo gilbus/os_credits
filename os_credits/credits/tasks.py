@@ -52,7 +52,7 @@ async def process_influx_line(
         task_logger.debug("Ignoring since the measurement is not needed/billable")
         return
     try:
-        measurement = UsageMeasurement.from_influx_line(influx_line)
+        measurement = UsageMeasurement.from_lineprotocol(influx_line)
     except (KeyError, ValueError):
         task_logger.exception(
             "Could not convert influx line %s to UsageMeasurement. Appending stacktrace",

@@ -40,7 +40,7 @@ def test_influx_line_conversion():
 
     influx_line = b'measurement,tag1=3 value1="vkey1" 1553342599293000000'
 
-    point1 = _TestPoint.from_influx_line(influx_line)
+    point1 = _TestPoint.from_lineprotocol(influx_line)
     point2 = _TestPoint(
         measurement="measurement",
         attr1=3,
