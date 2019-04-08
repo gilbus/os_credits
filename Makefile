@@ -40,7 +40,7 @@ mypy:
 	poetry run mypy .
 
 coverage:
-	poetry run python -m pytest --cov
+	poetry run pytest --color=yes --cov
 
 run:
 	poetry run os-credits --port $(PORT) --host $(HOST)

@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import MISSING, dataclass, field, fields
 from datetime import datetime
-from typing import Any, Dict, Type, TypeVar, Union
-
-from pandas import DataFrame
+from typing import Any, Dict, List, Type, TypeVar, Union
 
 from aioinflux.client import InfluxDBClient
+from pandas import DataFrame
 
 from .log import internal_logger
 from .settings import config
@@ -61,6 +60,7 @@ P = TypeVar("P", bound="InfluxDBPoint")
 
 @dataclass
 class InfluxDBPoint:
+    # decoder functions should assume that their input values are strings
     measurement: str = field(metadata={"component": "measurement"})
 
     time: datetime = field(
@@ -73,6 +73,50 @@ class InfluxDBPoint:
             "encoder": lambda ts: format(ts.timestamp() * 1e9, ".0f"),
         }
     )
+
+    @classmethod
+    def from_iterpoint(cls: Type[P], values: List[Any], meta: Dict[str, str]) -> P:
+        """Only intended to be passed to the `iterpoints` method of `aioinflux` to parse
+        the points and construct valid InfluxDBPoint instances.
+
+        The metadata of dataclass attributes are used to parse and convert the necessary
+        information, unknown values and tags are dropped.
+        """
+        measurement_name = meta["name"]
+        combined_dict = dict(zip(meta["columns"], values))
+        args: Dict[str, Any] = {
+            "measurement": measurement_name,
+            "time": datetime.fromtimestamp(combined_dict["time"] / 1e9),
+        }
+        for f in fields(cls):
+            if not f.metadata or "component" not in f.metadata:
+                # if the attribute has its own default value it's OK
+                if f.default is not MISSING:
+                    continue
+                raise SyntaxError(
+                    f"Attribute {f.name} has no metadata or component specified but at "
+                    " least component must be specified to parse its value an Influx "
+                    "Line."
+                )
+            if f.metadata["component"] in {"measurement", "time"}:
+                continue
+            elif f.metadata["component"] == "tag":
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(
+                    combined_dict[f.name]
+                )
+            # string field values are quoted, strip them
+            elif f.metadata["component"] == "field":
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(
+                    combined_dict[f.name].strip('"')
+                )
+            else:
+                raise SyntaxError(
+                    f"Unknown component for InfluxDB Line: {f.metadata['component']} "
+                    f"for field {f.name}"
+                )
+        new_point = cls(**args)
+        internal_logger.debug("Constructed %s", new_point)
+        return new_point
 
     @classmethod
     def from_lineprotocol(cls: Type[P], influx_line_: Union[str, bytes]) -> P:
@@ -100,7 +144,7 @@ class InfluxDBPoint:
         args: Dict[str, Any] = {}
         for f in fields(cls):
             if not f.metadata or "component" not in f.metadata:
-                # if the attribute has its own default value it's ok
+                # if the attribute has its own default value it's OK
                 if f.default is not MISSING:
                     continue
                 raise SyntaxError(
@@ -113,13 +157,11 @@ class InfluxDBPoint:
             elif f.metadata["component"] == "time":
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(time_str)
             elif f.metadata["component"] == "tag":
-                args[f.name] = f.metadata.get("decoder", lambda x: x)(
-                    tag_dict[f.metadata.get("key", f.name)]
-                )
+                args[f.name] = f.metadata.get("decoder", lambda x: x)(tag_dict[f.name])
             # string field values are quoted, strip them
             elif f.metadata["component"] == "field":
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
-                    field_dict[f.metadata.get("key", f.name)].strip('"')
+                    field_dict[f.name].strip('"')
                 )
             else:
                 raise SyntaxError(
