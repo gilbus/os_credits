@@ -25,7 +25,7 @@ def test_influx_line_conversion():
     )
     assert point1 == point2, "Parsing from Line Protocol failed"
     # timestamp has to be compared separately
-    rest1, timestamp1 = point1.to_influxdb_line().decode().rsplit(" ", 1)
+    rest1, timestamp1 = point1.to_lineprotocol().decode().rsplit(" ", 1)
     rest2, timestamp2 = influx_line.decode().rsplit(" ", 1)
     # approx is necessary since we are losing some nanoseconds when converting
     assert rest1 == rest2 and int(timestamp1) == approx(

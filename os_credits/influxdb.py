@@ -130,13 +130,14 @@ class InfluxDBPoint:
         internal_logger.debug("Constructed %s", new_point)
         return new_point
 
-    def to_influxdb_line(self) -> bytes:
+    def to_lineprotocol(self) -> bytes:
         tag_dict: Dict[str, str] = {}
         field_dict: Dict[str, str] = {}
         measurement = ""
         timestamp = ""
         for f in fields(self):
-            # should not be possible
+            # not raising an error since this would be raised every time for e.g.
+            # `metric` of `UsageMeasurement`
             if not f.metadata:
                 internal_logger.error(
                     "Could not insert attribute into InfluxDB Line representation, "
