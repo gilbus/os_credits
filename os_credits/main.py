@@ -80,11 +80,6 @@ async def create_app() -> web.Application:
     )
     dictConfig(DEFAULT_LOGGING_CONFIG)
     internal_logger.info("Applied default logging config")
-    if config["OS_CREDITS_DUMMY_MODE"]:
-        internal_logger.warning(
-            f"*** RUNNING IN DUMMY MODE (initial credits %f) ***",
-            config["OS_CREDITS_DUMMY_CREDITS_GRANTED"],
-        )
 
     app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)

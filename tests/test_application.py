@@ -3,7 +3,18 @@ from importlib import reload
 
 from pytest import fixture, mark
 
+import os_credits.perun.attributesManager
+import os_credits.perun.groupsManager
 from os_credits import settings
+
+from .conftest import TEST_INITIAL_CREDITS_GRANTED
+from .patches import (
+    get_attributes,
+    get_group_by_name,
+    get_resource_bound_attributes,
+    set_attributes,
+    set_resource_bound_attributes,
+)
 
 
 @fixture(autouse=True)
@@ -11,16 +22,37 @@ def reload_conf_module():
     reload(settings)
 
 
-@fixture(name="credits_env")
-def fixture_credits_env(monkeypatch):
-    monkeypatch.setenv("OS_CREDITS_PERUN_VO_ID", "0")
-    monkeypatch.setenv("OS_CREDITS_PERUN_LOGIN", "0")
-    monkeypatch.setenv("OS_CREDITS_PERUN_PASSWORD", "0")
-    monkeypatch.setenv("OS_CREDITS_DUMMY_MODE", "1")
-    monkeypatch.setenv("INFLUXDB_HOST", "")
-    monkeypatch.setenv("INFLUXDB_USER", "")
-    monkeypatch.setenv("INFLUXDB_USER_PASSWORD", "")
-    monkeypatch.setenv("INFLUXDB_DB", "")
+@fixture(name="os_credits_offline")
+def fixture_os_credits_offline(monkeypatch):
+
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager,
+        "get_resource_bound_attributes",
+        get_resource_bound_attributes,
+    )
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager,
+        "set_resource_bound_attributes",
+        set_resource_bound_attributes,
+    )
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager, "get_attributes", get_attributes
+    )
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager, "set_attributes", set_attributes
+    )
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager.Group._retrieve_resource_bound_attributes,
+        "__defaults__",
+        (True,),
+    )
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager.Group.save, "__defaults__", (True,)
+    )
+
+    monkeypatch.setattr(
+        os_credits.perun.groupsManager, "get_group_by_name", get_group_by_name
+    )
 
 
 async def test_settings(monkeypatch):
@@ -39,7 +71,7 @@ async def test_settings(monkeypatch):
     ), "Integer value was not parsed/converted correctly from environment"
 
 
-async def test_startup(aiohttp_client, credits_env):
+async def test_startup(aiohttp_client):
     from os_credits.main import create_app
 
     app = await create_app()
@@ -50,7 +82,7 @@ async def test_startup(aiohttp_client, credits_env):
     # check for correct parsing and processing of settings via env vars
 
 
-async def test_credits_endpoint(aiohttp_client, credits_env):
+async def test_credits_endpoint(aiohttp_client):
     from os_credits.main import create_app
     from os_credits.credits.measurements import Metric
 
@@ -94,20 +126,18 @@ async def test_credits_endpoint(aiohttp_client, credits_env):
 
 # actual influx line `project_mb_usage,__name__=project_mb_usage,domain_id=e049ffa7b625b12f,domain_name=elixir,instance=usage_exporter:8080,job=project_usages,lo
 # cation=site-a,location_id=8487,project_id=815070460d3a32ef,project_name=credits_2 value=555.3362602666667 1553342599293000000`
-async def test_initial_measurements(aiohttp_client, credits_env, monkeypatch):
+async def test_initial_measurements(aiohttp_client, monkeypatch, os_credits_offline):
     from os_credits.main import create_app
     from os_credits.credits.measurements import Metric
     from os_credits.perun.groupsManager import Group
 
     start_date = datetime.now()
 
-    test_initial_credits = 200
     test_measurent_name = "whole_run_test_1"
     test_group_name = "test_run_1"
     test_location_id = 1111
     test_group = Group(test_group_name, test_location_id)
 
-    monkeypatch.setenv("OS_CREDITS_DUMMY_CREDITS_GRANTED", f"{test_initial_credits}")
     reload(settings)
 
     class _TestMeasurement1(
@@ -139,7 +169,7 @@ async def test_initial_measurements(aiohttp_client, credits_env, monkeypatch):
     assert (
         test_group.credits_granted.value
         == test_group.credits_current.value
-        == test_initial_credits
+        == TEST_INITIAL_CREDITS_GRANTED
     ), "Initial copy from credits_granted to credits_current failed"
     assert (
         test_group.credits_timestamps.value[test_measurent_name] == start_date
@@ -147,20 +177,18 @@ async def test_initial_measurements(aiohttp_client, credits_env, monkeypatch):
 
 
 @mark.skip("Not yet, requires working InfluxDB")
-async def test_whole_run(aiohttp_client, credits_env, monkeypatch):
+async def test_whole_run(aiohttp_client, monkeypatch):
     from os_credits.main import create_app
     from os_credits.credits.measurements import Metric
     from os_credits.perun.groupsManager import Group
 
     start_date = datetime.now()
 
-    test_initial_credits = 200
     test_measurent_name = "whole_run_test_1"
     test_group_name = "test_run_1"
     test_location_id = 1111
     test_group = Group(test_group_name, test_location_id)
 
-    monkeypatch.setenv("OS_CREDITS_DUMMY_CREDITS_GRANTED", f"{test_initial_credits}")
     reload(settings)
 
     class _TestMeasurement1(
@@ -192,7 +220,7 @@ async def test_whole_run(aiohttp_client, credits_env, monkeypatch):
     assert (
         test_group.credits_granted.value
         == test_group.credits_current.value
-        == test_initial_credits
+        == TEST_INITIAL_CREDITS_GRANTED
     ), "Initial copy from credits_granted to credits_current failed"
     assert (
         test_group.credits_timestamps.value[test_measurent_name] == start_date
@@ -213,7 +241,7 @@ async def test_whole_run(aiohttp_client, credits_env, monkeypatch):
     await app["task_queue"].join()
     await test_group.connect()
     assert (
-        test_group.credits_granted.value == test_initial_credits
+        test_group.credits_granted.value == TEST_INITIAL_CREDITS_GRANTED
     ), "Initial copy from credits_granted to credits_current failed"
     assert test_group.credits_current.value == 197
     assert (

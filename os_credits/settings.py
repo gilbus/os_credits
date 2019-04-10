@@ -8,11 +8,16 @@ from os_credits.exceptions import MissingConfigError
 from os_credits.log import internal_logger
 
 DEFAULT_CONFIG = {
+    "OS_CREDITS_PERUN_LOGIN": "",
+    "OS_CREDITS_PERUN_PASSWORD": "",
+    "OS_CREDITS_PERUN_VO_ID": 0,
     "OS_CREDITS_WORKERS": 10,
     "OS_CREDITS_PRECISION": 2,
     "INFLUXDB_PORT": 8086,
-    "OS_CREDITS_DUMMY_MODE": False,
-    "OS_CREDITS_DUMMY_CREDITS_GRANTED": 100.0,
+    "INFLUXDB_HOST": "localhost",
+    "INFLUXDB_USER": "",
+    "INFLUXDB_USER_PASSWORD": "",
+    "INFLUXDB_DB": "",
 }
 
 # for environment variables that need to be processed
@@ -30,11 +35,12 @@ except KeyError:
     # Environment variable not set, that's ok
     pass
 
-for bool_value in ["OS_CREDITS_DUMMY_MODE"]:
-    if bool_value in environ and environ[bool_value]:
-        PROCESSED_ENV_CONFIG[bool_value] = True
-
-for int_value in ["OS_CREDITS_PRECISION", "OS_CREDITS_WORKERS", "INFLUXDB_PORT"]:
+for int_value in [
+    "OS_CREDITS_PRECISION",
+    "OS_CREDITS_WORKERS",
+    "INFLUXDB_PORT",
+    "OS_CREDITS_PERUN_VO_ID",
+]:
     try:
         PROCESSED_ENV_CONFIG.update({int_value: int(environ[int_value])})
     except KeyError:
@@ -42,15 +48,6 @@ for int_value in ["OS_CREDITS_PRECISION", "OS_CREDITS_WORKERS", "INFLUXDB_PORT"]
         pass
     except ValueError:
         internal_logger.warning("Could not convert value of $%s to int", int_value)
-
-for float_value in ["OS_CREDITS_DUMMY_CREDITS_GRANTED"]:
-    try:
-        PROCESSED_ENV_CONFIG.update({float_value: float(environ[int_value])})
-    except KeyError:
-        # Environment variable not set, that's ok
-        pass
-    except ValueError:
-        internal_logger.warning("Could not convert value of $%s to float", float_value)
 
 DEFAULT_LOG_LEVEL = {
     "os_credits.tasks": "INFO",

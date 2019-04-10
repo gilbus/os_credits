@@ -1,7 +1,4 @@
-from typing import Dict, List
-
-from pytest import fixture
-
-from pytest_docker_compose import NetworkInfo
-
 pytest_plugins = ["docker_compose"]
+
+# how many credits does every group, created during test runs, have
+TEST_INITIAL_CREDITS_GRANTED = 200

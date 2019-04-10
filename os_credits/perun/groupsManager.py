@@ -33,46 +33,27 @@ __url = "groupsManager"
 
 # groupsManager functions and the Group class are in the same file to prevent a modular
 # import
-async def get_all_groups(
-    vo: int = config["OS_CREDITS_PERUN_VO_ID"]
-) -> Dict[str, Group]:
+async def get_all_groups() -> Dict[str, Group]:
     """
     Return all groups in the given VO.
 
     :return: Dictionary of all groups with their name as index
     """
-    all_groups = await perun_get(f"{__url}/getAllGroups", params={"vo": vo})
+    all_groups = await perun_get(
+        f"{__url}/getAllGroups", params={"vo": config["OS_CREDITS_PERUN_VO_ID"]}
+    )
     return {group["name"]: await Group(group["name"]).connect() for group in all_groups}
 
 
-async def get_group_by_name(
-    name: str, vo: int = config["OS_CREDITS_PERUN_VO_ID"]
-) -> Dict[str, Any]:
+async def get_group_by_name(name: str) -> Dict[str, Any]:
     """:return: Dictionary of attributes of the requested Group."""
-    if not config["OS_CREDITS_DUMMY_MODE"]:
-        return cast(
-            Dict[str, Any],
-            await perun_get(f"{__url}/getGroupByName", params={"vo": vo, "name": name}),
-        )
-    else:
-        # create fake 8 digit id from name, must not be random since used as key in
-        # _dummy_mode_group_attributes
-        group_id = abs(hash(name) % (10 ** 8))
-        return {
-            "id": group_id,
-            "createdAt": "2000-01-01 00:00:00.000000",
-            "createdBy": "unknown@example.com",
-            "modifiedAt": "2000-01-01 00:00:00.000000",
-            "modifiedBy": "unknown@example.com",
-            "createdByUid": 0,
-            "modifiedByUid": 0,
-            "voId": vo,
-            "parentGroupId": None,
-            "name": name,
-            "description": f"Dummy offline group ({group_id})",
-            "shortName": name,
-            "beanName": "Group",
-        }
+    return cast(
+        Dict[str, Any],
+        await perun_get(
+            f"{__url}/getGroupByName",
+            params={"vo": config["OS_CREDITS_PERUN_VO_ID"], "name": name},
+        ),
+    )
 
 
 class Group:
@@ -147,14 +128,13 @@ class Group:
         return self
 
     async def _retrieve_resource_bound_attributes(
-        self,
-        attribute_names: Set[str],
-        _skip_resource_connected_check: bool = config["OS_CREDITS_DUMMY_MODE"],
+        self, attribute_names: Set[str], _skip_resource_connected_check=False
     ) -> None:
         """
-        :param _skip_resource_connected_check: Should not be set by hand but only used
-        for offline/dummy mode. Do not check whether this group is actually connected
-        with the Resource identified by self.resource_id
+        :param _skip_resource_connected_check: Do not check whether this group is
+        actually connected with the Resource identified by self.resource_id. Not sure
+        whether an error of Perun to allow such attributes despite the missing
+        connection between group/project and resource.
         """
         # Necessary since Perun returns attributes for non-existing combinations of
         # group and resource ids instead of throwing an error...
@@ -194,7 +174,7 @@ class Group:
             except KeyError:
                 self.__setattr__(attr_name, attr_class(value=None))
 
-    async def save(self, _save_all: bool = config["OS_CREDITS_DUMMY_MODE"]) -> None:
+    async def save(self, _save_all: bool = False) -> None:
         """
         :param _save_all: Save all attributes regardless whether their value was
         actually changed since retrieval. Primarily needed for offline/dummy mode.
@@ -257,14 +237,12 @@ class Group:
         object.__setattr__(self, name, value)
 
     @classmethod
-    async def get_all_groups(
-        cls, vo: int = config["OS_CREDITS_PERUN_VO_ID"]
-    ) -> Dict[str, Group]:
+    async def get_all_groups(cls) -> Dict[str, Group]:
         """
         Returns all groups in the given VO.
         :return: Dictionary of all groups with their name as index
         """
-        return await get_all_groups(vo)
+        return await get_all_groups()
 
     @staticmethod
     @lru_cache()
