@@ -23,7 +23,7 @@ class Metric:
         cls.friendly_name = friendly_name
 
     @classmethod
-    def _calculate_credits(
+    def calculate_credits(
         cls,
         *,
         current_measurement: UsageMeasurement,
@@ -150,7 +150,7 @@ def calculate_credits(measurement1: MT, measurement2: MT) -> float:
     else:
         older_measurement, new_measurement = measurement2, measurement1
 
-    credits = new_measurement.metric._calculate_credits(
+    credits = new_measurement.metric.calculate_credits(
         current_measurement=new_measurement, older_measurement=older_measurement
     )
     if credits < 0:

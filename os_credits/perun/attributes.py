@@ -275,6 +275,8 @@ class DenbiCreditsGranted(
         """Stored as str inside perun, unfortunately"""
         return str(value) if value else None
 
+    # TODO: evaluate read-only mechanism
+
 
 class ToEmail(
     _ContainerPerunAttribute[ToEmails],

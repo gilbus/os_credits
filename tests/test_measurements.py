@@ -16,7 +16,7 @@ class _TestMetric2(Metric, measurement_name="test2", friendly_name="test2"):
 
 class _TestMetric3(Metric, measurement_name="test3", friendly_name="test3"):
     @classmethod
-    def _calculate_credits(cls, *, current_measurement, older_measurement):
+    def calculate_credits(cls, *, current_measurement, older_measurement):
         return -10
 
 
@@ -46,10 +46,10 @@ def test_supported_measurements_error():
 def test_internal_calculate_credits():
     with pytest.raises(TypeError):
         # Measurements must be of same type
-        m1.metric._calculate_credits(current_measurement=m1, older_measurement=m21)
+        m1.metric.calculate_credits(current_measurement=m1, older_measurement=m21)
     with pytest.raises(MeasurementError):
         # Fails since m2 is NEWER instead of older
-        m21.metric._calculate_credits(current_measurement=m21, older_measurement=m22)
+        m21.metric.calculate_credits(current_measurement=m21, older_measurement=m22)
 
 
 def test_public_calculate_credits(monkeypatch):
