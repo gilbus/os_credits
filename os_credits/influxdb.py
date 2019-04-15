@@ -109,6 +109,13 @@ class InfluxDBPoint:
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
                     combined_dict[f.name].strip('"')
                 )
+            elif f.metadata["component"] is None:
+                internal_logger.debug(
+                    "Skipping deserialization of attribute %s into InfluxDB Line "
+                    "representation as requested",
+                    f.name,
+                )
+                continue
             else:
                 raise SyntaxError(
                     f"Unknown component for InfluxDB Line: {f.metadata['component']} "
@@ -163,6 +170,13 @@ class InfluxDBPoint:
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
                     field_dict[f.name].strip('"')
                 )
+            elif f.metadata["component"] is None:
+                internal_logger.debug(
+                    "Skipping deserialization of attribute %s into InfluxDB Line "
+                    "representation as requested",
+                    f.name,
+                )
+                continue
             else:
                 raise SyntaxError(
                     f"Unknown component for InfluxDB Line: {f.metadata['component']} "
@@ -182,8 +196,9 @@ class InfluxDBPoint:
             # `metric` of `UsageMeasurement`
             if not f.metadata:
                 internal_logger.error(
-                    "Could not insert attribute into InfluxDB Line representation, "
-                    "missing metadata"
+                    "Could not insert attribute %s into InfluxDB Line representation, "
+                    "missing metadata",
+                    f.name,
                 )
                 continue
             if f.metadata["component"] == "measurement":
@@ -199,6 +214,13 @@ class InfluxDBPoint:
                 field_dict[f.metadata.get("key", f.name)] = f.metadata.get(
                     "encoder", lambda x: f'"{x}"'
                 )(getattr(self, f.name))
+            elif f.metadata["component"] is None:
+                internal_logger.debug(
+                    "Skipping serialization of attribute %s into InfluxDB Line "
+                    "representation as requested",
+                    f.name,
+                )
+                continue
         tag_str = ",".join(f"{key}={value}" for key, value in tag_dict.items())
         field_str = ",".join(f"{key}={value}" for key, value in field_dict.items())
         influx_line = " ".join([",".join([measurement, tag_str]), field_str, time])

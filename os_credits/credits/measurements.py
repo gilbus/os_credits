@@ -122,7 +122,11 @@ class UsageMeasurement(InfluxDBPoint):
     project_name: str = field(metadata={"component": "tag"})
     value: float = field(metadata={"component": "field", "decoder": float})
     metric: Type[Metric] = field(
-        repr=False, init=False, compare=False, default=_DummyMetric
+        repr=False,
+        init=False,
+        compare=False,
+        default=_DummyMetric,
+        metadata={"component": None},
     )
 
     def __post_init__(self) -> None:
