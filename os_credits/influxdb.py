@@ -4,7 +4,7 @@ from dataclasses import MISSING, dataclass, field, fields
 from datetime import datetime
 from typing import Any, Dict, List, Type, TypeVar, Union
 
-from aioinflux.client import InfluxDBClient
+from aioinflux.client import InfluxDBClient as _InfluxDBClient
 from pandas import DataFrame
 
 from .log import internal_logger
@@ -18,8 +18,10 @@ _DEFINITELY_PAST = datetime.fromtimestamp(0)
 # can be reused?
 # would allow us to use alpine image and reduce dependencies
 
+__all__ = ("InfluxDBClient", "InfluxDBPoint")
 
-class InfluxClient(InfluxDBClient):
+
+class InfluxDBClient(_InfluxDBClient):
     def __init__(self) -> None:
         super().__init__(
             host=config["INFLUXDB_HOST"],

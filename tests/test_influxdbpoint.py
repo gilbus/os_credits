@@ -3,12 +3,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List
 
-from pytest import approx, fixture
-
 from aiohttp.client_exceptions import ClientOSError
 from aioinflux import iterpoints
-from os_credits.influxdb import InfluxClient, InfluxDBPoint
+from pytest import approx, fixture
 from pytest_docker_compose import NetworkInfo
+
+from os_credits.influxdb import InfluxDBClient, InfluxDBPoint
 
 
 @fixture(name="influx_client")
@@ -21,7 +21,7 @@ async def fixture_influx_client(
     monkeypatch.setenv("INFLUXDB_DB", "pytest")
     monkeypatch.setenv("INFLUXDB_USER", "")
     monkeypatch.setenv("INFLUXDB_USER_PASSWORD", "")
-    influx_client = InfluxClient()
+    influx_client = InfluxDBClient()
     while True:
         # wait until InfluxDB is ready and up
         try:
