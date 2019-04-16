@@ -136,7 +136,7 @@ async def update_credits(
         return
 
     project_measurements = await app["influx_client"].previous_measurements(
-        measurement=current_measurement  # , since=last_measurement_timestamp
+        measurement=current_measurement, since=last_measurement_timestamp
     )
     try:
         last_measurement = project_measurements[last_measurement_timestamp]

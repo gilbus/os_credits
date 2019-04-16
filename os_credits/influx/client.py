@@ -66,7 +66,7 @@ class InfluxDBClient(_InfluxDBClient):
             point_class=type(measurement),
             query_constraints=[f"project_name = '{measurement.project_name}'"],
         ):
-            if point.time > since:
+            if point.time >= since:
                 previous_measurements[point.time] = point
             else:
                 break

@@ -50,8 +50,6 @@ class Metric:
                 "Passed current_measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."
             )
-        internal_logger.debug(current_measurement.value)
-        internal_logger.debug(older_measurement.value)
         return (
             float(current_measurement.value - older_measurement.value)
             * cls.CREDITS_PER_VIRTUAL_HOUR
