@@ -13,7 +13,9 @@ from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
 from os_credits.settings import config
 
-from .measurements import Metric, UsageMeasurement, calculate_credits
+from .base_models import MT
+from .billing import calculate_credits
+from .models import measurement_by_name
 
 
 def unique_identifier(influx_line: str) -> str:
@@ -47,12 +49,13 @@ async def process_influx_line(
     task_logger.debug("Processing Influx Line `%s`", influx_line)
     # we want to end this task as quickly as possible if the InfluxDB Point is not
     # needed
-    measurement_name = influx_line.split(",")[0]
-    if not Metric.is_supported(measurement_name):
+    try:
+        measurement_class = measurement_by_name(influx_line)
+    except ValueError:
         task_logger.debug("Ignoring since the measurement is not needed/billable")
         return
     try:
-        measurement = UsageMeasurement.from_lineprotocol(influx_line)
+        measurement = measurement_class.from_lineprotocol(influx_line)
     except (KeyError, ValueError):
         task_logger.exception(
             "Could not convert influx line %s to UsageMeasurement. Appending stacktrace",
@@ -78,7 +81,7 @@ async def process_influx_line(
 
 
 async def update_credits(
-    group: Group, current_measurement: UsageMeasurement, app: Application
+    group: Group, current_measurement: MT, app: Application
 ) -> None:
     try:
         await group.connect()
@@ -98,8 +101,8 @@ async def update_credits(
             )
         else:
             task_logger.info(
-                "Group %s does not have `credits_current` and hasn't been billed before "
-                "copying the value of `credits_granted`",
+                "Group %s does not have `credits_current` and hasn't been billed before: "
+                "Copying the value of `credits_granted`",
                 group,
             )
             group.credits_current.value = group.credits_granted.value
@@ -132,19 +135,13 @@ async def update_credits(
         )
         return
 
-    project_measurements = await app["influx_client"].entries_by_project_since(
-        project_name=group.name,
-        since=last_measurement_timestamp,
-        measurement_name=current_measurement.measurement,
+    project_measurements = await app["influx_client"].previous_measurements(
+        measurement=current_measurement  # , since=last_measurement_timestamp
     )
     try:
-        last_measurement_value = project_measurements.loc[
-            last_measurement_timestamp
-        ].value
+        last_measurement = project_measurements[last_measurement_timestamp]
     except KeyError:
-        oldest_measurement_timestamp = project_measurements.head(
-            1
-        ).index.to_pydatetime()[0]
+        oldest_measurement_timestamp = list(project_measurements)[0]
 
         group.credits_timestamps.value[
             current_measurement.measurement
@@ -162,12 +159,6 @@ async def update_credits(
         )
         await group.save()
         return
-
-    last_measurement = replace(
-        current_measurement,
-        timestamp=last_measurement_timestamp,
-        value=last_measurement_value,
-    )
 
     credits_to_bill = calculate_credits(current_measurement, last_measurement)
     group.credits_timestamps.value[

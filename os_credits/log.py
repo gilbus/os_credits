@@ -15,3 +15,4 @@ class _TaskIdFilter(Filter):
 task_logger = getLogger("os_credits.tasks")
 internal_logger = getLogger("os_credits.internal")
 requests_logger = getLogger("os_credits.requests")
+influxdb_logger = getLogger("os_credits.influxdb")

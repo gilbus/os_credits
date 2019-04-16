@@ -7,8 +7,7 @@ from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
-
-from os_credits.credits.measurements import Metric
+from os_credits.credits.base_models import Metric
 from os_credits.log import internal_logger
 from os_credits.settings import config
 

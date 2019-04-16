@@ -4,63 +4,17 @@ from dataclasses import MISSING, dataclass, field, fields
 from datetime import datetime
 from typing import Any, Dict, List, Type, TypeVar, Union
 
-from aioinflux.client import InfluxDBClient as _InfluxDBClient
-from pandas import DataFrame
-
-from .log import internal_logger
-from .settings import config
+from os_credits.log import internal_logger
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 _DEFINITELY_PAST = datetime.fromtimestamp(0)
 
-# TODO: Think about switching from DataFrame to JSON or other format, may InfluxDBPoint
-# can be reused?
-# would allow us to use alpine image and reduce dependencies
-
-__all__ = ("InfluxDBClient", "InfluxDBPoint")
+# PointType
+PT = TypeVar("PT", bound="InfluxDBPoint")
 
 
-class InfluxDBClient(_InfluxDBClient):
-    def __init__(self) -> None:
-        super().__init__(
-            host=config["INFLUXDB_HOST"],
-            port=config["INFLUXDB_PORT"],
-            username=config["INFLUXDB_USER"],
-            password=config["INFLUXDB_USER_PASSWORD"],
-            database=config["INFLUXDB_DB"],
-            output="dataframe",
-        )
-
-    async def entries_by_project_since(
-        self,
-        project_name: str,
-        measurement_name: str,
-        since: datetime = _DEFINITELY_PAST,
-    ) -> DataFrame:
-        """
-        Query the InfluxDB for any entries of the project identified by its name with a
-        timestamp older or equal than `since`.
-        :return: DataFrame containing the requested entries
-        """
-        query_template = """\
-        SELECT *
-        FROM {measurement}
-        WHERE project_name = '{project_name}'
-            AND time >= '{since}'
-        """
-        query = query_template.format(
-            project_name=project_name,
-            since=since.strftime(INFLUX_QUERY_DATE_FORMAT),
-            measurement=measurement_name,
-        )
-        return await self.query(query)
-
-
-P = TypeVar("P", bound="InfluxDBPoint")
-
-
-@dataclass
+@dataclass(frozen=True)
 class InfluxDBPoint:
     # decoder functions should assume that their input values are strings
     measurement: str = field(metadata={"component": "measurement"})
@@ -77,7 +31,7 @@ class InfluxDBPoint:
     )
 
     @classmethod
-    def from_iterpoint(cls: Type[P], values: List[Any], meta: Dict[str, str]) -> P:
+    def from_iterpoint(cls: Type[PT], values: List[Any], meta: Dict[str, str]) -> PT:
         """Only intended to be passed to the `iterpoints` method of `aioinflux` to parse
         the points and construct valid InfluxDBPoint instances.
 
@@ -128,7 +82,7 @@ class InfluxDBPoint:
         return new_point
 
     @classmethod
-    def from_lineprotocol(cls: Type[P], influx_line_: Union[str, bytes]) -> P:
+    def from_lineprotocol(cls: Type[PT], influx_line_: Union[str, bytes]) -> PT:
         """
         Creates a point from an InfluxDB Line, see
         https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/
@@ -139,7 +93,7 @@ class InfluxDBPoint:
             influx_line = influx_line_.decode()
         else:
             influx_line = influx_line_
-        internal_logger.debug("Converting InfluxDB Line `%s`")
+        internal_logger.debug("Converting InfluxDB Line `%s`", influx_line)
         measurement_and_tag, field_set, time_str = influx_line.strip().split()
         measurement_name, tag_set = measurement_and_tag.split(",", 1)
         tag_dict: Dict[str, str] = {}

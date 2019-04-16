@@ -7,9 +7,8 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
-
 from os_credits.credits.tasks import worker
-from os_credits.influxdb import InfluxDBClient
+from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
 from os_credits.settings import DEFAULT_LOGGING_CONFIG, config

@@ -50,9 +50,10 @@ for int_value in [
         internal_logger.warning("Could not convert value of $%s to int", int_value)
 
 DEFAULT_LOG_LEVEL = {
-    "os_credits.tasks": "INFO",
-    "os_credits.internal": "INFO",
+    "os_credits.tasks": "DEBUG",
+    "os_credits.internal": "DEBUG",
     "os_credits.requests": "INFO",
+    "os_credits.influxdb": "DEBUG",
 }
 
 DEFAULT_LOGGING_CONFIG = {
@@ -94,6 +95,16 @@ DEFAULT_LOGGING_CONFIG = {
         },
         "os_credits.requests": {
             "level": DEFAULT_LOG_LEVEL["os_credits.requests"],
+            "handlers": ["with_task_id"],
+            "filters": ["task_id_filter"],
+        },
+        "os_credits.influxdb": {
+            "level": DEFAULT_LOG_LEVEL["os_credits.influxdb"],
+            "handlers": ["with_task_id"],
+            "filters": ["task_id_filter"],
+        },
+        "aioinflux": {
+            "level": "DEBUG",
             "handlers": ["with_task_id"],
             "filters": ["task_id_filter"],
         },

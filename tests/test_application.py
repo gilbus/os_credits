@@ -1,11 +1,14 @@
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from importlib import reload
+from typing import Type
 
-from pytest import fixture, mark
+from pytest import fixture
 
 import os_credits.perun.attributesManager
 import os_credits.perun.groupsManager
 from os_credits import settings
+from os_credits.credits.base_models import UsageMeasurement
 
 from .conftest import TEST_INITIAL_CREDITS_GRANTED
 from .patches import (
@@ -84,16 +87,14 @@ async def test_startup(aiohttp_client):
 
 async def test_credits_endpoint(aiohttp_client):
     from os_credits.main import create_app
-    from os_credits.credits.measurements import Metric
+    from os_credits.credits.base_models import Metric
 
     app = await create_app()
     client = await aiohttp_client(app)
 
-    class _MeasurementA(
-        Metric, measurement_name="measurement_a", friendly_name="measurement_a"
-    ):
+    class _MetricA(Metric, measurement_name="metric_a", friendly_name="metric_a"):
         CREDITS_PER_VIRTUAL_HOUR = 1.3
-        property_description = "Test measurement A"
+        property_description = "Test metric A"
 
         @classmethod
         def api_information(cls):
@@ -103,32 +104,30 @@ async def test_credits_endpoint(aiohttp_client):
                 "measurement_name": cls.measurement_name,
             }
 
-    class Measurement1(Metric, measurement_name="test2", friendly_name="test2"):
+    class _MetricB(Metric, measurement_name="metric_b", friendly_name="metric_b"):
         CREDITS_PER_VIRTUAL_HOUR = 1
 
     resp = await client.get("/credits")
     measurements = await resp.json()
-    assert resp.status == 200 and measurements["measurement_a"] == {
-        "description": "Test measurement A",
+    assert resp.status == 200 and measurements["metric_a"] == {
+        "description": "Test metric A",
         "type": "str",
-        "measurement_name": "measurement_a",
+        "measurement_name": "metric_a",
     }, "GET /credits returned wrong body"
 
     resp = await client.post("/credits", json={"DefinitelyNotExisting": "test"})
     assert resp.status == 404, "POST /credits accepted invalid data"
 
-    resp = await client.post("/credits", json={"test2": 2, "measurement_a": 3})
+    resp = await client.post("/credits", json={"metric_a": 3, "metric_b": 2})
     json = await resp.json()
     assert (
         resp.status == 200 and json == 2 * 1 + 3 * 1.3
     ), "POST /credits returned wrong result"
 
 
-# actual influx line `project_mb_usage,__name__=project_mb_usage,domain_id=e049ffa7b625b12f,domain_name=elixir,instance=usage_exporter:8080,job=project_usages,lo
-# cation=site-a,location_id=8487,project_id=815070460d3a32ef,project_name=credits_2 value=555.3362602666667 1553342599293000000`
-async def test_initial_measurements(aiohttp_client, monkeypatch, os_credits_offline):
+async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
     from os_credits.main import create_app
-    from os_credits.credits.measurements import Metric
+    from os_credits.credits.base_models import Metric
     from os_credits.perun.groupsManager import Group
 
     start_date = datetime.now()
@@ -137,30 +136,35 @@ async def test_initial_measurements(aiohttp_client, monkeypatch, os_credits_offl
     test_group_name = "test_run_1"
     test_location_id = 1111
     test_group = Group(test_group_name, test_location_id)
+    test_usage_delta = 5
 
     reload(settings)
 
-    class _TestMeasurement1(
+    class _TestMetric(
         Metric, measurement_name=test_measurent_name, friendly_name=test_measurent_name
     ):
         CREDITS_PER_VIRTUAL_HOUR = 1
         property_description = "Test Metric 1 for whole run test"
 
-    influx_line_template = (
-        "{measurement_name},location_id={location_id},"
-        "project_name={group_name} value={value} {timestamp_ns:.0f}"
+    @dataclass(frozen=True)
+    class _TestMeasurement(UsageMeasurement):
+        metric: Type[Metric] = _TestMetric
+
+    measurement1 = _TestMeasurement(
+        measurement=test_measurent_name,
+        time=start_date,
+        location_id=test_location_id,
+        project_name=test_group_name,
+        value=100,
     )
 
-    initial_line = influx_line_template.format(
-        value=100,
-        timestamp_ns=start_date.timestamp() * 1e9,
-        group_name=test_group_name,
-        location_id=test_location_id,
-        measurement_name=test_measurent_name,
-    )
     app = await create_app()
     client = await aiohttp_client(app)
-    resp = await client.post("/write", data=initial_line)
+
+    # simulate subscription behaviour where every entry gets mirrored to the application
+    # /write endpoint
+    await influx_client.write(measurement1)
+    resp = await client.post("/write", data=measurement1.to_lineprotocol())
     assert resp.status == 202
     # wait until request has been processed, indicated by the task finally calling
     # `task_done`
@@ -174,76 +178,25 @@ async def test_initial_measurements(aiohttp_client, monkeypatch, os_credits_offl
     assert (
         test_group.credits_timestamps.value[test_measurent_name] == start_date
     ), "Timestamp from measurement was not stored correctly in group"
-
-
-@mark.skip("Not yet, requires working InfluxDB")
-async def test_whole_run(aiohttp_client, monkeypatch):
-    from os_credits.main import create_app
-    from os_credits.credits.measurements import Metric
-    from os_credits.perun.groupsManager import Group
-
-    start_date = datetime.now()
-
-    test_measurent_name = "whole_run_test_1"
-    test_group_name = "test_run_1"
-    test_location_id = 1111
-    test_group = Group(test_group_name, test_location_id)
-
-    reload(settings)
-
-    class _TestMeasurement1(
-        Metric, measurement_name=test_measurent_name, friendly_name=test_measurent_name
-    ):
-        CREDITS_PER_VIRTUAL_HOUR = 1
-        property_description = "Test Metric 1 for whole run test"
-
-    influx_line_template = (
-        "{measurement_name},location_id={location_id},"
-        "project_name={group_name} value={value} {timestamp_ns:.0f}"
+    measurement2 = replace(
+        measurement1,
+        time=start_date + timedelta(days=7),
+        value=measurement1.value + test_usage_delta,
     )
-
-    initial_line = influx_line_template.format(
-        value=100,
-        timestamp_ns=start_date.timestamp() * 1e9,
-        group_name=test_group_name,
-        location_id=test_location_id,
-        measurement_name=test_measurent_name,
-    )
-    app = await create_app()
-    client = await aiohttp_client(app)
-    resp = await client.post("/write", data=initial_line)
+    await influx_client.write(measurement2)
+    resp = await client.post("/write", data=measurement2.to_lineprotocol())
     assert resp.status == 202
     # wait until request has been processed, indicated by the task finally calling
     # `task_done`
     await app["task_queue"].join()
     await test_group.connect()
-    assert (
-        test_group.credits_granted.value
-        == test_group.credits_current.value
-        == TEST_INITIAL_CREDITS_GRANTED
-    ), "Initial copy from credits_granted to credits_current failed"
-    assert (
-        test_group.credits_timestamps.value[test_measurent_name] == start_date
+    assert test_group.credits_timestamps.value[
+        test_measurent_name
+    ] == start_date + timedelta(
+        days=7
     ), "Timestamp from measurement was not stored correctly in group"
-    next_line = influx_line_template.format(
-        value=103,
-        # timestamp should not matter since this measurement uses the base
-        # implementation where virtual {cpu,ram}-hours are billed
-        timestamp_ns=(start_date + timedelta(days=7)).timestamp() * 1e9,
-        group_name=test_group_name,
-        location_id=test_location_id,
-        measurement_name=test_measurent_name,
+    # since our CREDITS_PER_VIRTUAL_HOUR are 1
+    assert (
+        test_group.credits_current.value
+        == TEST_INITIAL_CREDITS_GRANTED - test_usage_delta
     )
-    resp = await client.post("/write", data=next_line)
-    assert resp.status == 202
-    # wait until request has been processed, indicated by the task finally calling
-    # `task_done`
-    await app["task_queue"].join()
-    await test_group.connect()
-    assert (
-        test_group.credits_granted.value == TEST_INITIAL_CREDITS_GRANTED
-    ), "Initial copy from credits_granted to credits_current failed"
-    assert test_group.credits_current.value == 197
-    assert (
-        test_group.credits_timestamps.value[test_measurent_name] == start_date
-    ), "Timestamp from measurement was not stored correctly in group"

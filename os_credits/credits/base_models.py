@@ -4,8 +4,14 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any, Dict, Optional, Type, TypeVar
 
-from os_credits.exceptions import CalculationResultError, MeasurementError
-from os_credits.influxdb import InfluxDBPoint
+from os_credits.exceptions import MeasurementError
+from os_credits.influx.model import InfluxDBPoint
+from os_credits.log import internal_logger
+
+REGISTERED_MEASUREMENTS = {}
+
+# MeasurementType
+MT = TypeVar("MT", bound="UsageMeasurement")
 
 
 class Metric:
@@ -24,10 +30,7 @@ class Metric:
 
     @classmethod
     def calculate_credits(
-        cls,
-        *,
-        current_measurement: UsageMeasurement,
-        older_measurement: UsageMeasurement,
+        cls, *, current_measurement: MT, older_measurement: MT
     ) -> float:
         """
         Base implementation how to bill two measurements of the same type. Expected to
@@ -47,6 +50,8 @@ class Metric:
                 "Passed current_measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."
             )
+        internal_logger.debug(current_measurement.value)
+        internal_logger.debug(older_measurement.value)
         return (
             float(current_measurement.value - older_measurement.value)
             * cls.CREDITS_PER_VIRTUAL_HOUR
@@ -97,69 +102,14 @@ class Metric:
         return spec * cls.CREDITS_PER_VIRTUAL_HOUR
 
 
-class _DummyMetric(
-    Metric, measurement_name="_dummy_placeholder", friendly_name="_dummy_placeholder"
-):
-    "Not thought for actual usage, only as default argument for UsageMeasurement"
-    pass
-
-
-class _VCPUUsage(Metric, measurement_name="project_vcpu_usage", friendly_name="cpu"):
-
-    CREDITS_PER_VIRTUAL_HOUR = 1
-    property_description = "Amount of vCPUs."
-
-
-class _RAMUsage(Metric, measurement_name="project_mb_usage", friendly_name="ram"):
-
-    CREDITS_PER_VIRTUAL_HOUR = 0.3
-    property_description = "Amount of RAM in MB."
-
-
-@dataclass
+@dataclass(init=False, frozen=True)
 class UsageMeasurement(InfluxDBPoint):
     location_id: int = field(metadata={"component": "tag", "decoder": int})
     project_name: str = field(metadata={"component": "tag"})
     value: float = field(metadata={"component": "field", "decoder": float})
     metric: Type[Metric] = field(
-        repr=False,
-        init=False,
-        compare=False,
-        default=_DummyMetric,
-        metadata={"component": None},
+        repr=False, init=False, compare=False, metadata={"component": None}
     )
 
-    def __post_init__(self) -> None:
-        self.metric = Metric.from_measurement(self.measurement)
-
-
-# The TypeVar shows mypy that measurement{1,2} have to of the same type, the
-# bound-parameter specifies that this type must be a UsageMeasurement or a subclass
-MT = TypeVar("MT", bound=UsageMeasurement)
-
-
-def calculate_credits(measurement1: MT, measurement2: MT) -> float:
-    """
-    High-level function to calculate the credits based on the differences of the two
-    usage measurements.
-
-    Will sort the two measurements according to their time and use the `usage_type`
-    instance of the **more recent** measurement to calculate the credits.
-
-    :return: Non-negative amount of credits
-    :raises CalculationResultError: If the amount credits would be negative
-    """
-    if measurement1.time < measurement2.time:
-        older_measurement, new_measurement = measurement1, measurement2
-    else:
-        older_measurement, new_measurement = measurement2, measurement1
-
-    credits = new_measurement.metric.calculate_credits(
-        current_measurement=new_measurement, older_measurement=older_measurement
-    )
-    if credits < 0:
-        raise CalculationResultError(
-            f"Credits calculation of {measurement1} and {measurement2} returned a "
-            "negative amount of credits."
-        )
-    return credits
+    def __init_subclass__(cls: Type[UsageMeasurement]) -> None:
+        REGISTERED_MEASUREMENTS[cls.metric.measurement_name] = cls

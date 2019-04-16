@@ -201,7 +201,7 @@ class Group:
             if self.resource_id in self.assigned_resource_ids:
                 internal_logger.debug(
                     "Sending modified resource bound attributes to perun %s",
-                    changed_attrs,
+                    changed_resource_bound_attrs,
                 )
                 await set_resource_bound_attributes(
                     self.id, self.resource_id, changed_resource_bound_attrs

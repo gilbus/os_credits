@@ -1,8 +1,12 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Type
 
 import pytest
 
-from os_credits.credits.measurements import Metric, UsageMeasurement, calculate_credits
+from os_credits.credits.base_models import Metric, UsageMeasurement
+from os_credits.credits.billing import calculate_credits
+from os_credits.credits.models import measurement_by_name
 from os_credits.exceptions import CalculationResultError, MeasurementError
 
 
@@ -20,15 +24,30 @@ class _TestMetric3(Metric, measurement_name="test3", friendly_name="test3"):
         return -10
 
 
+@dataclass(frozen=True)
+class _TestMeasurement1(UsageMeasurement):
+    metric: Type[Metric] = _TestMetric1
+
+
+@dataclass(frozen=True)
+class _TestMeasurement2(UsageMeasurement):
+    metric: Type[Metric] = _TestMetric2
+
+
+@dataclass(frozen=True)
+class _TestMeasurement3(UsageMeasurement):
+    metric: Type[Metric] = _TestMetric3
+
+
 now = datetime.now()
 
-m1 = UsageMeasurement(
+m1 = _TestMeasurement1(
     measurement="test_fail1", location_id=0, time=now, project_name="", value=0.0
 )
-m21 = UsageMeasurement(
+m21 = _TestMeasurement2(
     measurement="test2", value=100.0, time=now, project_name="", location_id=0
 )
-m22 = UsageMeasurement(
+m22 = _TestMeasurement2(
     measurement="test2",
     value=110.0,
     time=now + timedelta(hours=1),
@@ -39,7 +58,7 @@ m22 = UsageMeasurement(
 
 def test_supported_measurements_error():
     with pytest.raises(ValueError):
-        Metric.from_measurement("definitelyNotSupported")
+        measurement_by_name("definitelyNotSupported")
     assert not Metric.is_supported("definitelyNotSupported")
 
 
@@ -69,10 +88,10 @@ def test_public_calculate_credits(monkeypatch):
         calculate_credits(m21, m22) == calculate_credits(m22, m21) == 10
     ), "Actual credits calculation, automatically determining older measurement"
 
-    m31 = UsageMeasurement(
+    m31 = _TestMeasurement3(
         measurement="test3", value=100.0, time=now, project_name="", location_id=0
     )
-    m32 = UsageMeasurement(
+    m32 = _TestMeasurement3(
         measurement="test3",
         value=110.0,
         time=now + timedelta(hours=1),
@@ -83,7 +102,3 @@ def test_public_calculate_credits(monkeypatch):
         # this fails due to the custom `calculate_credits` function returning a
         # negative amount of credits to bill
         calculate_credits(m31, m32)
-
-
-def test_costs_per_hour():
-    assert _TestMetric2.costs_per_hour(5) == 5
