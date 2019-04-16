@@ -9,6 +9,11 @@ class CreditsError(Exception):
     pass
 
 
+class MissingInfluxDatabase(CreditsError):
+    "Raised if a required database inside the InfluxDB does not exist"
+    pass
+
+
 class GroupAttributeError(CreditsError):
     "Base Exception if any Group-Attribute has an invalid value"
     pass

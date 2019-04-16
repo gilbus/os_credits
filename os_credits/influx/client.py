@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+from itertools import chain
 from textwrap import shorten
 from typing import AsyncGenerator, Dict, List, Optional, Type
 
 from aioinflux import iterpoints
 from aioinflux.client import InfluxDBClient as _InfluxDBClient
+
 from os_credits.credits.base_models import UsageMeasurement
 from os_credits.log import influxdb_logger
 from os_credits.settings import config
@@ -15,6 +17,8 @@ from .model import PT
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 _DEFINITELY_PAST = datetime.fromtimestamp(0)
+
+CREDITS_HISTORY_DB = "credits_history"
 
 
 class InfluxDBClient(_InfluxDBClient):
@@ -26,6 +30,15 @@ class InfluxDBClient(_InfluxDBClient):
             password=config["INFLUXDB_USER_PASSWORD"],
             database=config["INFLUXDB_DB"],
             output="json",
+        )
+
+    async def ensure_history_db_exists(self) -> bool:
+        """Checks whether the required database for credits history exists.
+        :return: Whether the database exists
+        """
+        r = await self.show_databases()
+        return CREDITS_HISTORY_DB in chain.from_iterable(
+            r["results"][0]["series"][0]["values"]
         )
 
     async def query_points(
@@ -46,7 +59,7 @@ class InfluxDBClient(_InfluxDBClient):
         """
         constraints = ""
         if query_constraints and len(query_constraints) > 0:
-            constraints = f"WHERE {'AND'.join(query_constraints)}"
+            constraints = f"WHERE {' AND '.join(query_constraints)}"
         query = query_template.format(constraints=constraints, measurement=measurement)
         influxdb_logger.debug(
             "Sending query `%s` to InfluxDB",

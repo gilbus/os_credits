@@ -60,10 +60,11 @@ class InfluxDBPoint:
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
                     combined_dict[f.name]
                 )
-            # string field values are quoted, strip them
+            # stripping not necessary since aioinflux seems to infer the correct types
+            # for us
             elif f.metadata["component"] == "field":
                 args[f.name] = f.metadata.get("decoder", lambda x: x)(
-                    combined_dict[f.name].strip('"')
+                    combined_dict[f.name]
                 )
             elif f.metadata["component"] is None:
                 internal_logger.debug(

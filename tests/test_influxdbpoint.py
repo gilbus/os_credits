@@ -2,9 +2,11 @@ from asyncio import sleep
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from aioinflux import iterpoints
 from pytest import approx
 
-from aioinflux import iterpoints
+from os_credits.exceptions import MissingInfluxDatabase
+from os_credits.influx.client import CREDITS_HISTORY_DB
 from os_credits.influx.model import InfluxDBPoint
 
 
@@ -12,6 +14,14 @@ from os_credits.influx.model import InfluxDBPoint
 class _TestPoint(InfluxDBPoint):
     field1: str = field(metadata={"component": "field"})
     tag1: str = field(metadata={"component": "tag"})
+
+
+async def test_missing_db_exception(influx_client):
+    influx_client.db = CREDITS_HISTORY_DB
+    await influx_client.drop_database()
+    assert (
+        not await influx_client.ensure_history_db_exists()
+    ), "Did not detect missing database"
 
 
 def test_influx_line_conversion():

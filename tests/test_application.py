@@ -74,7 +74,7 @@ async def test_settings(monkeypatch):
     ), "Integer value was not parsed/converted correctly from environment"
 
 
-async def test_startup(aiohttp_client):
+async def test_startup(aiohttp_client, influx_client):
     from os_credits.main import create_app
 
     app = await create_app()
@@ -85,7 +85,7 @@ async def test_startup(aiohttp_client):
     # check for correct parsing and processing of settings via env vars
 
 
-async def test_credits_endpoint(aiohttp_client):
+async def test_credits_endpoint(aiohttp_client, influx_client):
     from os_credits.main import create_app
     from os_credits.credits.base_models import Metric
 
