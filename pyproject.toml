@@ -10,6 +10,7 @@ aiohttp = "^3.5"
 aioinflux = "^0.5.1"
 aiohttp-swagger = "^1.0"
 prometheus_async = {version = "^19.2",extras = ["aiohttp"]}
+aiohttp_jinja2 = "^1.1"
 
 [tool.poetry.dev-dependencies]
 aiohttp-devtools = "^0.11.0"
@@ -17,7 +18,7 @@ pytest = "^4.3"
 pytest-aiohttp = "^0.3.0"
 pre-commit = "^1.14"
 black = {version = "^19.3-alpha.0",allows-prereleases = true}
-mypy = "^0.700.0"
+mypy = "^0.701.0"
 pytest-docker-compose = "^1.0"
 
 [tool.poetry.scripts]
