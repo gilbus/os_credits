@@ -125,4 +125,11 @@ class _EmptyConfig(UserDict):
         raise MissingConfigError(f"Missing value for key {key}")
 
 
-config = ChainMap(PROCESSED_ENV_CONFIG, environ, DEFAULT_CONFIG, _EmptyConfig())
+config = ChainMap(
+    PROCESSED_ENV_CONFIG,
+    # TODO: Find out why the code below makes pytest hang
+    # {key: environ[key] for key in DEFAULT_CONFIG if key in environ},
+    environ,
+    DEFAULT_CONFIG,
+    _EmptyConfig(),
+)
