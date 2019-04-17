@@ -7,8 +7,6 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
-from prometheus_async import aio
-
 from os_credits.credits.tasks import worker
 from os_credits.exceptions import MissingInfluxDatabase
 from os_credits.influx.client import InfluxDBClient
@@ -19,11 +17,13 @@ from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
 from os_credits.views import (
     application_stats,
     costs_per_hour,
+    credits_history_api,
     get_credits_measurements,
     influxdb_write_endpoint,
     ping,
     update_logging_config,
 )
+from prometheus_async import aio
 
 
 async def create_worker(app: web.Application) -> None:
@@ -76,6 +76,7 @@ async def create_app() -> web.Application:
     app = web.Application()
     app.add_routes(
         [
+            web.get("/credits_history/{project_name}", credits_history_api),
             web.get("/ping", ping),
             web.get("/stats", application_stats),
             web.post("/write", influxdb_write_endpoint),

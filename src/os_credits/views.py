@@ -2,12 +2,14 @@
 Contains all view function, the routes are specified inside main.py, django style like.
 """
 import logging.config
+from dataclasses import asdict
 from datetime import datetime
 from json import JSONDecodeError, loads
 from traceback import format_stack
 
 from aiohttp import web
 from os_credits.credits.base_models import Metric
+from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
 from os_credits.settings import config
 
@@ -29,6 +31,20 @@ async def ping(_: web.Request) -> web.Response:
             description: invalid HTTP Method
     """
     return web.Response(text="Pong")
+
+
+async def credits_history_api(request: web.Request) -> web.Response:
+    project_name = request.match_info["project_name"]
+    influx_client: InfluxDBClient = request.app["influx_client"]
+    return web.json_response(
+        {
+            point.time.isoformat(): {
+                "credits": point.credits,
+                "metric": point.metric_friendly_name,
+            }
+            async for point in await influx_client.query_billing_history(project_name)
+        }
+    )
 
 
 async def influxdb_write_endpoint(request: web.Request) -> web.Response:
