@@ -30,7 +30,7 @@ docker-build-dev:
 docker-run:
 	docker stop portal_credits || true
 	docker run --publish=8000:80 --name portal_credits --network \
-	  project_usage_portal -v $(PWD)/os_credits:/code/os_credits:ro \
+	  project_usage_portal -v $(PWD)/src:/code/src:ro \
 	  --env-file .env os_credits-dev:latest
 
 test:
@@ -46,4 +46,4 @@ run:
 	poetry run os-credits --port $(PORT) --host $(HOST)
 
 run-dev:
-	poetry run adev runserver --port $(PORT) --host $(HOST) os_credits 
+	poetry run adev runserver --port $(PORT) --host $(HOST) src/os_credits 
