@@ -17,7 +17,9 @@ DEFAULT_CONFIG = {
     "INFLUXDB_HOST": "localhost",
     "INFLUXDB_USER": "",
     "INFLUXDB_USER_PASSWORD": "",
+    # named this way to match environment variable used by the influxdb docker image
     "INFLUXDB_DB": "",
+    "CREDITS_HISTORY_DB": "credits_history",
 }
 
 # for environment variables that need to be processed

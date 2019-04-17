@@ -7,10 +7,9 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
-
 from os_credits.credits.tasks import worker
 from os_credits.exceptions import MissingInfluxDatabase
-from os_credits.influx.client import CREDITS_HISTORY_DB, InfluxDBClient
+from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
 from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
@@ -85,8 +84,9 @@ async def create_app() -> web.Application:
 
     if not await app["influx_client"].ensure_history_db_exists():
         raise MissingInfluxDatabase(
-            f"Required database {CREDITS_HISTORY_DB} does not exist inside InfluxDB. "
-            "Must be created externally since this code runs without such privileges."
+            f"Required database {config['CREDITS_HISTORY_DB']} does not exist inside "
+            "InfluxDB. Must be created externally since this code runs without admin "
+            "access."
         )
 
     app.on_startup.append(create_client_session)

@@ -5,7 +5,8 @@ from typing import Dict, List
 from pytest import fixture
 
 from aiohttp.client_exceptions import ClientOSError
-from os_credits.influx.client import CREDITS_HISTORY_DB, InfluxDBClient
+from os_credits.influx.client import InfluxDBClient
+from os_credits.settings import config
 from pytest_docker_compose import NetworkInfo
 
 pytest_plugins = ["docker_compose"]
@@ -36,6 +37,8 @@ async def fixture_influx_client(
         except ClientOSError:
             print("Sleeping for 1 second until InfluxDB is up")
             await sleep(1)
-    await influx_client.query(f"create database {CREDITS_HISTORY_DB}")
+    # in production the application cannot create any databases since it does not admin
+    # access to the InfluxDB and HTTP_AUTH is enabled, see the `project_usage` repo
+    await influx_client.query(f"create database {config['CREDITS_HISTORY_DB']}")
     yield influx_client
     await influx_client.close()
