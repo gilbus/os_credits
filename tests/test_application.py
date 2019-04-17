@@ -1,3 +1,9 @@
+"""
+Contains test which launch the whole application and simulate incoming data or external
+requests against it. They all require the aiohttp_client and influx_client fixture, the
+latter even if they do not the InfluxDB integration since the app does check the
+existence of certain databases at startup.
+"""
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from importlib import reload
@@ -59,6 +65,7 @@ def fixture_os_credits_offline(monkeypatch):
 
 
 async def test_settings(monkeypatch):
+    "Test whether values from environment variables are parsed and stored correctly"
     monkeypatch.setenv("OS_CREDITS_PROJECT_WHITELIST", "ProjectA;ProjectB")
     monkeypatch.setenv("OS_CREDITS_PRECISION", "98")
     # necessary to pickup different environment variables
@@ -75,6 +82,7 @@ async def test_settings(monkeypatch):
 
 
 async def test_startup(aiohttp_client, influx_client):
+    "Test startup of the application and try to connect to its `/ping` endpoint"
     from os_credits.main import create_app
 
     app = await create_app()
@@ -82,10 +90,11 @@ async def test_startup(aiohttp_client, influx_client):
     resp = await client.get("/ping")
     text = await resp.text()
     assert resp.status == 200 and text == "Pong", "/ping endpoint failed"
-    # check for correct parsing and processing of settings via env vars
 
 
 async def test_credits_endpoint(aiohttp_client, influx_client):
+    """Test the `/credits` endpoint responsible for calculating expected costs per hour
+    of given resources"""
     from os_credits.main import create_app
     from os_credits.credits.base_models import Metric
 
@@ -126,6 +135,10 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
 
 
 async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
+    """Tests the complete workflow of the application.
+    
+    Incoming data of the InfluxDB are simulated multiple times to trigger different
+    scenarios (first measurement vs further measurement)"""
     from os_credits.main import create_app
     from os_credits.credits.base_models import Metric
     from os_credits.perun.groupsManager import Group
@@ -137,8 +150,6 @@ async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
     test_location_id = 1111
     test_group = Group(test_group_name, test_location_id)
     test_usage_delta = 5
-
-    reload(settings)
 
     class _TestMetric(
         Metric, measurement_name=test_measurent_name, friendly_name=test_measurent_name

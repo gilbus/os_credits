@@ -2,11 +2,11 @@ from asyncio import sleep
 from logging import getLogger
 from typing import Dict, List
 
-from aiohttp.client_exceptions import ClientOSError
 from pytest import fixture
-from pytest_docker_compose import NetworkInfo
 
+from aiohttp.client_exceptions import ClientOSError
 from os_credits.influx.client import CREDITS_HISTORY_DB, InfluxDBClient
+from pytest_docker_compose import NetworkInfo
 
 pytest_plugins = ["docker_compose"]
 
@@ -34,6 +34,7 @@ async def fixture_influx_client(
             await influx_client.ping()
             break
         except ClientOSError:
+            print("Sleeping for 1 second until InfluxDB is up")
             await sleep(1)
     await influx_client.query(f"create database {CREDITS_HISTORY_DB}")
     yield influx_client
