@@ -7,6 +7,8 @@ from logging.config import dictConfig
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_swagger import setup_swagger
+from prometheus_async import aio
+
 from os_credits.credits.tasks import worker
 from os_credits.exceptions import MissingInfluxDatabase
 from os_credits.influx.client import InfluxDBClient
@@ -22,7 +24,6 @@ from os_credits.views import (
     ping,
     update_logging_config,
 )
-from prometheus_async import aio
 
 
 async def create_worker(app: web.Application) -> None:

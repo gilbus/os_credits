@@ -5,7 +5,7 @@ repos:
     hooks:
       - id: pytest
         name: Run tests
-        entry: poetry run python -m pytest -v --color=yes
+        entry: make test
         pass_filenames: false
         language: system
         types: [python]
@@ -16,7 +16,7 @@ repos:
         types: [python]
       - id: mypy
         name: Static type checker
-        entry: poetry run mypy .
+        entry: make mypy
         pass_filenames: false
         language: system
         types: [python]

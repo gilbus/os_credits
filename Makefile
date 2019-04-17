@@ -37,7 +37,7 @@ test:
 	poetry run pytest --color=yes tests
 
 mypy:
-	poetry run mypy .
+	poetry run mypy src/os_credits
 
 coverage:
 	poetry run pytest --color=yes --cov
