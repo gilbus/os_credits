@@ -53,7 +53,9 @@ async def test_query_points(influx_client):
     await influx_client.write(point)
     previous_points = [
         point
-        async for point in influx_client.query_points(point.measurement, type(point))
+        async for point in influx_client.query_points(
+            point.measurement, type(point), db=influx_client.db
+        )
     ]
     assert previous_points == [point]
 
