@@ -12,6 +12,7 @@ from os_credits.exceptions import MissingInfluxDatabase
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
+from os_credits.prometheus_metrics import projects_processed_counter, tasks_queued_gauge
 from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
 from os_credits.views import (
     application_stats,
@@ -21,6 +22,7 @@ from os_credits.views import (
     ping,
     update_logging_config,
 )
+from prometheus_async import aio
 
 
 async def create_worker(app: web.Application) -> None:
@@ -47,12 +49,21 @@ async def create_client_session(_: web.Application) -> None:
     )
 
 
+async def setup_prometheus_metrics(app: web.Application) -> None:
+    tasks_queued_gauge.set_function(lambda: app["task_queue"].qsize())
+
+
 async def close_client_session(_: web.Application) -> None:
     try:
         await client_session.get().close()
     except LookupError:
         # no session: no need to close a session
         pass
+
+
+def create_new_group_lock() -> Lock:
+    projects_processed_counter.inc()
+    return Lock()
 
 
 async def create_app() -> web.Application:
@@ -70,13 +81,14 @@ async def create_app() -> web.Application:
             web.post("/logconfig", update_logging_config),
             web.get("/credits", get_credits_measurements),
             web.post("/credits", costs_per_hour),
+            web.get("/metrics", aio.web.server_stats),
         ]
     )
     app.update(
         name="os-credits",
         influx_client=InfluxDBClient(),
         task_queue=Queue(),
-        group_locks=defaultdict(Lock),
+        group_locks=defaultdict(create_new_group_lock),
         start_time=datetime.now(),
     )
     dictConfig(DEFAULT_LOGGING_CONFIG)
@@ -91,6 +103,7 @@ async def create_app() -> web.Application:
 
     app.on_startup.append(create_client_session)
     app.on_startup.append(create_worker)
+    app.on_startup.append(setup_prometheus_metrics)
     app.on_cleanup.append(stop_worker)
     app.on_cleanup.append(close_client_session)
 

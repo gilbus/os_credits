@@ -11,6 +11,7 @@ from aiohttp.web import Application
 from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.groupsManager import Group
+from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config
 
 from .base_models import MT
@@ -43,6 +44,7 @@ async def worker(name: str, app: Application) -> None:
             task_queue.task_done()
 
 
+@worker_exceptions_counter.count_exceptions()
 async def process_influx_line(
     influx_line: str, app: Application, group_locks: Dict[str, Lock]
 ) -> None:
