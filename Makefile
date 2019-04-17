@@ -21,7 +21,7 @@ clean-build:
 
 docker-build:
 	find . -type d -name '__pycache__' -prune -exec rm -rf {} \;
-	bin/build_docker.py -u $(DOCKER_USERNAME) -i $(DOCKER_IMAGENAME)
+	poetry run bin/build_docker.py -u $(DOCKER_USERNAME) -i $(DOCKER_IMAGENAME)
 
 docker-build-dev:
 	find . -type d -name '__pycache__' -prune -exec rm -rf {} \;

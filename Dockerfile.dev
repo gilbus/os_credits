@@ -1,14 +1,16 @@
-FROM python:3.7-slim
+FROM python:3.7-alpine
 
-ADD os_credits /code/os_credits
+ADD src /code/src
 ADD pyproject.toml poetry.lock /code/
 WORKDIR /code
-RUN apt-get update && apt-get install -y gcc wget && apt-get clean
+RUN apk update && apk --no-cache add gcc wget linux-headers musl-dev
 RUN pip install --no-cache poetry
 # install to system
 RUN poetry config settings.virtualenvs.create false
-RUN poetry install
+# we do not need any development packages except aiohttp-devtools to
+# automatically restart the app once we changed the bind-mounted source code
+RUN poetry install --no-dev && pip install --no-cache aiohttp-devtools
 
 EXPOSE 80
 EXPOSE 81
-CMD adev runserver --port 80 --host 0.0.0.0 /code/os_credits
+CMD adev runserver --port 80 --host 0.0.0.0 /code/src/os_credits
