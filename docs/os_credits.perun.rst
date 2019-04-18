@@ -1,0 +1,54 @@
+os\_credits.perun package
+=========================
+
+Submodules
+----------
+
+os\_credits.perun.attributes module
+-----------------------------------
+
+.. automodule:: os_credits.perun.attributes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.perun.attributesManager module
+------------------------------------------
+
+.. automodule:: os_credits.perun.attributesManager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.perun.groupsManager module
+--------------------------------------
+
+.. automodule:: os_credits.perun.groupsManager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.perun.requests module
+---------------------------------
+
+.. automodule:: os_credits.perun.requests
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.perun.resourcesManager module
+-----------------------------------------
+
+.. automodule:: os_credits.perun.resourcesManager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: os_credits.perun
+    :members:
+    :undoc-members:
+    :show-inheritance:

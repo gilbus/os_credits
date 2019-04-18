@@ -3,7 +3,7 @@ PORT=8080
 DOCKER_USERNAME=$(USER)
 DOCKER_IMAGENAME=os_credits
 
-.PHONY: clean-pyc docker-build docker-build-dev docker-run test mypy coverage lint run run-dev
+.PHONY: clean-pyc docker-build docker-build-dev docker-run docs test mypy coverage lint run run-dev
 
 rule all:
 	@echo 'Please provide a Phony target'
@@ -32,6 +32,9 @@ docker-run:
 	docker run --publish=8000:80 --name portal_credits --network \
 	  project_usage_portal -v $(PWD)/src:/code/src:ro \
 	  --env-file .env os_credits-dev:latest
+
+docs:
+	cd docs && $(MAKE) html
 
 test:
 	poetry run pytest --color=yes tests

@@ -32,6 +32,7 @@ class InfluxDBClient(_InfluxDBClient):
 
     async def ensure_history_db_exists(self) -> bool:
         """Checks whether the required database for credits history exists.
+
         :return: Whether the database exists
         """
         r = await self.show_databases()
@@ -51,10 +52,10 @@ class InfluxDBClient(_InfluxDBClient):
 
         :param measurement: Which table to run the query against.
         :param point_class: Subclass of ``InfluxDBPoint`` whose ``from_iterpoint``
-        method will be used to deserialize the returned points.
+            method will be used to deserialize the returned points.
         :param db: Which database to run the query against.
         :param query_constraints: WHERE-constraints to add to the query, will be AND-ed
-        if more than one is given.
+            if more than one is given.
         :return: Instances of ``point_class`` ordered by their timestamp descending.
         """
         query_template = """\
@@ -105,10 +106,10 @@ class InfluxDBClient(_InfluxDBClient):
         measurement.
 
         :param measurement: Must be initialized since its project and metric values are
-        required.
+            required.
         :param since: Passed through to ``query_points_since``.
         :return: Dictionary of measurements accessible by their timestamp which are
-        sorted descending.
+            sorted descending.
         """
         previous_measurements = self.query_points_since(
             measurement=measurement.metric.measurement_name,
@@ -132,7 +133,7 @@ class InfluxDBClient(_InfluxDBClient):
         :param project_name: Project whose history should be queried.
         :param since: Passed through to ``query_points_since``.
         :return: Asynchronously yielded instances of ``BillingHistory`` sorted by their
-        timestamp descending.
+            timestamp descending.
         """
         return self.query_points_since(
             measurement=project_name,
