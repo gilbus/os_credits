@@ -93,8 +93,8 @@ async def test_startup(aiohttp_client, influx_client):
 
 
 async def test_credits_endpoint(aiohttp_client, influx_client):
-    """Test the `/credits` endpoint responsible for calculating expected costs per hour
-    of given resources"""
+    """Test the `/api/credits` endpoint responsible for calculating expected costs per
+    hour of given resources"""
     from os_credits.main import create_app
     from os_credits.credits.base_models import Metric
 
@@ -116,22 +116,22 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     class _MetricB(Metric, measurement_name="metric_b", friendly_name="metric_b"):
         CREDITS_PER_VIRTUAL_HOUR = 1
 
-    resp = await client.get("/credits")
+    resp = await client.get("/api/credits")
     measurements = await resp.json()
     assert resp.status == 200 and measurements["metric_a"] == {
         "description": "Test metric A",
         "type": "str",
         "measurement_name": "metric_a",
-    }, "GET /credits returned wrong body"
+    }, "GET /api/credits returned wrong body"
 
-    resp = await client.post("/credits", json={"DefinitelyNotExisting": "test"})
-    assert resp.status == 404, "POST /credits accepted invalid data"
+    resp = await client.post("/api/credits", json={"DefinitelyNotExisting": "test"})
+    assert resp.status == 404, "POST /api/credits accepted invalid data"
 
-    resp = await client.post("/credits", json={"metric_a": 3, "metric_b": 2})
+    resp = await client.post("/api/credits", json={"metric_a": 3, "metric_b": 2})
     json = await resp.json()
     assert (
         resp.status == 200 and json == 2 * 1 + 3 * 1.3
-    ), "POST /credits returned wrong result"
+    ), "POST /api/credits returned wrong result"
 
 
 async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):

@@ -21,8 +21,11 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     await wait_for(influx_client.write_billing_history(point), timeout=None)
     app = await create_app()
     client = await aiohttp_client(app)
-    resp = await client.get(f"/credits_history/{project_name}")
+    resp = await client.get(f"/api/credits_history/{project_name}")
+    expected_resp = dict(
+        credits=["credits", point.credits],
+        metrics=["metrics", point.metric_friendly_name],
+        timestamps=["timestamps", point.time.strftime("%Y-%m-%d %H:%M:%S")],
+    )
     assert 200 == resp.status
-    assert {
-        point.time.isoformat(): dict(credits=point.credits, metric=point.metric_name)
-    } == await resp.json()
+    assert expected_resp == await resp.json()

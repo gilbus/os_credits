@@ -98,6 +98,8 @@ class InfluxDBClient(_InfluxDBClient):
         ):
             if point.time >= since:
                 yield point
+            else:
+                return
 
     async def previous_measurements(
         self, measurement: UsageMeasurement, since: datetime = _DEFINITELY_PAST
