@@ -74,7 +74,7 @@ async def main() -> int:
     billing_interval = timedelta(seconds=args.time_interval)
     billing_point = BillingHistory(
         measurement=args.project,
-        time=datetime.now(),
+        time=datetime.now() - billing_interval * args.entries,
         credits=args.initial_credits - randint(*args.credits_interval),
         metric_name=args.metric,
         metric_friendly_name=args.metric,
@@ -85,7 +85,7 @@ async def main() -> int:
         billing_point = replace(
             billing_point,
             credits=billing_point.credits - randint(*args.credits_interval),
-            time=billing_point.time - billing_interval,
+            time=billing_point.time + billing_interval,
         )
         points.append(billing_point)
     print("Generated points. Sending to InfluxDB now")
