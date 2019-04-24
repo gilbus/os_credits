@@ -49,7 +49,7 @@ mypy:
 	poetry run mypy src/os_credits
 
 coverage:
-	poetry run pytest --color=yes --cov
+	poetry run pytest --color=yes --cov=src/os_credits --cov-report=html tests
 
 run:
 	poetry run os-credits --port $(PORT) --host $(HOST)
