@@ -26,6 +26,13 @@ class DenbiCreditsCurrentError(GroupAttributeError):
     pass
 
 
+class DenbiCreditsGrantedMissing(GroupAttributeError):
+    """Raised if a group does not have any credits granted in which case we cannot
+    operate on it."""
+
+    pass
+
+
 class MissingConfigError(CreditsError):
     "Raised if a non-set config value without default value is requested"
     pass

@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar
 
+from os_credits.exceptions import DenbiCreditsGrantedMissing
+
 __all__ = ["DenbiCreditTimestamps", "DenbiCreditsCurrent", "ToEmails"]
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
@@ -258,7 +260,7 @@ class DenbiCreditsCurrent(
 
 
 class DenbiCreditsGranted(
-    _ScalarPerunAttribute[Optional[int]],
+    _ScalarPerunAttribute[int],
     perun_id=3383,
     perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
@@ -267,13 +269,15 @@ class DenbiCreditsGranted(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> Optional[int]:
+    def perun_decode(self, value: Optional[str]) -> int:
         """Stored as str inside perun, unfortunately"""
-        return int(value) if value else None
+        if value is None:
+            raise DenbiCreditsGrantedMissing()
+        return int(value)
 
-    def perun_encode(self, value: Optional[int]) -> Optional[str]:
+    def perun_encode(self, value: int) -> str:
         """Stored as str inside perun, unfortunately"""
-        return str(value) if value else None
+        return str(value)
 
     # TODO: evaluate read-only mechanism
 
