@@ -27,11 +27,17 @@ docker-build-dev:
 	find . -type d -name '__pycache__' -prune -exec rm -rf {} \;
 	docker build -f Dockerfile.dev -t os_credits-dev .
 
-docker-run:
+docker-run-dev:
 	docker stop portal_credits || true
-	docker run --publish=8000:80 --name portal_credits --network \
-	  project_usage_portal -v $(PWD)/src:/code/src:ro \
-	  --env-file .env os_credits-dev:latest
+	docker rm portal_credits || true
+	docker run \
+		--publish=8000:80 \
+		--name portal_credits \
+		--network project_usage_portal \
+		--volume $(PWD)/src:/code/src:ro \
+		--env-file .env \
+		--detach \
+		os_credits-dev:latest
 
 docs:
 	cd docs && $(MAKE) html
