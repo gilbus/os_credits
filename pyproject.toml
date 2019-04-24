@@ -11,6 +11,7 @@ aioinflux = "^0.5.1"
 aiohttp-swagger = "^1.0"
 prometheus_async = {version = "^19.2",extras = ["aiohttp"]}
 aiohttp_jinja2 = "^1.1"
+aiosmtplib = "^1.0"
 
 [tool.poetry.dev-dependencies]
 aiohttp-devtools = "^0.11.0"
@@ -22,6 +23,8 @@ mypy = "^0.701.0"
 pytest-docker-compose = "^1.0"
 sphinx = "^2.0"
 sphinx-autodoc-typehints = "^1.6"
+pytest-localserver = "^0.5.0"
+pytest-cov = "^2.6"
 
 [tool.poetry.scripts]
 os-credits="os_credits.cli:main"
