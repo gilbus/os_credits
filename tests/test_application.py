@@ -15,6 +15,7 @@ import os_credits.perun.attributesManager
 import os_credits.perun.groupsManager
 from os_credits import settings
 from os_credits.credits.base_models import UsageMeasurement
+from os_credits.credits.models import BillingHistory
 
 from .conftest import TEST_INITIAL_CREDITS_GRANTED
 from .patches import (
@@ -194,6 +195,13 @@ async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
         time=start_date + timedelta(days=7),
         value=measurement1.value + test_usage_delta,
     )
+    billing_point = BillingHistory(
+        measurement=test_group_name,
+        time=measurement2.time,
+        credits=TEST_INITIAL_CREDITS_GRANTED - test_usage_delta,
+        metric_name=measurement2.metric.measurement_name,
+        metric_friendly_name=measurement2.metric.friendly_name,
+    )
     await influx_client.write(measurement2)
     resp = await client.post("/write", data=measurement2.to_lineprotocol())
     assert resp.status == 202
@@ -201,6 +209,9 @@ async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
     # `task_done`
     await app["task_queue"].join()
     await test_group.connect()
+    billing_points = [
+        p async for p in await influx_client.query_billing_history(test_group_name)
+    ]
     assert test_group.credits_timestamps.value[
         test_measurent_name
     ] == start_date + timedelta(
@@ -211,3 +222,4 @@ async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
         test_group.credits_current.value
         == TEST_INITIAL_CREDITS_GRANTED - test_usage_delta
     )
+    assert [billing_point] == billing_points

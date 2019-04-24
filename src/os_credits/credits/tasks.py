@@ -4,7 +4,6 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 from __future__ import annotations
 
 from asyncio import Lock
-from dataclasses import replace
 from typing import Dict
 
 from aiohttp.web import Application
@@ -16,7 +15,7 @@ from os_credits.settings import config
 
 from .base_models import MT
 from .billing import calculate_credits
-from .models import measurement_by_name
+from .models import BillingHistory, measurement_by_name
 
 
 def unique_identifier(influx_line: str) -> str:
@@ -108,6 +107,7 @@ async def update_credits(
                 group,
             )
             group.credits_current.value = group.credits_granted.value
+    # satisfy type checker
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
             current_measurement.measurement
@@ -175,4 +175,12 @@ async def update_credits(
         credits_to_bill,
         group.credits_current.value,
     )
+    billing_entry = BillingHistory(
+        measurement=group.name,
+        time=current_measurement.time,
+        credits=group.credits_current.value,  # type: ignore
+        metric_name=current_measurement.metric.measurement_name,
+        metric_friendly_name=current_measurement.metric.friendly_name,
+    )
+    await app["influx_client"].write_billing_history(billing_entry)
     await group.save()

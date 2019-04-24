@@ -25,7 +25,7 @@ canvas {
       }
 let data = {};
 var chart = {};
-getCreditsHistory('history_test').then(function(data) {
+getCreditsHistory('{{ project_name }}').then(function(data) {
   c3.generate({
     bindto: '#chart',
     data: {

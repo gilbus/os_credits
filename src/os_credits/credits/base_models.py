@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
 from os_credits.influx.model import InfluxDBPoint
-from os_credits.log import internal_logger
 
 REGISTERED_MEASUREMENTS = {}
 

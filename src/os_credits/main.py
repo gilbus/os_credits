@@ -7,12 +7,11 @@ from logging.config import dictConfig
 from pathlib import Path
 from pprint import pformat
 
+from jinja2 import FileSystemLoader
+
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_jinja2 import setup
 from aiohttp_swagger import setup_swagger
-from jinja2 import FileSystemLoader
-from prometheus_async import aio
-
 from os_credits.credits.tasks import worker
 from os_credits.exceptions import MissingInfluxDatabase
 from os_credits.influx.client import InfluxDBClient
@@ -30,6 +29,7 @@ from os_credits.views import (
     ping,
     update_logging_config,
 )
+from prometheus_async import aio
 
 APP_ROOT = Path(__file__).parent
 
@@ -91,7 +91,7 @@ async def create_app() -> web.Application:
             ),
             web.get("/api/credits", get_credits_measurements),
             web.post("/api/credits", costs_per_hour),
-            web.get("/credits", credits_history),
+            web.get("/credits/{project_name}", credits_history),
             web.get("/ping", ping, name="ping"),
             web.get("/stats", application_stats),
             web.post("/write", influxdb_write_endpoint),

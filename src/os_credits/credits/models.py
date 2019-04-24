@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import AnyStr, Type
 
 from os_credits.influx.model import InfluxDBPoint
+from os_credits.log import internal_logger
 
 from .base_models import REGISTERED_MEASUREMENTS, Metric, UsageMeasurement
 
@@ -53,3 +54,6 @@ class BillingHistory(InfluxDBPoint):
     credits: float = field(metadata={"component": "field", "decoder": float})
     metric_name: str = field(metadata={"component": "tag"})
     metric_friendly_name: str = field(metadata={"component": "tag"})
+
+    def __post_init__(self) -> None:
+        internal_logger.debug("Constructed billing history point %s", self)
