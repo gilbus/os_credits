@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
-from os_credits.perun.attributes import DenbiCreditsGranted, PerunAttribute
+from os_credits.perun.attributes import DenbiCreditsGranted
+from os_credits.perun.base_attributes import PerunAttribute
 
 from .conftest import TEST_INITIAL_CREDITS_GRANTED
 

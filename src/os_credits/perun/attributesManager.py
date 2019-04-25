@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, cast
 
-from .attributes import PerunAttribute
+from .base_attributes import PerunAttribute
 from .requests import perun_get, perun_set
 
 _URL = "attributesManager"

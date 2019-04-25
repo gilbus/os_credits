@@ -15,9 +15,7 @@ from .attributes import (
     DenbiCreditsCurrent,
     DenbiCreditsGranted,
     DenbiCreditTimestamps,
-    PerunAttribute,
     ToEmail,
-    registered_attributes,
 )
 from .attributesManager import (
     get_attributes,
@@ -25,6 +23,7 @@ from .attributesManager import (
     set_attributes,
     set_resource_bound_attributes,
 )
+from .base_attributes import PerunAttribute, registered_attributes
 from .requests import perun_get
 from .resourcesManager import get_assigned_resources
 
