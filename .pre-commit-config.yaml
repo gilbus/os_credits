@@ -9,6 +9,7 @@ repos:
         pass_filenames: false
         language: system
         types: [python]
+        exclude: 'docs/conf.py'
       - id: black
         name: Blacken code
         entry: poetry run black

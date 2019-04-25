@@ -84,10 +84,12 @@ class InfluxDBClient(_InfluxDBClient):
         since: datetime = _DEFINITELY_PAST,
         query_constraints: Optional[List[str]] = None,
     ) -> AsyncGenerator[PT, None]:
-        """Wrapper around ``query_points`` to emulate ``WHERE time >= since`` constraint of InfluxDB.
+        """Wrapper around ``query_points`` to emulate ``WHERE time >= since`` constraint
+        of InfluxDB.
 
         Necessary since it returns wrong results (for me), fixing definitely
         appreciated.
+
         :param since: Only return Points whose timestamp is >=, i.e. which are not older
         """
         async for point in self.query_points(
