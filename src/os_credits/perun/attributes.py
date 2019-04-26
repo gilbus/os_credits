@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from os_credits.exceptions import DenbiCreditsGrantedMissing
-
 from . import PERUN_DATETIME_FORMAT
 from .base_attributes import (
     CreditTimestamps,
@@ -12,6 +10,7 @@ from .base_attributes import (
     _ContainerPerunAttribute,
     _ScalarPerunAttribute,
 )
+from .exceptions import DenbiCreditsGrantedMissing
 
 PERUN_NAMESPACE_OPT = "urn:perun:group:attribute-def:opt"
 PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"

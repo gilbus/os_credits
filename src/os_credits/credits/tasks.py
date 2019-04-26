@@ -7,8 +7,8 @@ from asyncio import Lock
 from typing import Dict
 
 from aiohttp.web import Application
-from os_credits.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.log import TASK_ID, task_logger
+from os_credits.perun.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.perun.groupsManager import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config

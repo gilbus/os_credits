@@ -18,6 +18,6 @@ repos:
       - id: mypy
         name: Static type checker
         entry: make mypy
-        pass_filenames: false
+        #        pass_filenames: false
         language: system
         types: [python]

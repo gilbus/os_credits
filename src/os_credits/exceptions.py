@@ -14,25 +14,6 @@ class MissingInfluxDatabase(CreditsError):
     pass
 
 
-class GroupAttributeError(CreditsError):
-    "Base Exception if any Group-Attribute has an invalid value"
-    pass
-
-
-class DenbiCreditsCurrentError(GroupAttributeError):
-    """Raised if a group does not have any value for DenbiCreditsCurrent and has been
-    billed before"""
-
-    pass
-
-
-class DenbiCreditsGrantedMissing(GroupAttributeError):
-    """Raised if a group does not have any credits granted in which case we cannot
-    operate on it."""
-
-    pass
-
-
 class MissingConfigError(CreditsError):
     "Raised if a non-set config value without default value is requested"
     pass
@@ -45,29 +26,4 @@ class MeasurementError(CreditsError):
 
 class CalculationResultError(CreditsError):
     "Raised if the result of credits calculation does not meet constraints"
-    pass
-
-
-class RequestError(CreditsError):
-    "Generic Exception in case no specific exception has been thrown"
-    pass
-
-
-class GroupNotExistsError(CreditsError):
-    "Python mapping of Perun's GroupNotExistsException"
-    pass
-
-
-class AttributeNotExistsError(CreditsError):
-    "Python mapping of Perun's AttributeNotExistsException"
-    pass
-
-
-class InternalError(CreditsError):
-    "Python mapping of Perun's InternalErrorException"
-    pass
-
-
-class ConsistencyError(CreditsError):
-    "Python mapping of Perun's ConsistencyErrorException"
     pass

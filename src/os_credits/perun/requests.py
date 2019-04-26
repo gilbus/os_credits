@@ -2,16 +2,16 @@ from contextvars import ContextVar
 from typing import Any, Dict, Optional
 
 from aiohttp import BasicAuth, ClientSession
+from os_credits.log import requests_logger
+from os_credits.settings import config
 
-from os_credits.exceptions import (
+from .exceptions import (
     AttributeNotExistsError,
     ConsistencyError,
     GroupNotExistsError,
     InternalError,
     RequestError,
 )
-from os_credits.log import requests_logger
-from os_credits.settings import config
 
 # will be instantiated/set it in the context of the aiohttp.web.application on
 # startup to have its lifetime bound to the application
