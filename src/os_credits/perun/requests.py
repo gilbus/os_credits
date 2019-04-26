@@ -7,6 +7,7 @@ from os_credits.settings import config
 
 from .exceptions import (
     AttributeNotExistsError,
+    BadCredentialsException,
     ConsistencyError,
     GroupNotExistsError,
     InternalError,
@@ -46,6 +47,11 @@ async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
         )
 
     async with _client.post(request_url, json=params) as response:
+        if response.status == 401:
+            raise BadCredentialsException(
+                "Perun returned 'Unauthorized' status code for user "
+                f"`{config['OS_CREDITS_PERUN_LOGIN']}`."
+            )
         response_content = await response.json()
         requests_logger.debug(
             "Received response %r with content %r", response, response_content

@@ -6,6 +6,11 @@ class PerunBaseException(CreditsError):
     pass
 
 
+class BadCredentialsException(PerunBaseException):
+    "Raised if Perun returns an 'Unauthorized' status code"
+    pass
+
+
 class GroupNotExistsError(PerunBaseException):
     "Python mapping of Perun's GroupNotExistsException"
     pass
