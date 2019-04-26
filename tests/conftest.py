@@ -1,4 +1,5 @@
 from asyncio import sleep
+from importlib import reload
 from logging import getLogger
 from typing import Dict, List
 
@@ -13,6 +14,13 @@ pytest_plugins = ["docker_compose"]
 
 # how many credits does every group, created during test runs, have
 TEST_INITIAL_CREDITS_GRANTED = 200
+
+
+@fixture(autouse=True)
+def reload_conf_module():
+    from os_credits import settings
+
+    reload(settings)
 
 
 @fixture(name="influx_client")

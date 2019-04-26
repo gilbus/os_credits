@@ -107,7 +107,6 @@ async def update_credits(
                 group,
             )
             group.credits_current.value = group.credits_granted.value
-    # satisfy type checker
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
             current_measurement.measurement
@@ -178,7 +177,7 @@ async def update_credits(
     billing_entry = BillingHistory(
         measurement=group.name,
         time=current_measurement.time,
-        credits=group.credits_current.value,  # type: ignore
+        credits=group.credits_current.value,
         metric_name=current_measurement.metric.measurement_name,
         metric_friendly_name=current_measurement.metric.friendly_name,
     )
