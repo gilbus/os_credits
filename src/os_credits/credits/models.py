@@ -6,25 +6,36 @@ from typing import AnyStr, Type
 from os_credits.influx.model import InfluxDBPoint
 from os_credits.log import internal_logger
 
-from .base_models import REGISTERED_MEASUREMENTS, Metric, UsageMeasurement
+from .base_models import (
+    REGISTERED_MEASUREMENTS,
+    Metric,
+    TotalUsageMetric,
+    UsageMeasurement,
+)
 
 
-class _VCPUMetric(Metric, measurement_name="project_vcpu_usage", friendly_name="cpu"):
+class VCPUMetric(
+    TotalUsageMetric, measurement_name="project_vcpu_usage", friendly_name="cpu"
+):
 
     CREDITS_PER_VIRTUAL_HOUR = 1
     property_description = "Amount of vCPUs."
 
 
-class _RAMMetric(Metric, measurement_name="project_mb_usage", friendly_name="ram"):
+class RAMMetric(
+    TotalUsageMetric, measurement_name="project_mb_usage", friendly_name="ram"
+):
 
-    CREDITS_PER_VIRTUAL_HOUR = 0.3
+    CREDITS_PER_VIRTUAL_HOUR = 0.03
     property_description = "Amount of RAM in MB."
 
 
+# located next to the metrics to ensure that their classes are initialized and therefore
+# registered in REGISTERED_MEASUREMENTS
 def measurement_by_name(name: AnyStr) -> Type[UsageMeasurement]:
     """
     :param name: The name of the measurement or a text in InfluxDB Line Protocol from
-    which the name is extracted.
+        which the name is extracted.
     """
     if isinstance(name, bytes):
         influx_line = name.decode()
@@ -40,12 +51,12 @@ def measurement_by_name(name: AnyStr) -> Type[UsageMeasurement]:
 
 @dataclass(frozen=True)
 class _VCPUMeasurement(UsageMeasurement):
-    metric: Type[Metric] = _VCPUMetric
+    metric: Type[Metric] = VCPUMetric
 
 
 @dataclass(frozen=True)
 class _RAMMeasurement(UsageMeasurement):
-    metric: Type[Metric] = _RAMMetric
+    metric: Type[Metric] = RAMMetric
 
 
 @dataclass(frozen=True)

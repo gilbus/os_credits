@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
 from os_credits.influx.model import InfluxDBPoint
@@ -16,7 +16,6 @@ MT = TypeVar("MT", bound="UsageMeasurement")
 class Metric:
     _metrics: Dict[str, Type[Metric]] = {}
 
-    CREDITS_PER_VIRTUAL_HOUR: Optional[float] = None
     property_description = ""
 
     measurement_name: str
@@ -31,28 +30,7 @@ class Metric:
     def calculate_credits(
         cls, *, current_measurement: MT, older_measurement: MT
     ) -> float:
-        """
-        Base implementation how to bill two measurements of the same type. Expected to
-        be overwritten by subclasses whose billing logic goes beyond subtracting usage
-        values, e.g. if your current_measurement values are not continuously increasing
-        but fluctuating, i.e. being a delta instead of a total sum.
-        """
-        if current_measurement.metric is not older_measurement.metric:
-            raise TypeError("Measurements must be of same type")
-        if cls.CREDITS_PER_VIRTUAL_HOUR is None or cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
-            raise ValueError(
-                f"UsageMeasurement type {type(cls)} does neither define a positive "
-                "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
-            )
-        if current_measurement.time < older_measurement.time:
-            raise MeasurementError(
-                "Passed current_measurement must be older. Use the top-level "
-                "`calculate_credits` function to prevent this error."
-            )
-        return (
-            float(current_measurement.value - older_measurement.value)
-            * cls.CREDITS_PER_VIRTUAL_HOUR
-        )
+        raise NotImplementedError("Must be implemented by subclass.")
 
     @classmethod
     def from_measurement(cls, name: str) -> Type[Metric]:
@@ -87,16 +65,63 @@ class Metric:
 
     @classmethod
     def costs_per_hour(cls, spec: int) -> float:
+        raise NotImplementedError("Must be implemented by subclass.")
+
+
+class TotalUsageMetric(
+    Metric,
+    # class definition must contain the following attributes to allow 'passthrough' from
+    # child classes
+    measurement_name=None,
+    friendly_name=None,
+):
+    """Base class of every metric which is only billed by its usage values, i.e. the
+    timestamps of any measurements are not considered at all.
+
+    One example is the :class:`~os_credits.credits.models.VCPUMetric` which bills the
+    amount of used virtual CPUs, the value of its corresponding measurement represents
+    this time in hours.
+    """
+
+    CREDITS_PER_VIRTUAL_HOUR: float
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        if cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
+            raise ValueError(
+                f"Metric type {cls.__name__} has non-positive "
+                f"CREDITS_PER_VIRTUAL_HOUR({cls.CREDITS_PER_VIRTUAL_HOUR})."
+            )
+        super().__init_subclass__(**kwargs)
+
+    @classmethod
+    def costs_per_hour(cls, spec: int) -> float:
         """
         Simple base implementation according to _calculate_credits. Expected to be
         overwritten in more complex measurement classes.
         """
-        if cls.CREDITS_PER_VIRTUAL_HOUR is None or cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
-            raise ValueError(
-                f"Metric type {cls.__name__} does neither define a positive "
-                "`CREDITS_PER_VIRTUAL_HOUR` nor overwrites `calculate_credits`"
-            )
         return spec * cls.CREDITS_PER_VIRTUAL_HOUR
+
+    @classmethod
+    def calculate_credits(
+        cls, *, current_measurement: MT, older_measurement: MT
+    ) -> float:
+        """
+        Base implementation how to bill two measurements of the same type. Expected to
+        be overwritten by subclasses whose billing logic goes beyond subtracting usage
+        values, e.g. if your current_measurement values are not continuously increasing
+        but fluctuating, i.e. being a delta instead of a total sum.
+        """
+        if current_measurement.metric is not older_measurement.metric:
+            raise TypeError("Measurements must be of same type")
+        if current_measurement.time < older_measurement.time:
+            raise MeasurementError(
+                "Passed current_measurement must be older. Use the top-level "
+                "`calculate_credits` function to prevent this error."
+            )
+        return (
+            float(current_measurement.value - older_measurement.value)
+            * cls.CREDITS_PER_VIRTUAL_HOUR
+        )
 
 
 @dataclass(init=False, frozen=True)

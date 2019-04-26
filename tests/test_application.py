@@ -97,12 +97,14 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     """Test the `/api/credits` endpoint responsible for calculating expected costs per
     hour of given resources"""
     from os_credits.main import create_app
-    from os_credits.credits.base_models import Metric
+    from os_credits.credits.base_models import TotalUsageMetric
 
     app = await create_app()
     client = await aiohttp_client(app)
 
-    class _MetricA(Metric, measurement_name="metric_a", friendly_name="metric_a"):
+    class _MetricA(
+        TotalUsageMetric, measurement_name="metric_a", friendly_name="metric_a"
+    ):
         CREDITS_PER_VIRTUAL_HOUR = 1.3
         property_description = "Test metric A"
 
@@ -114,7 +116,9 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
                 "measurement_name": cls.measurement_name,
             }
 
-    class _MetricB(Metric, measurement_name="metric_b", friendly_name="metric_b"):
+    class _MetricB(
+        TotalUsageMetric, measurement_name="metric_b", friendly_name="metric_b"
+    ):
         CREDITS_PER_VIRTUAL_HOUR = 1
 
     resp = await client.get("/api/credits")
@@ -141,7 +145,7 @@ async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
     Incoming data of the InfluxDB are simulated multiple times to trigger different
     scenarios (first measurement vs further measurement)"""
     from os_credits.main import create_app
-    from os_credits.credits.base_models import Metric
+    from os_credits.credits.base_models import TotalUsageMetric, Metric
     from os_credits.perun.groupsManager import Group
 
     start_date = datetime.now()
@@ -153,7 +157,9 @@ async def test_whole_run(aiohttp_client, os_credits_offline, influx_client):
     test_usage_delta = 5
 
     class _TestMetric(
-        Metric, measurement_name=test_measurent_name, friendly_name=test_measurent_name
+        TotalUsageMetric,
+        measurement_name=test_measurent_name,
+        friendly_name=test_measurent_name,
     ):
         CREDITS_PER_VIRTUAL_HOUR = 1
         property_description = "Test Metric 1 for whole run test"
