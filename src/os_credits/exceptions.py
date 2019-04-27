@@ -27,3 +27,13 @@ class MeasurementError(CreditsError):
 class CalculationResultError(CreditsError):
     "Raised if the result of credits calculation does not meet constraints"
     pass
+
+
+class MissingTemplateError(CreditsError):
+    "Raised if a Notification class does not define a template"
+    pass
+
+
+class BrokenTemplateError(CreditsError):
+    "Raised if a template of a Notification class contains errors"
+    pass

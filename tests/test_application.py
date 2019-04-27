@@ -13,7 +13,6 @@ from pytest import fixture
 
 import os_credits.perun.attributesManager
 import os_credits.perun.groupsManager
-from os_credits import settings
 from os_credits.credits.base_models import Metric, TotalUsageMetric, UsageMeasurement
 from os_credits.credits.models import BillingHistory
 from os_credits.perun.groupsManager import Group

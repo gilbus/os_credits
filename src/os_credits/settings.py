@@ -20,6 +20,13 @@ DEFAULT_CONFIG = {
     # named this way to match environment variable used by the influxdb docker image
     "INFLUXDB_DB": "",
     "CREDITS_HISTORY_DB": "credits_history",
+    "MAIL_FROM": "CreditsService@denbi.de",
+    "MAIL_SMTP_SERVER": "localhost",
+    "MAIL_SMTP_PORT": 25,
+    "MAIL_SMTP_USER": "",
+    "MAIL_SMTP_PASSWORD": "",
+    "MAIL_NOT_STARTTLS": False,
+    "CLOUD_GOVERNANCE_MAIL": "",
 }
 
 # for environment variables that need to be processed
@@ -36,12 +43,16 @@ try:
 except KeyError:
     # Environment variable not set, that's ok
     pass
+for bool_value in ["MAIL_NOT_STARTTLS"]:
+    if bool_value in environ:
+        PROCESSED_ENV_CONFIG.update({bool_value: True})
 
 for int_value in [
     "OS_CREDITS_PRECISION",
     "OS_CREDITS_WORKERS",
     "INFLUXDB_PORT",
     "OS_CREDITS_PERUN_VO_ID",
+    "MAIL_SMTP_PORT",
 ]:
     try:
         PROCESSED_ENV_CONFIG.update({int_value: int(environ[int_value])})

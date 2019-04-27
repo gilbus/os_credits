@@ -23,6 +23,15 @@ def reload_conf_module():
     reload(settings)
 
 
+@fixture(name="smtpserver")
+def fixture_smtpserver(smtpserver, monkeypatch):
+    monkeypatch.setenv("MAIL_SMTP_SERVER", str(smtpserver.addr[0]))
+    monkeypatch.setenv("MAIL_SMTP_PORT", str(smtpserver.addr[1]))
+    monkeypatch.setenv("MAIL_NOT_STARTTLS", "1")
+    monkeypatch.setenv("CLOUD_GOVERNANCE_MAIL", "cloud@governance")
+    return smtpserver
+
+
 @fixture(name="influx_client")
 async def fixture_influx_client(
     docker_network_info: Dict[str, List[NetworkInfo]], monkeypatch, loop
