@@ -6,6 +6,7 @@ from typing import Any, Dict, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
 from os_credits.influx.model import InfluxDBPoint
+from os_credits.log import internal_logger
 
 REGISTERED_MEASUREMENTS = {}
 
@@ -22,9 +23,15 @@ class Metric:
     friendly_name: str
 
     def __init_subclass__(cls, measurement_name: str, friendly_name: str) -> None:
+        if None in (measurement_name, friendly_name):
+            internal_logger.debug(
+                "Not registering subclass %s of `Metric` since one or both of its names are None."
+            )
+            return
         Metric._metrics.update({measurement_name: cls})
         cls.measurement_name = measurement_name
         cls.friendly_name = friendly_name
+        internal_logger.debug("Registered subclass of `Metric`: %s", cls)
 
     @classmethod
     def calculate_credits(
