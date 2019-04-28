@@ -3,6 +3,18 @@ repos:
   # required linters/fixers are already part of poetry dev-setup
   - repo: local
     hooks:
+      # run mypy first since its errors will probably also be the cause of
+      # failing tests but its faster than the whole pytest suite
+      - id: mypy
+        name: Static type checker
+        entry: make mypy
+        language: system
+        types: [python]
+      - id: black
+        name: Blacken code
+        entry: poetry run black
+        language: system
+        types: [python]
       - id: pytest
         name: Run tests
         entry: make test
@@ -10,14 +22,3 @@ repos:
         language: system
         types: [python]
         exclude: 'docs/conf.py'
-      - id: black
-        name: Blacken code
-        entry: poetry run black
-        language: system
-        types: [python]
-      - id: mypy
-        name: Static type checker
-        entry: make mypy
-        #        pass_filenames: false
-        language: system
-        types: [python]
