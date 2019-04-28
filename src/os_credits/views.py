@@ -3,12 +3,14 @@ Contains all view function, the routes are specified inside main.py, django styl
 """
 import logging.config
 from datetime import datetime
+from decimal import Decimal
 from json import JSONDecodeError, loads
 from traceback import format_stack
 from typing import Any, Dict, List, Union
 
 from aiohttp import web
 from aiohttp_jinja2 import template
+
 from os_credits.credits.base_models import Metric
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
@@ -44,7 +46,7 @@ async def credits_history_api(request: web.Request) -> web.Response:
         project_name, since=datetime(2019, 4, 19)
     ):
         time_column.append(point.time.strftime("%Y-%m-%d %H:%M:%S"))
-        credits_column.append(point.credits)
+        credits_column.append(float(point.credits))
         metric_column.append(point.metric_friendly_name)
     return web.json_response(
         {"timestamps": time_column, "credits": credits_column, "metrics": metric_column}
@@ -253,7 +255,7 @@ async def costs_per_hour(request: web.Request) -> web.Response:
         machine_specs = await request.json()
     except JSONDecodeError:
         raise web.HTTPBadRequest(reason="Invalid JSON")
-    costs_per_hour = 0.0
+    costs_per_hour = Decimal(0)
     for friendly_name, spec in machine_specs.items():
         try:
             costs_per_hour += Metric.friendly_name_to_usage()[
@@ -265,4 +267,6 @@ async def costs_per_hour(request: web.Request) -> web.Response:
             raise web.HTTPBadRequest(
                 reason=f"Parameter {friendly_name} had wrong type."
             )
-    return web.json_response(costs_per_hour)
+    return web.json_response(
+        float(costs_per_hour.quantize(config["OS_CREDITS_PRECISION"]))
+    )

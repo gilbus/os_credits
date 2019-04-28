@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from functools import lru_cache
 from typing import Any, Dict, Type, TypeVar
 
@@ -36,7 +37,7 @@ class Metric:
     @classmethod
     def calculate_credits(
         cls, *, current_measurement: MT, older_measurement: MT
-    ) -> float:
+    ) -> Decimal:
         raise NotImplementedError("Must be implemented by subclass.")
 
     @classmethod
@@ -71,7 +72,7 @@ class Metric:
         return {m.friendly_name: m for m in Metric._metrics.values()}
 
     @classmethod
-    def costs_per_hour(cls, spec: int) -> float:
+    def costs_per_hour(cls, spec: int) -> Decimal:
         raise NotImplementedError("Must be implemented by subclass.")
 
 
@@ -90,7 +91,7 @@ class TotalUsageMetric(
     this time in hours.
     """
 
-    CREDITS_PER_VIRTUAL_HOUR: float
+    CREDITS_PER_VIRTUAL_HOUR: Decimal
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         if cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
@@ -101,7 +102,7 @@ class TotalUsageMetric(
         super().__init_subclass__(**kwargs)
 
     @classmethod
-    def costs_per_hour(cls, spec: int) -> float:
+    def costs_per_hour(cls, spec: int) -> Decimal:
         """
         Simple base implementation according to _calculate_credits. Expected to be
         overwritten in more complex measurement classes.
@@ -111,7 +112,7 @@ class TotalUsageMetric(
     @classmethod
     def calculate_credits(
         cls, *, current_measurement: MT, older_measurement: MT
-    ) -> float:
+    ) -> Decimal:
         """
         Base implementation how to bill two measurements of the same type. Expected to
         be overwritten by subclasses whose billing logic goes beyond subtracting usage
@@ -126,7 +127,7 @@ class TotalUsageMetric(
                 "`calculate_credits` function to prevent this error."
             )
         return (
-            float(current_measurement.value - older_measurement.value)
+            Decimal(current_measurement.value - older_measurement.value)
             * cls.CREDITS_PER_VIRTUAL_HOUR
         )
 

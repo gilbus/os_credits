@@ -6,6 +6,7 @@ existence of certain databases at startup.
 """
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+from decimal import Decimal
 from importlib import reload
 from typing import Type
 
@@ -87,7 +88,7 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     class _MetricA(
         TotalUsageMetric, measurement_name="metric_a", friendly_name="metric_a"
     ):
-        CREDITS_PER_VIRTUAL_HOUR = 1.3
+        CREDITS_PER_VIRTUAL_HOUR = Decimal("1.3")
         property_description = "Test metric A"
 
         @classmethod
@@ -101,7 +102,7 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     class _MetricB(
         TotalUsageMetric, measurement_name="metric_b", friendly_name="metric_b"
     ):
-        CREDITS_PER_VIRTUAL_HOUR = 1
+        CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
 
     resp = await client.get("/api/credits")
     measurements = await resp.json()
@@ -115,9 +116,8 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     assert resp.status == 404, "POST /api/credits accepted invalid data"
 
     resp = await client.post("/api/credits", json={"metric_a": 3, "metric_b": 2})
-    json = await resp.json()
     assert (
-        resp.status == 200 and json == 2 * 1 + 3 * 1.3
+        resp.status == 200 and await resp.json() == 2 * 1 + 3 * 1.3
     ), "POST /api/credits returned wrong result"
 
 
@@ -133,7 +133,7 @@ class _TestMetric(
     measurement_name=test_measurent_name,
     friendly_name=test_measurent_name,
 ):
-    CREDITS_PER_VIRTUAL_HOUR = 1
+    CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
     property_description = "Test Metric 1 for whole run test"
 
 

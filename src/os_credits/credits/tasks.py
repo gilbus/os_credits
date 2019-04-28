@@ -4,6 +4,7 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 from __future__ import annotations
 
 from asyncio import Lock
+from decimal import Decimal
 from typing import Dict
 
 from aiohttp.web import Application
@@ -106,7 +107,7 @@ async def update_credits(
                 "Copying the value of `credits_granted`",
                 group,
             )
-            group.credits_current.value = group.credits_granted.value
+            group.credits_current.value = Decimal(group.credits_granted.value)
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
             current_measurement.measurement
@@ -167,7 +168,9 @@ async def update_credits(
     ] = current_measurement.time
 
     previous_group_credits = group.credits_current.value
-    group.credits_current.value -= credits_to_bill
+    group.credits_current.value = (
+        group.credits_current.value - credits_to_bill
+    ).quantize(config["OS_CREDITS_PRECISION"])
     task_logger.info(
         "Credits: %f - %f = %f",
         previous_group_credits,

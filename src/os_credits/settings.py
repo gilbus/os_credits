@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import ChainMap, UserDict
+from decimal import Decimal
 from os import environ
 from typing import Any, Dict
 
@@ -12,7 +13,8 @@ DEFAULT_CONFIG = {
     "OS_CREDITS_PERUN_PASSWORD": "",
     "OS_CREDITS_PERUN_VO_ID": 0,
     "OS_CREDITS_WORKERS": 10,
-    "OS_CREDITS_PRECISION": 2,
+    # see python docs for Decimal
+    "OS_CREDITS_PRECISION": Decimal(10) ** -2,
     "INFLUXDB_PORT": 8086,
     "INFLUXDB_HOST": "localhost",
     "INFLUXDB_USER": "",
@@ -47,7 +49,7 @@ for bool_value in ["MAIL_NOT_STARTTLS"]:
     if bool_value in environ:
         PROCESSED_ENV_CONFIG.update({bool_value: True})
 
-for int_value in [
+for int_value_key in [
     "OS_CREDITS_PRECISION",
     "OS_CREDITS_WORKERS",
     "INFLUXDB_PORT",
@@ -55,12 +57,24 @@ for int_value in [
     "MAIL_SMTP_PORT",
 ]:
     try:
-        PROCESSED_ENV_CONFIG.update({int_value: int(environ[int_value])})
+        int_value = int(environ[int_value_key])
+        if int_value < 0:
+            internal_logger.warning(
+                "Integer value (%s) must not be negative, falling back to default value",
+                int_value_key,
+            )
+            continue
+        PROCESSED_ENV_CONFIG.update({int_value_key: int_value})
     except KeyError:
         # Environment variable not set, that's ok
         pass
     except ValueError:
-        internal_logger.warning("Could not convert value of $%s to int", int_value)
+        internal_logger.warning("Could not convert value of $%s to int", int_value_key)
+
+if "OS_CREDITS_PRECISION" in PROCESSED_ENV_CONFIG:
+    PROCESSED_ENV_CONFIG["OS_CREDITS_PRECISION"] = (
+        Decimal(10) ** -PROCESSED_ENV_CONFIG["OS_CREDITS_PRECISION"]
+    )
 
 DEFAULT_LOG_LEVEL = {
     "os_credits.tasks": "DEBUG",

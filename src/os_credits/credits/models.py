@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import AnyStr, Type
 
 from os_credits.influx.model import InfluxDBPoint
@@ -18,7 +19,7 @@ class VCPUMetric(
     TotalUsageMetric, measurement_name="project_vcpu_usage", friendly_name="cpu"
 ):
 
-    CREDITS_PER_VIRTUAL_HOUR = 1
+    CREDITS_PER_VIRTUAL_HOUR = Decimal(1)
     property_description = "Amount of vCPUs."
 
 
@@ -26,7 +27,8 @@ class RAMMetric(
     TotalUsageMetric, measurement_name="project_mb_usage", friendly_name="ram"
 ):
 
-    CREDITS_PER_VIRTUAL_HOUR = 0.03
+    # always specify the amount as string to prevent inaccuracies of builtin float
+    CREDITS_PER_VIRTUAL_HOUR = Decimal("0.03")
     property_description = "Amount of RAM in MB."
 
 
@@ -62,7 +64,7 @@ class _RAMMeasurement(UsageMeasurement):
 @dataclass(frozen=True)
 class BillingHistory(InfluxDBPoint):
 
-    credits: float = field(metadata={"component": "field", "decoder": float})
+    credits: Decimal = field(metadata={"component": "field", "decoder": Decimal})
     metric_name: str = field(metadata={"component": "tag"})
     metric_friendly_name: str = field(metadata={"component": "tag"})
 

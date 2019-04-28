@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from . import PERUN_DATETIME_FORMAT
@@ -18,7 +19,7 @@ PERUN_NAMESPACE_GROUP_RESOURCE_OPT = "urn:perun:group_resource:attribute-def:opt
 
 
 class DenbiCreditsCurrent(
-    _ScalarPerunAttribute[Optional[float]],
+    _ScalarPerunAttribute[Optional[Decimal]],
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
     perun_type="java.lang.String",
@@ -27,11 +28,11 @@ class DenbiCreditsCurrent(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> Optional[float]:
+    def perun_decode(self, value: Optional[str]) -> Optional[Decimal]:
         """Stored as str inside perun, unfortunately"""
-        return float(value) if value else None
+        return Decimal(value) if value else None
 
-    def perun_encode(self, value: Optional[float]) -> Optional[str]:
+    def perun_encode(self, value: Optional[Decimal]) -> Optional[str]:
         return str(value) if value else None
 
 

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from importlib import reload
 
 
@@ -10,14 +11,16 @@ async def test_settings(monkeypatch):
     monkeypatch.setenv(
         "OS_CREDITS_PROJECT_WHITELIST", ";".join(sorted(list_conf_value))
     )
-    monkeypatch.setenv("OS_CREDITS_PRECISION", str(integer_conf_value))
+    monkeypatch.setenv("INFLUXDB_PORT", str(integer_conf_value))
+    monkeypatch.setenv("OS_CREDITS_PRECISION", str(3))
     # necessary to pickup changed environment variables
     reload(settings)
     from os_credits.settings import config
 
     assert (
-        list_conf_value == config["OS_CREDITS_PROJECT_WHITELIST"]
+        config["OS_CREDITS_PROJECT_WHITELIST"] == list_conf_value
     ), "Comma-separated list was not parsed correctly from environment"
     assert (
-        integer_conf_value == config["OS_CREDITS_PRECISION"]
+        config["INFLUXDB_PORT"] == integer_conf_value
     ), "Integer value was not parsed/converted correctly from environment"
+    assert config["OS_CREDITS_PRECISION"] == Decimal(10) ** -3
