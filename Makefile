@@ -43,13 +43,10 @@ docs:
 	cd docs && $(MAKE) html
 
 test:
-	poetry run pytest --color=yes tests
+	poetry run pytest --color=yes --cov=src/os_credits --cov-report=html:htmlcov/tests tests
 
 mypy:
-	poetry run mypy src/os_credits
-
-coverage:
-	poetry run pytest --color=yes --cov=src/os_credits --cov-report=html tests
+	poetry run mypy src/os_credits --html-report=htmlcov/mypy
 
 run:
 	poetry run os-credits --port $(PORT) --host $(HOST)
