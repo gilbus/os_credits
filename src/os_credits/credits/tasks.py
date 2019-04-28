@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Dict
 
 from aiohttp.web import Application
+
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.perun.groupsManager import Group
@@ -131,9 +132,10 @@ async def update_credits(
         group.credits_timestamps.value[current_measurement.measurement],
     )
 
-    if current_measurement.time < last_measurement_timestamp:
+    if current_measurement.time <= last_measurement_timestamp:
         task_logger.warning(
-            "Current measurement is OLDER than the last measurement. HOW? Ignoring"
+            "Current measurement is not more recent than the last measurement. HOW? "
+            "Ignoring"
         )
         return
 
@@ -171,6 +173,17 @@ async def update_credits(
     group.credits_current.value = (
         group.credits_current.value - credits_to_bill
     ).quantize(config["OS_CREDITS_PRECISION"])
+    # Comparing the actual values makes sure that this case even triggers if
+    # credits_to_bill is not zero but so small that its changes are dropped due to
+    # rounding
+    if previous_group_credits == group.credits_current.value:
+        task_logger.info(
+            "Measurement does not change the amount of credits, therefore no changes "
+            "will be stored inside Perun or the InfluxDB. Credits to bill would have "
+            "been: %f",
+            credits_to_bill,
+        )
+        return
     task_logger.info(
         "Credits: %f - %f = %f",
         previous_group_credits,
