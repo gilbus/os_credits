@@ -4,7 +4,7 @@ from asyncio import get_event_loop
 from email.mime.text import MIMEText
 from enum import Enum, auto
 from string import Template
-from typing import Dict, Set, Union
+from typing import ClassVar, Dict, Set, Union
 
 from aiosmtplib import SMTP
 from os_credits.exceptions import BrokenTemplateError, MissingTemplateError
@@ -25,22 +25,22 @@ class EmailNotificationBase(Exception):
     """Base class of all exceptions whose cause should not only be logged but also send
     to the Cloud Governance and/or the Group maintainers."""
 
-    to: Set[EmailRecipientType]
-    cc: Set[EmailRecipientType] = set()
-    bcc: Set[EmailRecipientType] = set()
+    to: ClassVar[Set[EmailRecipientType]]
+    cc: ClassVar[Set[EmailRecipientType]] = set()
+    bcc: ClassVar[Set[EmailRecipientType]] = set()
 
     """:class:`string.Template` object created on class instantiation from the content
     of :attr:`subject_template`."""
-    subject: Template
+    subject: ClassVar[Template]
     """Contains the template for the subject of mail in string form. Must be defined by
     any subclass."""
-    subject_template: str
+    subject_template: ClassVar[str]
     """:class:`string.Template` object created on class instantiation from the content
     of :attr:`body_template`."""
-    body: Template
+    body: ClassVar[Template]
     """Contains the template for the body of mail in string form. Must be defined by any
     subclass."""
-    body_template: str
+    body_template: ClassVar[str]
     """Mapping between placeholders and values which can used inside subject and body
     templates. See :func:`construct_message` for default mappings provided by the base
     class. Feel free to overwrite/extend the function or add custom mappings to this

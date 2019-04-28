@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import lru_cache
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, ClassVar, Dict, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
 from os_credits.influx.model import InfluxDBPoint
@@ -32,10 +32,10 @@ MT = TypeVar("MT", bound=UsageMeasurement)
 class Metric:
     _metrics: Dict[str, Type[Metric]] = {}
 
-    property_description = ""
+    property_description: ClassVar[str] = ""
 
-    measurement_name: str
-    friendly_name: str
+    measurement_name: ClassVar[str]
+    friendly_name: ClassVar[str]
 
     def __init_subclass__(cls, measurement_name: str, friendly_name: str) -> None:
         if None in (measurement_name, friendly_name):
@@ -105,7 +105,7 @@ class TotalUsageMetric(
     this time in hours.
     """
 
-    CREDITS_PER_VIRTUAL_HOUR: Decimal
+    CREDITS_PER_VIRTUAL_HOUR: ClassVar[Decimal]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         if cls.CREDITS_PER_VIRTUAL_HOUR <= 0:

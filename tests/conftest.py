@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from pytest import fixture
 
-from aiohttp.client_exceptions import ClientOSError
+from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
 from os_credits.influx.client import InfluxDBClient
 from os_credits.settings import config
 from pytest_docker_compose import NetworkInfo
@@ -51,7 +51,7 @@ async def fixture_influx_client(
         try:
             await influx_client.ping()
             break
-        except ClientOSError:
+        except (ClientOSError, ServerDisconnectedError):
             print("Sleeping for 1 second until InfluxDB is up")
             await sleep(1)
     # in production the application cannot create any databases since it does not admin
