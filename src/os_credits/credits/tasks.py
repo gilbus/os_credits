@@ -3,19 +3,20 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 """
 from __future__ import annotations
 
-from asyncio import Lock
+from asyncio import Lock, Queue
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, cast
 
 from aiohttp.web import Application
 
+from os_credits.influx.client import InfluxDBClient
 from os_credits.log import TASK_ID, task_logger
 from os_credits.perun.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.perun.groupsManager import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config
 
-from .base_models import MT
+from .base_models import UsageMeasurement
 from .billing import calculate_credits
 from .models import BillingHistory, measurement_by_name
 
@@ -26,8 +27,8 @@ def unique_identifier(influx_line: str) -> str:
 
 
 async def worker(name: str, app: Application) -> None:
-    group_locks = app["group_locks"]
-    task_queue = app["task_queue"]
+    group_locks = cast(Dict[str, Lock], app["group_locks"])
+    task_queue = cast(Queue, app["task_queue"])
     while True:
         influx_line: str = await task_queue.get()
         task_id = unique_identifier(influx_line)
@@ -84,7 +85,7 @@ async def process_influx_line(
 
 
 async def update_credits(
-    group: Group, current_measurement: MT, app: Application
+    group: Group, current_measurement: UsageMeasurement, app: Application
 ) -> None:
     try:
         await group.connect()
@@ -139,7 +140,10 @@ async def update_credits(
         )
         return
 
-    project_measurements = await app["influx_client"].previous_measurements(
+    # help type checker since it can not infer the type of app['influx_client']
+    # statically
+    influx_client = cast(InfluxDBClient, app["influx_client"])
+    project_measurements = await influx_client.previous_measurements(
         measurement=current_measurement, since=last_measurement_timestamp
     )
     try:
@@ -164,6 +168,12 @@ async def update_credits(
         await group.save()
         return
 
+    if current_measurement.value == last_measurement.value:
+        task_logger.info(
+            "Values of this and previously billed measurement do not differ, dropping it."
+        )
+        return
+
     credits_to_bill = calculate_credits(current_measurement, last_measurement)
     group.credits_timestamps.value[
         current_measurement.measurement
@@ -178,9 +188,9 @@ async def update_credits(
     # rounding
     if previous_group_credits == group.credits_current.value:
         task_logger.info(
-            "Measurement does not change the amount of credits, therefore no changes "
-            "will be stored inside Perun or the InfluxDB. Credits to bill would have "
-            "been: %f",
+            "Measurement does not change the amount of credits left due to rounding, "
+            "therefore no changes will be stored inside Perun or the InfluxDB. Credits "
+            "to bill would have been: %f",
             credits_to_bill,
         )
         return
@@ -197,5 +207,5 @@ async def update_credits(
         metric_name=current_measurement.metric.measurement_name,
         metric_friendly_name=current_measurement.metric.friendly_name,
     )
-    await app["influx_client"].write_billing_history(billing_entry)
+    await influx_client.write_billing_history(billing_entry)
     await group.save()

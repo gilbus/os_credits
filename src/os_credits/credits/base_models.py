@@ -11,8 +11,22 @@ from os_credits.log import internal_logger
 
 REGISTERED_MEASUREMENTS = {}
 
+
+@dataclass(init=False, frozen=True)
+class UsageMeasurement(InfluxDBPoint):
+    location_id: int = field(metadata={"component": "tag", "decoder": int})
+    project_name: str = field(metadata={"component": "tag"})
+    value: float = field(metadata={"component": "field", "decoder": float})
+    metric: Type[Metric] = field(
+        repr=False, init=False, compare=False, metadata={"component": None}
+    )
+
+    def __init_subclass__(cls: Type[UsageMeasurement]) -> None:
+        REGISTERED_MEASUREMENTS[cls.metric.measurement_name] = cls
+
+
 # MeasurementType
-MT = TypeVar("MT", bound="UsageMeasurement")
+MT = TypeVar("MT", bound=UsageMeasurement)
 
 
 class Metric:
@@ -130,16 +144,3 @@ class TotalUsageMetric(
             Decimal(current_measurement.value - older_measurement.value)
             * cls.CREDITS_PER_VIRTUAL_HOUR
         )
-
-
-@dataclass(init=False, frozen=True)
-class UsageMeasurement(InfluxDBPoint):
-    location_id: int = field(metadata={"component": "tag", "decoder": int})
-    project_name: str = field(metadata={"component": "tag"})
-    value: float = field(metadata={"component": "field", "decoder": float})
-    metric: Type[Metric] = field(
-        repr=False, init=False, compare=False, metadata={"component": None}
-    )
-
-    def __init_subclass__(cls: Type[UsageMeasurement]) -> None:
-        REGISTERED_MEASUREMENTS[cls.metric.measurement_name] = cls

@@ -261,7 +261,7 @@ async def test_measurement_from_the_past(
     assert [] == billing_points
 
 
-async def test_no_changing_credits(aiohttp_client, os_credits_offline, influx_client):
+async def test_equal_usage_values(aiohttp_client, os_credits_offline, influx_client):
     """In contrast to :func:`test_regular_run` the second measurement does not have a
     higher usage value than the first one"""
     from os_credits.main import create_app
@@ -299,6 +299,128 @@ async def test_no_changing_credits(aiohttp_client, os_credits_offline, influx_cl
     assert (
         test_group.credits_current.value == TEST_INITIAL_CREDITS_GRANTED
     ), "Group has been billed incorrectly, no changes expected"
+
+
+async def test_no_billing_due_to_rounding(
+    aiohttp_client, os_credits_offline, influx_client
+):
+    """The measurements are all valid but no credits are billed and no timestamps
+    updated when the second measurement is processed since the costs of the metric are
+    so low they get lost when rounding according to given precision.
+    
+    Depending on the chosen rounding strategy multiple measurements have to processed
+    before their accumulated usage delta leads to a billing."""
+    from os_credits.main import create_app
+    from os_credits.settings import config
+
+    test_measurent_name = "whole_run_test_cheap_1"
+
+    class _TestMetricCheap(
+        TotalUsageMetric,
+        measurement_name=test_measurent_name,
+        friendly_name=test_measurent_name,
+    ):
+        # by setting the costs per hour this way we can be sure that the first billings
+        # will be rounded to zero
+        CREDITS_PER_VIRTUAL_HOUR = config["OS_CREDITS_PRECISION"] * Decimal("10") ** -1
+        property_description = "Test Metric 1 for whole run test"
+
+    @dataclass(frozen=True)
+    class _TestMeasurementCheap(UsageMeasurement):
+        metric: Type[Metric] = _TestMetricCheap
+
+    measurement = _TestMeasurementCheap(
+        measurement=test_measurent_name,
+        time=start_date,
+        location_id=test_location_id,
+        project_name=test_group_name,
+        value=100,
+    )
+    test_usage_delta = 1
+
+    app = await create_app()
+    http_client = await aiohttp_client(app)
+
+    # simulate subscription behaviour where every entry gets mirrored to the application
+    # /write endpoint
+    await influx_client.write(measurement)
+    resp = await http_client.post("/write", data=measurement.to_lineprotocol())
+    assert resp.status == 202
+    # wait until request has been processed, indicated by the task finally calling
+    # `task_done`
+    await app["task_queue"].join()
+    await test_group.connect()
+    assert (
+        test_group.credits_granted.value
+        == test_group.credits_current.value
+        == TEST_INITIAL_CREDITS_GRANTED
+    ), "Initial copy from credits_granted to credits_current failed"
+    assert (
+        test_group.credits_timestamps.value[test_measurent_name] == start_date
+    ), "Timestamp from measurement was not stored correctly in group"
+    # with default rounding Strategy ROUND_TO_HALF_EVEN
+    # https://en.wikipedia.org/wiki/Rounding#Round_half_to_even
+    # the following measurements will not cause any bills
+    # choosing the ranges according to the amount of the credits to bill they accumulate
+    for i in range(1, 6):
+        measurement = replace(
+            measurement,
+            time=measurement.time + timedelta(days=7),
+            value=measurement.value + test_usage_delta,
+        )
+        await influx_client.write(measurement)
+        resp = await http_client.post("/write", data=measurement.to_lineprotocol())
+        assert resp.status == 202
+        # wait until request has been processed, indicated by the task finally calling
+        # `task_done`
+        await app["task_queue"].join()
+        await test_group.connect()
+        billing_points = [
+            p async for p in await influx_client.query_billing_history(test_group_name)
+        ]
+        assert (
+            test_group.credits_timestamps.value[test_measurent_name] == start_date
+        ), "Timestamp from measurement was updated although no credits were billed"
+        # since our CREDITS_PER_VIRTUAL_HOUR are 1
+        assert (
+            test_group.credits_current.value == TEST_INITIAL_CREDITS_GRANTED
+        ), """Credits were billed although this should not have happened given the required
+        precision"""
+        assert billing_points == []
+    # this measurement should to a bill
+    measurement = replace(
+        measurement,
+        time=measurement.time + timedelta(days=7),
+        value=measurement.value + test_usage_delta,
+    )
+    await influx_client.write(measurement)
+    resp = await http_client.post("/write", data=measurement.to_lineprotocol())
+    assert resp.status == 202
+    # wait until request has been processed, indicated by the task finally calling
+    # `task_done`
+    await app["task_queue"].join()
+    await test_group.connect()
+    billing_points = [
+        p async for p in await influx_client.query_billing_history(test_group_name)
+    ]
+    expected_credits_left = (
+        Decimal(TEST_INITIAL_CREDITS_GRANTED) - config["OS_CREDITS_PRECISION"]
+    )
+    billing_point = BillingHistory(
+        measurement=test_group_name,
+        time=measurement.time,
+        credits=expected_credits_left,
+        metric_name=measurement.metric.measurement_name,
+        metric_friendly_name=measurement.metric.friendly_name,
+    )
+    assert (
+        test_group.credits_timestamps.value[test_measurent_name] == measurement.time
+    ), "Timestamp from measurement was updated although no credits were billed"
+    assert (
+        test_group.credits_current.value == expected_credits_left
+    ), """Credits were billed although this should not have happened given the required
+    precision"""
+    assert billing_points == [billing_point]
 
 
 async def test_missing_previous_values(

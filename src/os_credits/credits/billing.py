@@ -3,13 +3,9 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TypeVar
 
-from os_credits.credits.base_models import UsageMeasurement
+from os_credits.credits.base_models import MT
 from os_credits.exceptions import CalculationResultError
 from os_credits.log import internal_logger
-
-# The TypeVar shows mypy that measurement{1,2} have to of the same type, the
-# bound-parameter specifies that this type must be a UsageMeasurement or a subclass
-MT = TypeVar("MT", bound=UsageMeasurement)
 
 
 def calculate_credits(measurement1: MT, measurement2: MT) -> Decimal:
