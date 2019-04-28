@@ -29,8 +29,10 @@ author = "gilbus"
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx_autodoc_typehints",
+    "sphinx.ext.coverage",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
+    "sphinx_autodoc_typehints",
     "sphinxcontrib_trio",
 ]
 
@@ -44,6 +46,10 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 add_module_names = False
+
+# -- Intersphinx -------------------------------------------------------------
+
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # -- Options for HTML output -------------------------------------------------
 

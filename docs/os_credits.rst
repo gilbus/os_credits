@@ -37,6 +37,14 @@ os\_credits.log module
     :undoc-members:
     :show-inheritance:
 
+os\_credits.notifications module
+--------------------------------
+
+.. automodule:: os_credits.notifications
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 os\_credits.main module
 -----------------------
 
