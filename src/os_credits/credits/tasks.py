@@ -67,14 +67,16 @@ async def process_influx_line(
         )
         return
     perun_group = Group(measurement.project_name, measurement.location_id)
-    if "OS_CREDITS_PROJECT_WHITELIST" in config:
-        if perun_group.name not in config["OS_CREDITS_PROJECT_WHITELIST"]:
-            task_logger.info(
-                "Group `%s` is not part of given whitelist (%s). Ignoring measurement",
-                perun_group.name,
-                config["OS_CREDITS_PROJECT_WHITELIST"],
-            )
-            return
+    if (
+        config["OS_CREDITS_PROJECT_WHITELIST"] is not None
+        and perun_group.name not in config["OS_CREDITS_PROJECT_WHITELIST"]
+    ):
+        task_logger.info(
+            "Group `%s` is not part of given whitelist (%s). Ignoring measurement",
+            perun_group.name,
+            config["OS_CREDITS_PROJECT_WHITELIST"],
+        )
+        return
     task_logger.info(
         "Processing UsageMeasurement `%s` - Group `%s`", measurement, perun_group
     )
