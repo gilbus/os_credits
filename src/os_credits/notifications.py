@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from asyncio import get_event_loop
+from asyncio import AbstractEventLoop, get_event_loop
 from email.mime.text import MIMEText
 from enum import Enum, auto
 from string import Template
-from typing import ClassVar, Dict, Set, Union
+from typing import ClassVar, Dict, Optional, Set, Union
 
 from aiosmtplib import SMTP
+
 from os_credits.exceptions import BrokenTemplateError, MissingTemplateError
 from os_credits.log import internal_logger
 from os_credits.perun.groupsManager import Group
@@ -131,7 +132,7 @@ class EmailNotificationBase(Exception):
             elif r is EmailRecipient.PROJECT_MAINTAINERS:
                 for mail in self.group.email.value:
                     recipients.add(mail)
-            else:
+            elif isinstance(r, str):
                 recipients.add(r)
         print(recipients, recipient_placeholders)
         return ",".join(recipients)
@@ -144,7 +145,7 @@ class HalfOfCreditsLeft(EmailNotificationBase):
     body_template = """
 Dear Project Maintainer,
 
-Your OpenStack Project ${project} in the de.NBI Cloud has only 50% of its credits
+Your OpenStack Project ${project} in the de.NBI Cloud has less than 50% of its credits
 left. To view a history of your credits please login at the Cloud Portal under
 https://cloud.denbi.de/portal.
 
@@ -157,37 +158,30 @@ Use contact@denbi.de instead.
 """
 
     def __init__(self, group: Group) -> None:
-        super().__init__(group, message="")
+        super().__init__(
+            group,
+            message=f"Group {group.name} has only 50% of their credits left. Sending "
+            "notification.",
+        )
         self.group = group
 
 
-class SendNotificationsMails:
-    async def __aenter__(self):
-        pass
-
-    def __init__(self, loop=None):
-        self.loop = loop or get_event_loop()
-
-    async def __aexit__(self, exc_type, exc, tb):
-        # whyever this is not working...
-        # if not issubclass(exc_type, EmailNotificationBase):
-        #    return
-        if "construct_message" not in dir(exc):
-            return
-        async with SMTP(
-            hostname=config["MAIL_SMTP_SERVER"],
-            port=config["MAIL_SMTP_PORT"],
-            loop=self.loop,
-        ) as smtp:
-            if not config["MAIL_NOT_STARTTLS"]:
-                internal_logger.debug("Not connecting via STARTTLS as requested")
-                await self.smtp.starttls()
-            if config["MAIL_SMTP_USER"] and config["MAIL_SMTP_PASSWORD"]:
-                internal_logger.debug("Authenticating against smtp server")
-                await smtp.login(config["MAIL_SMTP_USER"], config["MAIL_SMTP_PASSWORD"])
-            else:
-                internal_logger.debug(
-                    "Not authenticating against smtp server since neither user and/nor "
-                    "password are specified."
-                )
-            await smtp.send_message(exc.construct_message())
+async def send_notification(
+    notification: EmailNotificationBase, loop: Optional[AbstractEventLoop] = None
+) -> None:
+    loop = loop or get_event_loop()
+    async with SMTP(
+        hostname=config["MAIL_SMTP_SERVER"], port=config["MAIL_SMTP_PORT"], loop=loop
+    ) as smtp:
+        if not config["MAIL_NOT_STARTTLS"]:
+            internal_logger.debug("Not connecting via STARTTLS as requested")
+            await smtp.starttls()
+        if config["MAIL_SMTP_USER"] and config["MAIL_SMTP_PASSWORD"]:
+            internal_logger.debug("Authenticating against smtp server")
+            await smtp.login(config["MAIL_SMTP_USER"], config["MAIL_SMTP_PASSWORD"])
+        else:
+            internal_logger.debug(
+                "Not authenticating against smtp server since neither user and/nor "
+                "password are specified."
+            )
+        await smtp.send_message(notification.construct_message())

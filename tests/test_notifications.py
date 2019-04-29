@@ -6,7 +6,7 @@ from os_credits.exceptions import BrokenTemplateError, MissingTemplateError
 from os_credits.notifications import (
     EmailNotificationBase,
     EmailRecipient,
-    SendNotificationsMails,
+    send_notification,
 )
 from os_credits.perun.attributes import (
     DenbiCreditsCurrent,
@@ -96,9 +96,5 @@ async def test_sending(smtpserver, loop):
         raise notification
     assert len(smtpserver.outbox) == 0
 
-    async def coro():
-        async with SendNotificationsMails(loop=loop):
-            raise notification
-
-    await wait({loop.create_task(coro())})
+    await wait({loop.create_task(send_notification(notification))})
     assert len(smtpserver.outbox) == 1
