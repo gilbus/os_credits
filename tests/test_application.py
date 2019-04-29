@@ -77,7 +77,7 @@ async def test_startup(aiohttp_client, influx_client):
 
 
 async def test_credits_endpoint(aiohttp_client, influx_client):
-    """Test the `/api/credits` endpoint responsible for calculating expected costs per
+    """Test the `get_metrics` endpoint responsible for calculating expected costs per
     hour of given resources"""
     from os_credits.main import create_app
     from os_credits.credits.base_models import TotalUsageMetric
@@ -85,9 +85,7 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     app = await create_app()
     client = await aiohttp_client(app)
 
-    class _MetricA(
-        TotalUsageMetric, measurement_name="metric_a", friendly_name="metric_a"
-    ):
+    class _MetricA(TotalUsageMetric, name="metric_a", friendly_name="metric_a"):
         CREDITS_PER_VIRTUAL_HOUR = Decimal("1.3")
         property_description = "Test metric A"
 
@@ -96,32 +94,42 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
             return {
                 "type": "str",
                 "description": cls.property_description,
-                "measurement_name": cls.measurement_name,
+                "name": cls.name,
+                "friendly_name": cls.friendly_name,
             }
 
-    class _MetricB(
-        TotalUsageMetric, measurement_name="metric_b", friendly_name="metric_b"
-    ):
+    class _MetricB(TotalUsageMetric, name="metric_b", friendly_name="metric_b"):
         CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
+        property_description = "Test metric B"
 
-    resp = await client.get("/api/credits")
-    measurements = await resp.json()
-    assert resp.status == 200 and measurements["metric_a"] == {
+    get_metrics_url = app.router["get_metrics"].url_for()
+    resp = await client.get(get_metrics_url)
+    metrics = await resp.json()
+    assert resp.status == 200
+    assert metrics["metric_a"] == {
         "description": "Test metric A",
         "type": "str",
-        "measurement_name": "metric_a",
-    }, "GET /api/credits returned wrong body"
+        "name": "metric_a",
+        "friendly_name": "metric_a",
+    }, "Returned wrong body"
+    assert metrics["metric_b"] == {
+        "description": "Test metric B",
+        "type": "int",
+        "name": "metric_b",
+        "friendly_name": "metric_b",
+    }, "Returned wrong body"
 
-    resp = await client.post("/api/credits", json={"DefinitelyNotExisting": "test"})
-    assert resp.status == 404, "POST /api/creditst accepted invalid data"
+    costs_per_hour_url = app.router["costs_per_hour"].url_for()
+    resp = await client.post(costs_per_hour_url, json={"DefinitelyNotExisting": "test"})
+    assert resp.status == 404, "Accepted invalid data"
 
-    resp = await client.post("/api/credits", json={"metric_a": 3, "metric_b": 2})
+    resp = await client.post(costs_per_hour_url, json={"metric_a": 3, "metric_b": 2})
     assert (
         resp.status == 200 and await resp.json() == 2 * 1 + 3 * 1.3
-    ), "POST /api/credits returned wrong result"
+    ), "Rturned wrong result"
 
 
-test_measurement_name = "whole_run_test_1"
+test_metric_name = "whole_run_test_1"
 test_group_name = "test_run_1"
 test_location_id = 1111
 test_group = Group(test_group_name, test_location_id)
@@ -130,9 +138,7 @@ start_date = datetime.now()
 
 
 class _TestMetric(
-    TotalUsageMetric,
-    measurement_name=test_measurement_name,
-    friendly_name=test_measurement_name,
+    TotalUsageMetric, name=test_metric_name, friendly_name=test_metric_name
 ):
     CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
     property_description = "Test Metric 1 for whole run test"
@@ -144,7 +150,7 @@ class _TestMeasurement(UsageMeasurement):
 
 
 measurement1 = _TestMeasurement(
-    measurement=test_measurement_name,
+    measurement=test_metric_name,
     time=start_date,
     location_id=test_location_id,
     project_name=test_group_name,
@@ -185,7 +191,7 @@ async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
 
     await first_write(app, http_client, influx_client)
     assert (
-        test_group.credits_timestamps.value[test_measurement_name] == start_date
+        test_group.credits_timestamps.value[test_metric_name] == start_date
     ), "Timestamp from measurement was not stored correctly in group"
     # let's send the second measurement
     measurement2 = replace(
@@ -197,7 +203,7 @@ async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
         measurement=test_group_name,
         time=measurement2.time,
         credits_left=TEST_INITIAL_CREDITS_GRANTED - test_usage_delta,
-        metric_name=measurement2.metric.measurement_name,
+        metric_name=measurement2.metric.name,
         metric_friendly_name=measurement2.metric.friendly_name,
     )
     await write_and_mirror(app, http_client, influx_client, measurement2)
@@ -206,7 +212,7 @@ async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
         p async for p in await influx_client.query_billing_history(test_group_name)
     ]
     assert test_group.credits_timestamps.value[
-        test_measurement_name
+        test_metric_name
     ] == start_date + timedelta(
         days=7
     ), "Timestamp from measurement was not stored correctly in group"
@@ -243,14 +249,14 @@ async def test_50_percent_notification(
         measurement=test_group_name,
         time=measurement2.time,
         credits_left=half_of_granted_credits - test_usage_delta,
-        metric_name=measurement2.metric.measurement_name,
+        metric_name=measurement2.metric.name,
         metric_friendly_name=measurement2.metric.friendly_name,
     )
     billing_points = [
         p async for p in await influx_client.query_billing_history(test_group_name)
     ]
     assert test_group.credits_timestamps.value[
-        test_measurement_name
+        test_metric_name
     ] == start_date + timedelta(
         days=7
     ), "Timestamp from measurement was not stored correctly in group"
@@ -320,7 +326,7 @@ async def test_measurement_from_the_past(
         p async for p in await influx_client.query_billing_history(test_group_name)
     ]
     assert (
-        test_group.credits_timestamps.value[test_measurement_name] == start_date
+        test_group.credits_timestamps.value[test_metric_name] == start_date
     ), "Timestamp of metric was updated although the measurement was invalid"
     assert test_group.credits_used.value == 0
     assert [] == billing_points
@@ -341,7 +347,7 @@ async def test_equal_usage_values(aiohttp_client, os_credits_offline, influx_cli
     await write_and_mirror(app, http_client, influx_client, measurement2)
     await test_group.connect()
     assert (
-        test_group.credits_timestamps.value[test_measurement_name] == start_date
+        test_group.credits_timestamps.value[test_metric_name] == start_date
     ), "Timestamp was updated although the measurement did not cause any billing"
     assert (
         test_group.credits_used.value == 0
@@ -360,12 +366,10 @@ async def test_no_billing_due_to_rounding(
     from os_credits.main import create_app
     from os_credits.settings import config
 
-    test_measurent_name = "whole_run_test_cheap_1"
+    test_metric_name = "whole_run_test_cheap_1"
 
     class _TestMetricCheap(
-        TotalUsageMetric,
-        measurement_name=test_measurent_name,
-        friendly_name=test_measurent_name,
+        TotalUsageMetric, name=test_metric_name, friendly_name=test_metric_name
     ):
         # by setting the costs per hour this way we can be sure that the first billings
         # will be rounded to zero
@@ -377,7 +381,7 @@ async def test_no_billing_due_to_rounding(
         metric: Type[Metric] = _TestMetricCheap
 
     measurement = _TestMeasurementCheap(
-        measurement=test_measurent_name,
+        measurement=test_metric_name,
         time=start_date,
         location_id=test_location_id,
         project_name=test_group_name,
@@ -406,7 +410,7 @@ async def test_no_billing_due_to_rounding(
             p async for p in await influx_client.query_billing_history(test_group_name)
         ]
         assert (
-            test_group.credits_timestamps.value[test_measurent_name] == start_date
+            test_group.credits_timestamps.value[test_metric_name] == start_date
         ), "Timestamp from measurement was updated although no credits were billed"
         assert (
             test_group.credits_used.value == 0
@@ -431,11 +435,11 @@ async def test_no_billing_due_to_rounding(
         credits_left=(
             Decimal(TEST_INITIAL_CREDITS_GRANTED) - config["OS_CREDITS_PRECISION"]
         ),
-        metric_name=measurement.metric.measurement_name,
+        metric_name=measurement.metric.name,
         metric_friendly_name=measurement.metric.friendly_name,
     )
     assert (
-        test_group.credits_timestamps.value[test_measurent_name] == measurement.time
+        test_group.credits_timestamps.value[test_metric_name] == measurement.time
     ), "Timestamp from measurement was updated although no credits were billed"
     assert (
         test_group.credits_used.value == expected_credits
@@ -470,7 +474,7 @@ async def test_missing_previous_values(
     await write_and_mirror(app, http_client, influx_client, measurement2)
     await test_group.connect()
     assert test_group.credits_timestamps.value[
-        test_measurement_name
+        test_metric_name
     ] == start_date + timedelta(
         days=7
     ), "Timestamp from measurement was not stored correctly in group"

@@ -21,7 +21,9 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     await wait_for(influx_client.write_billing_history(point), timeout=None)
     app = await create_app()
     client = await aiohttp_client(app)
-    resp = await client.get(f"/api/credits_history/{project_name}")
+    resp = await client.get(
+        app.router["api_credits_history"].url_for(project_name=project_name)
+    )
     expected_resp = dict(
         credits=["credits", point.credits_left],
         metrics=["metrics", point.metric_friendly_name],

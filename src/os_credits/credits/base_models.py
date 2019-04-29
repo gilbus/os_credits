@@ -22,7 +22,7 @@ class UsageMeasurement(InfluxDBPoint):
     )
 
     def __init_subclass__(cls: Type[UsageMeasurement]) -> None:
-        REGISTERED_MEASUREMENTS[cls.metric.measurement_name] = cls
+        REGISTERED_MEASUREMENTS[cls.metric.name] = cls
 
 
 # MeasurementType
@@ -34,17 +34,18 @@ class Metric:
 
     property_description: ClassVar[str] = ""
 
-    measurement_name: ClassVar[str]
+    name: ClassVar[str]
     friendly_name: ClassVar[str]
 
-    def __init_subclass__(cls, measurement_name: str, friendly_name: str) -> None:
-        if None in (measurement_name, friendly_name):
+    def __init_subclass__(cls, name: str, friendly_name: str) -> None:
+        if None in (name, friendly_name):
             internal_logger.debug(
-                "Not registering subclass %s of `Metric` since one or both of its names are None."
+                "Not registering subclass %s of `Metric` since one or both of its names "
+                "are None."
             )
             return
-        Metric._metrics.update({measurement_name: cls})
-        cls.measurement_name = measurement_name
+        Metric._metrics.update({name: cls})
+        cls.name = name
         cls.friendly_name = friendly_name
         internal_logger.debug("Registered subclass of `Metric`: %s", cls)
 
@@ -53,17 +54,6 @@ class Metric:
         cls, *, current_measurement: MT, older_measurement: MT
     ) -> Decimal:
         raise NotImplementedError("Must be implemented by subclass.")
-
-    @classmethod
-    def from_measurement(cls, name: str) -> Type[Metric]:
-        try:
-            return cls._metrics[name]
-        except KeyError:
-            raise ValueError(f"UsageMeasurement `{name}` it not supported/needed.")
-
-    @classmethod
-    def is_supported(cls, measurement_name: str) -> bool:
-        return measurement_name in cls._metrics
 
     @classmethod
     def api_information(cls) -> Dict[str, Any]:
@@ -77,7 +67,8 @@ class Metric:
         return {
             "type": "int",
             "description": cls.property_description,
-            "measurement_name": cls.measurement_name,
+            "name": cls.name,
+            "friendly_name": cls.friendly_name,
         }
 
     @classmethod
@@ -94,7 +85,7 @@ class TotalUsageMetric(
     Metric,
     # class definition must contain the following attributes to allow 'passthrough' from
     # child classes
-    measurement_name=None,
+    name=None,
     friendly_name=None,
 ):
     """Base class of every metric which is only billed by its usage values, i.e. the

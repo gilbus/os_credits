@@ -7,6 +7,7 @@ from typing import AsyncGenerator, Dict, Iterable, List, Optional, Type, Union
 
 from aioinflux import iterpoints
 from aioinflux.client import InfluxDBClient as _InfluxDBClient
+
 from os_credits.credits.base_models import UsageMeasurement
 from os_credits.credits.models import BillingHistory
 from os_credits.log import influxdb_logger
@@ -116,7 +117,7 @@ class InfluxDBClient(_InfluxDBClient):
             sorted descending.
         """
         previous_measurements = self.query_points_since(
-            measurement=measurement.metric.measurement_name,
+            measurement=measurement.metric.name,
             point_class=type(measurement),
             db=config["INFLUXDB_DB"],
             since=since,

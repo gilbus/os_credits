@@ -15,17 +15,13 @@ from .base_models import (
 )
 
 
-class VCPUMetric(
-    TotalUsageMetric, measurement_name="project_vcpu_usage", friendly_name="cpu"
-):
+class VCPUMetric(TotalUsageMetric, name="project_vcpu_usage", friendly_name="cpu"):
 
     CREDITS_PER_VIRTUAL_HOUR = Decimal(1)
     property_description = "Amount of vCPUs."
 
 
-class RAMMetric(
-    TotalUsageMetric, measurement_name="project_mb_usage", friendly_name="ram"
-):
+class RAMMetric(TotalUsageMetric, name="project_mb_usage", friendly_name="ram"):
 
     # always specify the amount as string to prevent inaccuracies of builtin float
     CREDITS_PER_VIRTUAL_HOUR = Decimal("0.03")

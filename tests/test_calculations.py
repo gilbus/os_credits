@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Type
 
 import pytest
@@ -12,18 +13,16 @@ from os_credits.exceptions import CalculationResultError, MeasurementError
 with pytest.raises(TypeError):
     # Due to CREDITS_PER_VIRTUAL_HOUR being None
 
-    class _TestMetric1(
-        TotalUsageMetric, measurement_name="test_fail1", friendly_name="test_fail1"
-    ):
+    class _TestMetric1(TotalUsageMetric, name="test_fail1", friendly_name="test_fail1"):
         CREDITS_PER_VIRTUAL_HOUR = None
 
 
-class _TestMetric2(TotalUsageMetric, measurement_name="test2", friendly_name="test2"):
-    CREDITS_PER_VIRTUAL_HOUR = 1
+class _TestMetric2(TotalUsageMetric, name="test2", friendly_name="test2"):
+    CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
 
 
-class _TestMetric3(TotalUsageMetric, measurement_name="test3", friendly_name="test3"):
-    CREDITS_PER_VIRTUAL_HOUR = 2
+class _TestMetric3(TotalUsageMetric, name="test3", friendly_name="test3"):
+    CREDITS_PER_VIRTUAL_HOUR = Decimal("2")
 
     @classmethod
     def calculate_credits(cls, *, current_measurement, older_measurement):
@@ -68,7 +67,6 @@ m32 = _TestMeasurement3(
 def test_supported_measurements_error():
     with pytest.raises(ValueError):
         measurement_by_name("definitelyNotSupported")
-    assert not Metric.is_supported("definitelyNotSupported")
 
 
 def test_internal_calculate_credits():

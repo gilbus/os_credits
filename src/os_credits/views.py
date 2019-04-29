@@ -192,11 +192,10 @@ async def update_logging_config(request: web.Request) -> web.Response:
 
 # Usage of class-based views would be nicer, unfortunately not yet supported by
 # aiohttp-swagger
-async def get_credits_measurements(_: web.Request) -> web.Response:
+async def get_metrics(_: web.Request) -> web.Response:
     """
-    Returns a JSON object describing the currently supported measurements and
-    therefore the supported values when interested in the potential per-hour usage of
-    given machines.
+    Returns a JSON object describing the currently supported metrics and their per-hour
+    costs.
     ---
     description: Get type and description of currently needed/supported measurements.
       Also describes the structure of the corresponding POST API to calculate the per
@@ -210,11 +209,11 @@ async def get_credits_measurements(_: web.Request) -> web.Response:
         description: Information object
         schema:
           type: object
-          required: [measurements]
+          required: [metrics]
           properties:
-            measurements:
+            metrics:
               type: object
-              required: [description, type, prometheus_name]
+              required: [description, type, metric_name, friendly_name]
               properties:
                 description:
                   type: str
@@ -222,15 +221,18 @@ async def get_credits_measurements(_: web.Request) -> web.Response:
                 type:
                   type: str
                   description: Type information
-                prometheus_name:
+                metric_name:
                   type: str
                   description: Name/Identifier of the metric inside prometheus and InfluxDB
+                friendly_name:
+                  type: str
+                  description: Human readable name of the metric.
     """
-    measurement_information = {
-        friendly_name: measurement.api_information()
-        for friendly_name, measurement in Metric.friendly_name_to_usage().items()
+    metric_information = {
+        friendly_name: metric.api_information()
+        for friendly_name, metric in Metric.friendly_name_to_usage().items()
     }
-    return web.json_response(measurement_information)
+    return web.json_response(metric_information)
 
 
 async def costs_per_hour(request: web.Request) -> web.Response:

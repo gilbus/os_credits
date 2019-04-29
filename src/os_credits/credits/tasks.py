@@ -221,7 +221,7 @@ async def update_credits(
         measurement=group.name,
         time=current_measurement.time,
         credits_left=group.credits_granted.value - group.credits_used.value,
-        metric_name=current_measurement.metric.measurement_name,
+        metric_name=current_measurement.metric.name,
         metric_friendly_name=current_measurement.metric.friendly_name,
     )
     await influx_client.write_billing_history(billing_entry)
