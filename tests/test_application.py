@@ -87,20 +87,20 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
 
     class _MetricA(TotalUsageMetric, name="metric_a", friendly_name="metric_a"):
         CREDITS_PER_VIRTUAL_HOUR = Decimal("1.3")
-        property_description = "Test metric A"
+        description = "Test metric A"
 
         @classmethod
         def api_information(cls):
             return {
                 "type": "str",
-                "description": cls.property_description,
+                "description": cls.description,
                 "name": cls.name,
                 "friendly_name": cls.friendly_name,
             }
 
     class _MetricB(TotalUsageMetric, name="metric_b", friendly_name="metric_b"):
         CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
-        property_description = "Test metric B"
+        description = "Test metric B"
 
     get_metrics_url = app.router["get_metrics"].url_for()
     resp = await client.get(get_metrics_url)
@@ -141,7 +141,7 @@ class _TestMetric(
     TotalUsageMetric, name=test_metric_name, friendly_name=test_metric_name
 ):
     CREDITS_PER_VIRTUAL_HOUR = Decimal("1")
-    property_description = "Test Metric 1 for whole run test"
+    description = "Test Metric 1 for whole run test"
 
 
 @dataclass(frozen=True)
@@ -374,7 +374,7 @@ async def test_no_billing_due_to_rounding(
         # by setting the costs per hour this way we can be sure that the first billings
         # will be rounded to zero
         CREDITS_PER_VIRTUAL_HOUR = config["OS_CREDITS_PRECISION"] * Decimal("10") ** -1
-        property_description = "Test Metric 1 for whole run test"
+        description = "Test Metric 1 for whole run test"
 
     @dataclass(frozen=True)
     class _TestMeasurementCheap(UsageMeasurement):

@@ -32,7 +32,7 @@ MT = TypeVar("MT", bound=UsageMeasurement)
 class Metric:
     _metrics: Dict[str, Type[Metric]] = {}
 
-    property_description: ClassVar[str] = ""
+    description: ClassVar[str] = ""
 
     name: ClassVar[str]
     friendly_name: ClassVar[str]
@@ -66,7 +66,7 @@ class Metric:
         """
         return {
             "type": "int",
-            "description": cls.property_description,
+            "description": cls.description,
             "name": cls.name,
             "friendly_name": cls.friendly_name,
         }
