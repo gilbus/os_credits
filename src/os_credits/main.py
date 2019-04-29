@@ -7,18 +7,18 @@ from logging.config import dictConfig
 from pathlib import Path
 from pprint import pformat
 
-from jinja2 import FileSystemLoader
-
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_jinja2 import setup
 from aiohttp_swagger import setup_swagger
+from jinja2 import FileSystemLoader
+from prometheus_async import aio
+
 from os_credits.credits.tasks import worker
 from os_credits.exceptions import MissingInfluxDatabase
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
 from os_credits.prometheus_metrics import projects_processed_counter, tasks_queued_gauge
-from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
 from os_credits.views import (
     application_stats,
     costs_per_hour,
@@ -29,7 +29,6 @@ from os_credits.views import (
     ping,
     update_logging_config,
 )
-from prometheus_async import aio
 
 APP_ROOT = Path(__file__).parent
 
@@ -37,9 +36,9 @@ APP_ROOT = Path(__file__).parent
 async def create_worker(app: web.Application) -> None:
     app["task_workers"] = {
         f"worker-{i}": app.loop.create_task(worker(f"worker-{i}", app))
-        for i in range(config["OS_CREDITS_WORKERS"])
+        for i in range(app["config"]["OS_CREDITS_WORKERS"])
     }
-    internal_logger.info("Created %d workers", config["OS_CREDITS_WORKERS"])
+    internal_logger.info("Created %d workers", len(app["task_workers"]))
 
 
 async def stop_worker(app: web.Application) -> None:
@@ -48,11 +47,12 @@ async def stop_worker(app: web.Application) -> None:
     await gather(*app["task_workers"].values(), return_exceptions=True)
 
 
-async def create_client_session(_: web.Application) -> None:
+async def create_client_session(app: web.Application) -> None:
     client_session.set(
         ClientSession(
             auth=BasicAuth(
-                config["OS_CREDITS_PERUN_LOGIN"], config["OS_CREDITS_PERUN_PASSWORD"]
+                app["config"]["OS_CREDITS_PERUN_LOGIN"],
+                app["config"]["OS_CREDITS_PERUN_PASSWORD"],
             )
         )
     )
@@ -80,6 +80,12 @@ async def create_app() -> web.Application:
     Separated from main function to be usable via `python -m aiohttp.web [...]`. Takes
     care of any application related setup, e.g. which config to use.
     """
+    # imported inside the function to allow pytest to set environment variables and have
+    # them applied
+    from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
+
+    dictConfig(DEFAULT_LOGGING_CONFIG)
+    internal_logger.info("Applied default logging config")
 
     app = web.Application()
     app.add_routes(
@@ -106,9 +112,8 @@ async def create_app() -> web.Application:
         task_queue=Queue(),
         group_locks=defaultdict(create_new_group_lock),
         start_time=datetime.now(),
+        config=config,
     )
-    dictConfig(DEFAULT_LOGGING_CONFIG)
-    internal_logger.info("Applied default logging config")
 
     if not await app["influx_client"].ensure_history_db_exists():
         raise MissingInfluxDatabase(

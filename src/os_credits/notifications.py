@@ -116,9 +116,23 @@ class EmailNotificationBase(Exception):
         message = MIMEText(rendered_body)
         message["Subject"] = rendered_subject
         message["From"] = config["MAIL_FROM"]
-        message["To"] = self.resolve_recipient_placeholders(self.to)
-        message["Cc"] = self.resolve_recipient_placeholders(self.cc)
-        message["Bcc"] = self.resolve_recipient_placeholders(self.bcc)
+        if config["NOTIFICATION_TO_OVERWRITE"].strip():
+            internal_logger.info(
+                "Applying `NOTIFICATION_TO_OVERWRITE` setting to notification `%s`",
+                self,
+            )
+            message["To"] = config["NOTIFICATION_TO_OVERWRITE"]
+        else:
+            message["To"] = self.resolve_recipient_placeholders(self.to)
+            message["Cc"] = self.resolve_recipient_placeholders(self.cc)
+            message["Bcc"] = self.resolve_recipient_placeholders(self.bcc)
+        internal_logger.debug(
+            "Recipients of notification `%s`: To=%s, Cc=%s, Bcc=%s",
+            self,
+            message["To"],
+            message["Cc"],
+            message["Bcc"],
+        )
 
         return message
 
@@ -134,7 +148,6 @@ class EmailNotificationBase(Exception):
                     recipients.add(mail)
             elif isinstance(r, str):
                 recipients.add(r)
-        print(recipients, recipient_placeholders)
         return ",".join(recipients)
 
 

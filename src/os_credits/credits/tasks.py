@@ -35,21 +35,28 @@ async def worker(name: str, app: Application) -> None:
     group_locks = cast(Dict[str, Lock], app["group_locks"])
     task_queue = cast(Queue, app["task_queue"])
     while True:
-        influx_line: str = await task_queue.get()
-        task_id = unique_identifier(influx_line)
-        TASK_ID.set(task_id)
-        task_logger.debug("Worker %s starting task `%s`", name, task_id)
-
         try:
-            await process_influx_line(influx_line, app, group_locks)
-            task_logger.debug(
-                "Worker %s finished task `%s` successfully", name, task_id
+            influx_line: str = await task_queue.get()
+            task_id = unique_identifier(influx_line)
+            TASK_ID.set(task_id)
+            task_logger.debug("Worker %s starting task `%s`", name, task_id)
+
+            try:
+                await process_influx_line(influx_line, app, group_locks)
+                task_logger.debug(
+                    "Worker %s finished task `%s` successfully", name, task_id
+                )
+            except EmailNotificationBase as notification:
+                task_logger.info("Sending notification %s", notification)
+                await send_notification(notification)
+        # necessary since the tasks must continue working despite any exceptions that
+        # occurred
+        except Exception as e:
+            task_logger.exception(
+                "Worker %s exited task with unhandled exception: %s, stacktrace attached",
+                name,
+                e,
             )
-        except EmailNotificationBase as e:
-            task_logger.info("Sending notification %s", e)
-            await send_notification(e)
-        except Exception:
-            task_logger.exception("%s threw an exception:", name)
         finally:
             task_queue.task_done()
 

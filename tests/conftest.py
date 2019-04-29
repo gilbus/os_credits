@@ -3,12 +3,12 @@ from importlib import reload
 from logging import getLogger
 from typing import Dict, List
 
-from pytest import fixture
-
 from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
+from pytest import fixture
+from pytest_docker_compose import NetworkInfo
+
 from os_credits.influx.client import InfluxDBClient
 from os_credits.settings import config
-from pytest_docker_compose import NetworkInfo
 
 pytest_plugins = ["docker_compose"]
 
@@ -16,10 +16,14 @@ pytest_plugins = ["docker_compose"]
 TEST_INITIAL_CREDITS_GRANTED = 200
 
 
-@fixture(autouse=True)
-def reload_conf_module():
+@fixture(name="one_worker_task", autouse=True)
+def fixture_one_worker_task(monkeypatch):
+    "Makes sure that only one worker task is used and that all settings are reset"
     from os_credits import settings
 
+    monkeypatch.setenv("OS_CREDITS_WORKERS", "1")
+    reload(settings)
+    yield
     reload(settings)
 
 

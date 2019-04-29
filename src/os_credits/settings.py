@@ -35,6 +35,11 @@ class Config(TypedDict):
     MAIL_SMTP_PASSWORD: str
     MAIL_NOT_STARTTLS: bool
     CLOUD_GOVERNANCE_MAIL: str
+    """
+    If this setting contains a non-empty value all notifications are exclusively sent to
+    it.
+    """
+    NOTIFICATION_TO_OVERWRITE: str
 
 
 default_config = Config(
@@ -59,6 +64,7 @@ default_config = Config(
     MAIL_SMTP_PASSWORD="",
     MAIL_NOT_STARTTLS=False,
     CLOUD_GOVERNANCE_MAIL="",
+    NOTIFICATION_TO_OVERWRITE="",
 )
 
 
@@ -97,6 +103,7 @@ def parse_config_from_environment() -> Config:
                 )
                 continue
             PROCESSED_ENV_CONFIG.update({int_value_key: int_value})
+            internal_logger.debug(f"Added {int_value_key} to procssed env")
         except KeyError:
             # Environment variable not set, that's ok
             pass

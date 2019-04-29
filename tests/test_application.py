@@ -222,8 +222,6 @@ async def test_50_percent_notification(
     let the group fall under 50% of its granted credits.
     """
     from os_credits.main import create_app
-    from os_credits.settings import config
-    from os_credits.notifications import HalfOfCreditsLeft
 
     app = await create_app()
     http_client = await aiohttp_client(app)
@@ -284,6 +282,43 @@ async def test_50_percent_notification(
         billing_point
     ] == billing_points, "Billing history has been stored incorrectly"
     assert len(smtpserver.outbox) == 1, "No notification has been send"
+
+
+async def test_exception_during_send_notification(
+    aiohttp_client, os_credits_offline, influx_client, monkeypatch
+):
+    """Makes sure that any error during sending of the notification does not crash the
+    worker. Should also guarantee that no exception raised inside the original
+    :func:`process_influx_line` can crash the worker.
+
+    The sending fails because no smtpserver can be reached since the fixture is not
+    requested.
+    """
+    from os_credits.notifications import EmailNotificationBase
+    from os_credits.main import create_app
+    import os_credits.credits.tasks
+
+    def fake_process_influx_line(*args, **kwargs):
+        raise EmailNotificationBase(None, "test")
+
+    monkeypatch.setattr(
+        os_credits.credits.tasks, "process_influx_line", fake_process_influx_line
+    )
+
+    app = await create_app()
+    http_client = await aiohttp_client(app)
+
+    # simulate subscription behaviour where every entry gets mirrored to the application
+    # /write endpoint
+    await influx_client.write(measurement1)
+    resp = await http_client.post("/write", data=measurement1.to_lineprotocol())
+    assert resp.status == 202
+    # wait until request has been processed, indicated by the task finally calling
+    # `task_done`
+    await app["task_queue"].join()
+    # ugly code to access only worker task independent of its name
+    # done() does also return true if the task exited with an exception
+    assert not app["task_workers"][list(app["task_workers"].keys())[0]].done()
 
 
 async def test_measurement_from_the_past(

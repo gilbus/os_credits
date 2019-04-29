@@ -1,4 +1,5 @@
 from asyncio import wait
+from importlib import reload
 
 import pytest
 
@@ -61,6 +62,22 @@ class NotificationTest1(EmailNotificationBase):
 
     def __init__(self, group):
         super().__init__(group, "")
+
+
+def test_notification_to_overwrite(smtpserver, monkeypatch):
+    from os_credits import settings
+
+    overwrite_mail = "overwrite@mail"
+    monkeypatch.setenv("NOTIFICATION_TO_OVERWRITE", overwrite_mail)
+    reload(settings)
+    notification = NotificationTest1(test_group)
+    msg = notification.construct_message()
+    assert (
+        msg["Cc"] == msg["Bcc"] == None
+    ), "Cc and Bcc not empty despite NOTIFICATION_TO_OVERWRITE"
+    assert (
+        msg["To"] == overwrite_mail
+    ), "NOTIFICATION_TO_OVERWRITE not applied correctly"
 
 
 def test_message_construction(smtpserver):
