@@ -11,6 +11,11 @@ from aiohttp.web import Application
 
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import TASK_ID, task_logger
+from os_credits.notifications import (
+    EmailNotificationBase,
+    HalfOfCreditsLeft,
+    send_notification,
+)
 from os_credits.perun.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
 from os_credits.perun.groupsManager import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
@@ -40,6 +45,9 @@ async def worker(name: str, app: Application) -> None:
             task_logger.debug(
                 "Worker %s finished task `%s` successfully", name, task_id
             )
+        except EmailNotificationBase as e:
+            task_logger.info("Sending notification %s", e)
+            await send_notification(e)
         except Exception:
             task_logger.exception("%s threw an exception:", name)
         finally:
@@ -211,3 +219,9 @@ async def update_credits(
     )
     await influx_client.write_billing_history(billing_entry)
     await group.save()
+    half_of_credits_granted = Decimal(group.credits_granted.value) / 2
+    if (
+        previous_group_credits >= half_of_credits_granted
+        and group.credits_current.value < half_of_credits_granted
+    ):
+        raise HalfOfCreditsLeft(group)

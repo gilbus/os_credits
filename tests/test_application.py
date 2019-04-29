@@ -154,7 +154,7 @@ measurement1 = _TestMeasurement(
 
 async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
     """Tests the complete workflow of the application without any expected errors.
-    
+
     Incoming data of the InfluxDB are simulated two times to trigger different
     scenarios (first measurement vs second measurement)"""
     from os_credits.main import create_app
@@ -213,6 +213,77 @@ async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
         == TEST_INITIAL_CREDITS_GRANTED - test_usage_delta
     )
     assert [billing_point] == billing_points
+
+
+async def test_50_percent_notification(
+    aiohttp_client, os_credits_offline, influx_client, smtpserver
+):
+    """Tests the complete workflow of the application without any expected errors but
+    let the group fall under 50% of its granted credits.
+    """
+    from os_credits.main import create_app
+    from os_credits.settings import config
+    from os_credits.notifications import HalfOfCreditsLeft
+
+    app = await create_app()
+    http_client = await aiohttp_client(app)
+
+    # simulate subscription behaviour where every entry gets mirrored to the application
+    # /write endpoint
+    await influx_client.write(measurement1)
+    resp = await http_client.post("/write", data=measurement1.to_lineprotocol())
+    assert resp.status == 202
+    # wait until request has been processed, indicated by the task finally calling
+    # `task_done`
+    await app["task_queue"].join()
+    await test_group.connect()
+    assert (
+        test_group.credits_granted.value
+        == test_group.credits_current.value
+        == TEST_INITIAL_CREDITS_GRANTED
+    ), "Initial copy from credits_granted to credits_current failed"
+    assert (
+        test_group.credits_timestamps.value[test_measurent_name] == start_date
+    ), "Timestamp from measurement was not stored correctly in group"
+    # let's send the second measurement
+    measurement2 = replace(
+        measurement1,
+        time=start_date + timedelta(days=7),
+        value=measurement1.value + test_usage_delta,
+    )
+    half_of_granted_credits = Decimal(TEST_INITIAL_CREDITS_GRANTED / 2)
+    billing_point = BillingHistory(
+        measurement=test_group_name,
+        time=measurement2.time,
+        credits=half_of_granted_credits - test_usage_delta,
+        metric_name=measurement2.metric.measurement_name,
+        metric_friendly_name=measurement2.metric.friendly_name,
+    )
+    test_group.credits_current.value = half_of_granted_credits
+    await test_group.save()
+    await influx_client.write(measurement2)
+    resp = await http_client.post("/write", data=measurement2.to_lineprotocol())
+    assert resp.status == 202
+    # wait until request has been processed, indicated by the task finally calling
+    # `task_done`
+    await app["task_queue"].join()
+    await test_group.connect()
+    billing_points = [
+        p async for p in await influx_client.query_billing_history(test_group_name)
+    ]
+    assert test_group.credits_timestamps.value[
+        test_measurent_name
+    ] == start_date + timedelta(
+        days=7
+    ), "Timestamp from measurement was not stored correctly in group"
+    # since our CREDITS_PER_VIRTUAL_HOUR are 1
+    assert (
+        test_group.credits_current.value == half_of_granted_credits - test_usage_delta
+    )
+    assert [
+        billing_point
+    ] == billing_points, "Billing history has been stored incorrectly"
+    assert len(smtpserver.outbox) == 1, "No notification has been send"
 
 
 async def test_measurement_from_the_past(
