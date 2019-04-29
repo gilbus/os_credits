@@ -3,6 +3,7 @@ from typing import List, Optional
 import pytest
 
 from os_credits.perun.attributes import (
+    DenbiCreditsGranted,
     DenbiCreditTimestamps,
     _ContainerPerunAttribute,
     _ScalarPerunAttribute,
@@ -68,3 +69,8 @@ class TestAttributes:
         assert not my_attr.has_changed
         with pytest.raises(ValueError):
             my_attr.has_changed = True
+
+    def test_credits_granted_read_only(self):
+        credits_granted = DenbiCreditsGranted(value="100")
+        with pytest.raises(AttributeError):
+            credits_granted.value = 200

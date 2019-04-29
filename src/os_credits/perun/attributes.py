@@ -9,6 +9,7 @@ from .base_attributes import (
     CreditTimestamps,
     ToEmails,
     _ContainerPerunAttribute,
+    _ReadOnlyScalarPerunAttribute,
     _ScalarPerunAttribute,
 )
 from .exceptions import DenbiCreditsGrantedMissing
@@ -37,12 +38,19 @@ class DenbiCreditsUsed(
 
 
 class DenbiCreditsGranted(
-    _ScalarPerunAttribute[int],
+    _ReadOnlyScalarPerunAttribute[int],
     perun_id=3383,
     perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
+    """Contains the amount of credits granted to the project when its application was
+    confirmed.
+
+    Expected to be an integer and implemented read-only since we **MUST** never change
+    it since the Cloud portal owns this value.
+    """
+
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
@@ -55,8 +63,6 @@ class DenbiCreditsGranted(
     def perun_encode(self, value: int) -> str:
         """Stored as str inside perun, unfortunately"""
         return str(value)
-
-    # TODO: evaluate read-only mechanism
 
 
 class ToEmail(

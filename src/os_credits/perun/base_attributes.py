@@ -139,6 +139,31 @@ class PerunAttribute(Generic[VT]):
         return bool(self._value)
 
 
+class _ReadOnlyScalarPerunAttribute(
+    PerunAttribute[VT],
+    # class definition must contain the following attributes to allow 'passthrough' from
+    # child classes
+    perun_id=None,
+    perun_friendly_name=None,
+    perun_type=None,
+    perun_namespace=None,
+):
+    """
+    Base class for all read-only scalar attributes, where `value` only contains a scalar
+    value, i.e.  an `float` or `str`, in contrast to container attributes
+    """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+
+    @property
+    def value(self) -> VT:
+        return self._value
+
+
 class _ScalarPerunAttribute(
     PerunAttribute[VT],
     # class definition must contain the following attributes to allow 'passthrough' from
@@ -149,8 +174,8 @@ class _ScalarPerunAttribute(
     perun_namespace=None,
 ):
     """
-    Base class for scalar attributes, where `value` only contains a scalar value, i.e.
-    an `float` or `str`, in contrast to container attributes
+    Identical to :class:`_ReadOnlyScalarPerunAttribute` but provides a setter method for
+    `value`
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
