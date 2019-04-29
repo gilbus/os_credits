@@ -64,7 +64,7 @@ class _RAMMeasurement(UsageMeasurement):
 @dataclass(frozen=True)
 class BillingHistory(InfluxDBPoint):
 
-    credits: Decimal = field(metadata={"component": "field", "decoder": Decimal})
+    credits_left: Decimal = field(metadata={"component": "field", "decoder": Decimal})
     metric_name: str = field(metadata={"component": "tag"})
     metric_friendly_name: str = field(metadata={"component": "tag"})
 

@@ -8,13 +8,13 @@ from os_credits.main import create_app
 
 async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     now = datetime.now()
-    credits = 300
+    credits_left = 300
     metric_name = metric_friendly_name = "test_history_metric"
     project_name = "test_history_measurement"
     point = BillingHistory(
         measurement=project_name,
         time=now,
-        credits=credits,
+        credits_left=credits_left,
         metric_name=metric_name,
         metric_friendly_name=metric_friendly_name,
     )
@@ -23,7 +23,7 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     client = await aiohttp_client(app)
     resp = await client.get(f"/api/credits_history/{project_name}")
     expected_resp = dict(
-        credits=["credits", point.credits],
+        credits=["credits", point.credits_left],
         metrics=["metrics", point.metric_friendly_name],
         timestamps=["timestamps", point.time.strftime("%Y-%m-%d %H:%M:%S")],
     )

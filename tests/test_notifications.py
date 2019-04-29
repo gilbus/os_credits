@@ -9,20 +9,14 @@ from os_credits.notifications import (
     EmailRecipient,
     send_notification,
 )
-from os_credits.perun.attributes import (
-    DenbiCreditsCurrent,
-    DenbiCreditsGranted,
-    ToEmail,
-)
+from os_credits.perun.attributes import DenbiCreditsGranted, DenbiCreditsUsed, ToEmail
 from os_credits.perun.groupsManager import Group
 
 from .conftest import TEST_INITIAL_CREDITS_GRANTED
 
 test_group = Group("TestGroup")
 test_group.email = ToEmail(value=["admin@project"])
-test_group.credits_current = DenbiCreditsCurrent(
-    value=str(TEST_INITIAL_CREDITS_GRANTED)
-)
+test_group.credits_used = DenbiCreditsUsed(value=str(TEST_INITIAL_CREDITS_GRANTED))
 test_group.credits_granted = DenbiCreditsGranted(
     value=str(TEST_INITIAL_CREDITS_GRANTED)
 )
@@ -55,7 +49,7 @@ def test_broken_template_detection():
 
 class NotificationTest1(EmailNotificationBase):
     body_template = "$credits_granted - $project"
-    subject_template = "Test: $credits_current"
+    subject_template = "Test: $credits_used"
     to = {"test3@local", EmailRecipient.PROJECT_MAINTAINERS}
     cc = {EmailRecipient.CLOUD_GOVERNANCE}
     bcc = {"test2@local"}
@@ -99,7 +93,7 @@ def test_message_construction(smtpserver):
         msg["Bcc"] == "test2@local"
     ), "Wrong Bcc in header of construct_message message"
     assert (
-        msg["Subject"] == f"Test: {test_group.credits_current.value}"
+        msg["Subject"] == f"Test: {test_group.credits_used.value}"
     ), "Bad substitution of Subject"
     assert (
         msg._payload == f"{test_group.credits_granted.value} - TestGroup"

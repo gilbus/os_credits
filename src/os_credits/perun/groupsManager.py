@@ -12,8 +12,8 @@ from os_credits.log import internal_logger
 from os_credits.settings import config
 
 from .attributes import (
-    DenbiCreditsCurrent,
     DenbiCreditsGranted,
+    DenbiCreditsUsed,
     DenbiCreditTimestamps,
     ToEmail,
 )
@@ -71,7 +71,7 @@ class Group:
 
     email: ToEmail
     credits_granted: DenbiCreditsGranted
-    credits_current: DenbiCreditsCurrent
+    credits_used: DenbiCreditsUsed
     credits_timestamps: DenbiCreditTimestamps
 
     """

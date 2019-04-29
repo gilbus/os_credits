@@ -18,7 +18,7 @@ PERUN_NAMESPACE_DEF = "urn:perun:group:attribute-def:def"
 PERUN_NAMESPACE_GROUP_RESOURCE_OPT = "urn:perun:group_resource:attribute-def:opt"
 
 
-class DenbiCreditsCurrent(
+class DenbiCreditsUsed(
     _ScalarPerunAttribute[Optional[Decimal]],
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
@@ -33,7 +33,7 @@ class DenbiCreditsCurrent(
         return Decimal(value) if value else None
 
     def perun_encode(self, value: Optional[Decimal]) -> Optional[str]:
-        return str(value) if value else None
+        return None if value is None else str(value)
 
 
 class DenbiCreditsGranted(

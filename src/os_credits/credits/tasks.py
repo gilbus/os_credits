@@ -111,22 +111,22 @@ async def update_credits(
             "Could not resolve group with name `%s` against perun. %r", group.name, e
         )
         return
-    if group.credits_current.value is None:
+    if group.credits_used.value is None:
         # let's check whether any measurement timestamps are present, if so we are
         # having a problem since this means that this group has been processed before!
         if group.credits_timestamps.value:
             raise DenbiCreditsCurrentError(
                 f"Group {group.name} has been billed before but is missing "
-                "`credits_current` now. "
+                "`credits_used` now. "
                 "Did someone modify the values by hand? Aborting"
             )
         else:
             task_logger.info(
-                "Group %s does not have `credits_current` and hasn't been billed before: "
-                "Copying the value of `credits_granted`",
+                "Group %s does not have `credits_used` and hasn't been billed before: "
+                "Initialising with 0",
                 group,
             )
-            group.credits_current.value = Decimal(group.credits_granted.value)
+            group.credits_used.value = Decimal(0)
     try:
         last_measurement_timestamp = group.credits_timestamps.value[
             current_measurement.measurement
@@ -196,14 +196,14 @@ async def update_credits(
         current_measurement.measurement
     ] = current_measurement.time
 
-    previous_group_credits = group.credits_current.value
-    group.credits_current.value = (
-        group.credits_current.value - credits_to_bill
-    ).quantize(config["OS_CREDITS_PRECISION"])
+    previous_group_credits = group.credits_used.value
+    group.credits_used.value = (group.credits_used.value + credits_to_bill).quantize(
+        config["OS_CREDITS_PRECISION"]
+    )
     # Comparing the actual values makes sure that this case even triggers if
     # credits_to_bill is not zero but so small that its changes are dropped due to
     # rounding
-    if previous_group_credits == group.credits_current.value:
+    if previous_group_credits == group.credits_used.value:
         task_logger.info(
             "Measurement does not change the amount of credits left due to rounding, "
             "therefore no changes will be stored inside Perun or the InfluxDB. Credits "
@@ -215,12 +215,12 @@ async def update_credits(
         "Credits: %f - %f = %f",
         previous_group_credits,
         credits_to_bill,
-        group.credits_current.value,
+        group.credits_used.value,
     )
     billing_entry = BillingHistory(
         measurement=group.name,
         time=current_measurement.time,
-        credits=group.credits_current.value,
+        credits_left=group.credits_granted.value - group.credits_used.value,
         metric_name=current_measurement.metric.measurement_name,
         metric_friendly_name=current_measurement.metric.friendly_name,
     )
@@ -228,7 +228,7 @@ async def update_credits(
     await group.save()
     half_of_credits_granted = Decimal(group.credits_granted.value) / 2
     if (
-        previous_group_credits >= half_of_credits_granted
-        and group.credits_current.value < half_of_credits_granted
+        previous_group_credits <= half_of_credits_granted
+        and group.credits_used.value > half_of_credits_granted
     ):
         raise HalfOfCreditsLeft(group)

@@ -75,7 +75,7 @@ class EmailNotificationBase(Exception):
     def construct_message(self) -> MIMEText:
         placeholder = {
             "project": self.group.name,
-            "credits_current": str(self.group.credits_current.value),
+            "credits_used": str(self.group.credits_used.value),
             "credits_granted": str(self.group.credits_granted.value),
             **self.placeholders,
         }
@@ -158,9 +158,9 @@ class HalfOfCreditsLeft(EmailNotificationBase):
     body_template = """
 Dear Project Maintainer,
 
-Your OpenStack Project ${project} in the de.NBI Cloud has less than 50% of its credits
-left. To view a history of your credits please login at the Cloud Portal under
-https://cloud.denbi.de/portal.
+Your OpenStack Project ${project} in the de.NBI Cloud has less than 50%
+($credits_used/$credits_granted) of its credits left. To view a history of your credits
+please login at the Cloud Portal under https://cloud.denbi.de/portal.
 
 Have a nice day,
 Your de.NBI Cloud Governance

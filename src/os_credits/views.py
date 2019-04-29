@@ -46,7 +46,7 @@ async def credits_history_api(request: web.Request) -> web.Response:
         project_name, since=datetime(2019, 4, 19)
     ):
         time_column.append(point.time.strftime("%Y-%m-%d %H:%M:%S"))
-        credits_column.append(float(point.credits))
+        credits_column.append(float(point.credits_left))
         metric_column.append(point.metric_friendly_name)
     return web.json_response(
         {"timestamps": time_column, "credits": credits_column, "metrics": metric_column}
