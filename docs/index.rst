@@ -10,6 +10,9 @@ Welcome to OpenStack Credits Service's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   settings
+   notifications
+   exceptions
    os_credits
    os_credits.credits
    os_credits.perun

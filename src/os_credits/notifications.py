@@ -1,12 +1,18 @@
 """
-Notifications are email which are sent in case of certain events.
-
-All notifications are based on :class:`EmailNotificationBase`.
+Notifications are modeled as exceptions so you are able to raise them whenever necessary
+and don't have to worry about stopping further execution. All notifications are based on
+:class:`EmailNotificationBase`. See :class:`HalfOfCreditsLeft` for a working example.
 
 .. autoclass:: EmailNotificationBase
     :members:
     :undoc-members:
 
+.. autoclass:: HalfOfCreditsLeft
+    :members: cc, subject_template, to
+    :undoc-members:
+
+    .. autoattribute:: body_template
+        :annotation: = 'Dear Project Maintainer,...'
 """
 from __future__ import annotations
 
