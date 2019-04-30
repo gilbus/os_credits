@@ -1,26 +1,31 @@
 OpenStack Credits Service
 =========================
 
-This service is responsible for processing the usage measurements exported by a
-```usage exporter`` <https://github.com/gilbus/OS_project_usage_exporter>`__,
-calculate the used ‘credits’ for any group according to them and store
-the results in appropriate fields inside
-`Perun <https://perun-aai.org/>`__.
+This service is the main component of the *de.NBI* billing system and fulfills the
+following tasks:
 
-Running
--------
+* Process incoming usage measurements and bill projects accordingly
+* Send notifications in case of events such as a low number of remaining credits
+* Provide a history of the credits of a project
 
-The service is integrated into the docker-compose setup of
-```project_usage`` <https://github.com/deNBI/project_usage>`__, please
-refer to its wiki for setup instructions.
+The service is integrated into the *Portal stack* of the `project_usage project
+<https://github.com/deNBI/project_usage>`_, please refer to its wiki for corresponding
+setup instructions/required services.
 
-Configuration
--------------
+The development has been part of the master thesis **INSERT_TITLE_HERE** which therefore
+contains a large introduction to the area of *Cloud Billing* and motivations which lead
+to the current design. An operation and development manual can be found inside the
+``docs/`` folder of this repository which can be build via ``make docs``.
 
-Take a look at ``.default.env`` to see all possible configuration
-variables. Copy it over to ``.env`` (included in ``.gitignore``) and
-insert your values. The latter will be used automatically, i.e. by
-``make docker-run``.
+Development
+----------
+
+The project has been developed with Python 3.7 and uses the `aiohttp
+<https://docs.aiohttp.org>`_ framework communication. Its dependencies are managed via
+`Poetry <https://pypi.org/project/poetry/>`_, so you’ll have to install it and then
+execute ``poetry install`` to get up and running. Your first action should be ``poetry
+run pre-commit install`` to install `Pre-Commit Hooks <https://pre-commit.com/>`_, to
+make sure that every of your commits results in a well-tested application.
 
 Monitoring/Debugging
 ~~~~~~~~~~~~~~~~~~~~
@@ -40,15 +45,6 @@ Use the provided ``Makefile`` via ``make build-docker``. This will build
 the image. To modify this values call
 ``make build-docker DOCKER_USERNAME=<your_username>``.
 
-Developing
-----------
-
-The project and its dependencies are managed via
-`Poetry <https://pypi.org/project/poetry/>`__, so you’ll have to install
-it and then execute ``poetry install`` to get up and running. Your first
-action should be ``poetry run pre-commit install`` to install
-`Pre-Commit Hooks <https://pre-commit.com/>`__, to make sure that every
-of your commits results in a running application.
 
 Stack integration
 ~~~~~~~~~~~~~~~~~
@@ -69,9 +65,3 @@ Tests
 
 Tests are written against ```pytest`` <https://pytest.org>`__ and can be
 executed from the project directory via ``make test``.
-
-Security Tests
-~~~~~~~~~~~~~~
-
-Those are handled by ```bandit`` <https://bandit.readthedocs.io>`__, run
-them via ``poetry run bandit --ini .bandit -r``.
