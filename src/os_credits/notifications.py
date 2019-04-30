@@ -7,8 +7,11 @@ from string import Template
 from typing import ClassVar, Dict, Optional, Set, Union
 
 from aiosmtplib import SMTP
-
-from os_credits.exceptions import BrokenTemplateError, MissingTemplateError
+from os_credits.exceptions import (
+    BrokenTemplateError,
+    MissingTemplateError,
+    MissingToError,
+)
 from os_credits.log import internal_logger
 from os_credits.perun.groupsManager import Group
 from os_credits.settings import config
@@ -65,8 +68,12 @@ class EmailNotificationBase(Exception):
             raise MissingTemplateError(
                 f"Subject template of {cls.__name__} is not defined or empty."
             )
-        cls.body = Template(cls.body_template.strip())
-        cls.subject = Template(cls.subject_template.strip())
+        if not "to" in dir(cls) or not cls.to:
+            raise MissingToError(
+                f"{cls.__name__} does any define any ``To`` recipients."
+            )
+        cls._body = Template(cls.body_template.strip())
+        cls._subject = Template(cls.subject_template.strip())
 
     def __init__(self, group: Group, message: str) -> None:
         self.group = group
@@ -80,7 +87,7 @@ class EmailNotificationBase(Exception):
             **self.placeholders,
         }
         try:
-            rendered_subject = self.subject.substitute(placeholder)
+            rendered_subject = self._subject.substitute(placeholder)
         except KeyError as e:
             internal_logger.error(
                 "Subject of Notification %s contains unknown placeholder %s. Sending "
@@ -88,7 +95,7 @@ class EmailNotificationBase(Exception):
                 type(self).__name__,
                 e,
             )
-            rendered_subject = self.subject.safe_substitute(placeholder)
+            rendered_subject = self._subject.safe_substitute(placeholder)
         except ValueError as e:
             internal_logger.error(
                 "Subject of Notification %s contains invalid placeholder %s.",
@@ -97,7 +104,7 @@ class EmailNotificationBase(Exception):
             )
             raise BrokenTemplateError(f"Subject of Notification {type(self).__name__}")
         try:
-            rendered_body = self.body.substitute(placeholder)
+            rendered_body = self._body.substitute(placeholder)
         except KeyError as e:
             internal_logger.error(
                 "Body of Notification %s contains unknown placeholder %s. Sending "
@@ -105,7 +112,7 @@ class EmailNotificationBase(Exception):
                 type(self).__name__,
                 e,
             )
-            rendered_body = self.body.safe_substitute(placeholder)
+            rendered_body = self._body.safe_substitute(placeholder)
         except ValueError as e:
             internal_logger.error(
                 "Body of Notification %s contains invalid placeholder %s.",
@@ -123,9 +130,9 @@ class EmailNotificationBase(Exception):
             )
             message["To"] = config["NOTIFICATION_TO_OVERWRITE"]
         else:
-            message["To"] = self.resolve_recipient_placeholders(self.to)
-            message["Cc"] = self.resolve_recipient_placeholders(self.cc)
-            message["Bcc"] = self.resolve_recipient_placeholders(self.bcc)
+            message["To"] = self._resolve_recipient_placeholders(self.to)
+            message["Cc"] = self._resolve_recipient_placeholders(self.cc)
+            message["Bcc"] = self._resolve_recipient_placeholders(self.bcc)
         internal_logger.debug(
             "Recipients of notification `%s`: To=%s, Cc=%s, Bcc=%s",
             self,
@@ -136,7 +143,7 @@ class EmailNotificationBase(Exception):
 
         return message
 
-    def resolve_recipient_placeholders(
+    def _resolve_recipient_placeholders(
         self, recipient_placeholders: Set[EmailRecipientType]
     ) -> str:
         recipients = set()

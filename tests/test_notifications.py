@@ -3,7 +3,11 @@ from importlib import reload
 
 import pytest
 
-from os_credits.exceptions import BrokenTemplateError, MissingTemplateError
+from os_credits.exceptions import (
+    BrokenTemplateError,
+    MissingTemplateError,
+    MissingToError,
+)
 from os_credits.notifications import (
     EmailNotificationBase,
     EmailRecipient,
@@ -22,24 +26,40 @@ test_group.credits_granted = DenbiCreditsGranted(
 )
 
 
-def test_broken_template_detection():
+def test_detect_invalid_notifications():
 
     with pytest.raises(MissingTemplateError):
 
         class EmptySubjectTemplate(EmailNotificationBase):
             body_template = "Hallo welt"
             subject_template = ""
+            to = {"test@local"}
 
     with pytest.raises(MissingTemplateError):
 
         class MissingSubjectTemplate(EmailNotificationBase):
             body_template = "Hallo welt"
+            to = {"test@local"}
+
+    with pytest.raises(MissingToError):
+
+        class MissingTo(EmailNotificationBase):
+            body_template = "Hallo $welt"
+            subject_template = "Broken $template"
+
+    with pytest.raises(MissingToError):
+
+        class InvalidTo(EmailNotificationBase):
+            body_template = "Hallo $welt"
+            subject_template = "Broken $template"
+            to = set()
 
     with pytest.raises(BrokenTemplateError):
 
         class BrokenTemplate(EmailNotificationBase):
             body_template = "Hallo $100 welt"
             subject_template = "Broken $ template"
+            to = {"test@local"}
 
             def __init__(self, group):
                 super().__init__(group, "")

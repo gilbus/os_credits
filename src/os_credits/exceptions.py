@@ -37,3 +37,7 @@ class MissingTemplateError(CreditsError):
 class BrokenTemplateError(CreditsError):
     "Raised if a template of a Notification class contains errors"
     pass
+
+
+class MissingToError(CreditsError):
+    "Raised if a Notification class does not defined any ``To`` recipients."
