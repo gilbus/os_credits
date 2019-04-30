@@ -101,6 +101,7 @@ def parse_config_from_environment() -> Config:
                     "Integer value (%s) must not be negative, falling back to default value",
                     int_value_key,
                 )
+                del environ[int_value_key]
                 continue
             PROCESSED_ENV_CONFIG.update({int_value_key: int_value})
             internal_logger.debug(f"Added {int_value_key} to procssed env")
@@ -109,7 +110,9 @@ def parse_config_from_environment() -> Config:
             pass
         except ValueError:
             internal_logger.warning(
-                "Could not convert value of $%s to int", int_value_key
+                "Could not convert value of $%s('%s') to int",
+                int_value_key,
+                environ[int_value_key],
             )
             # since we cannot use a subset of the actual environment, see below, we have
             # to remove invalid keys from environment to make sure that if such a key is
