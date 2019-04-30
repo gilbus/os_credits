@@ -129,3 +129,32 @@ async def test_sending(smtpserver, loop):
 
     await wait({loop.create_task(send_notification(notification))})
     assert len(smtpserver.outbox) == 1
+
+
+def test_construction_with_missing_placeholder(smtpserver):
+    """Test whether a notification with an unresolvable placeholder in a template
+    constructs a message with the placeholder unresolved. Requires the smtpserver
+    fixture to ensure that the value of config['CLOUD_GOVERNANCE_MAIL'] is set"""
+
+    class NotificationWithUnresolvableTemplate(NotificationTest1):
+        subject_template = "$unresolvable"
+
+        def __init__(self, group):
+            super().__init__(group)
+
+    notification = NotificationWithUnresolvableTemplate(test_group)
+    msg = notification.construct_message()
+    assert msg["Subject"] == NotificationWithUnresolvableTemplate.subject_template
+
+
+def test_placeholder_overwrite_default(smtpserver):
+    class NotificationWithCustomPlaceholder(NotificationTest1):
+        subject_template = "$credits_used"
+        custom_placeholders = {"credits_used": "MyPlaceholder"}
+
+        def __init__(self, group):
+            super().__init__(group)
+
+    notification = NotificationWithCustomPlaceholder(test_group)
+    msg = notification.construct_message()
+    assert msg["Subject"] == "MyPlaceholder"

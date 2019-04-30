@@ -1,3 +1,13 @@
+"""
+Notifications are email which are sent in case of certain events.
+
+All notifications are based on :class:`EmailNotificationBase`.
+
+.. autoclass:: EmailNotificationBase
+    :members:
+    :undoc-members:
+
+"""
 from __future__ import annotations
 
 from asyncio import AbstractEventLoop, get_event_loop
@@ -18,8 +28,18 @@ from os_credits.settings import config
 
 
 class EmailRecipient(Enum):
+    """Defines placeholder values to use inside ``to``, ``cc``, ``bcc`` of Notification
+    classes which will replaced dynamically when the message is constructed.
+    """
+
     CLOUD_GOVERNANCE = auto()
+    """Will be replaced with the value of ``CLOUD_GOVERNANCE_MAIL``, see :ref:`Settings`
+    """
+
     PROJECT_MAINTAINERS = auto()
+    """Will be replaced with the ``ToEmail`` addresses of this project stored inside
+    Perun
+    """
 
 
 EmailRecipientType = Union[str, EmailRecipient]
@@ -27,30 +47,48 @@ EmailRecipientType = Union[str, EmailRecipient]
 
 class EmailNotificationBase(Exception):
     """Base class of all exceptions whose cause should not only be logged but also send
-    to the Cloud Governance and/or the Group maintainers."""
+    to the Cloud Governance, the Group maintainers and/or other recipients.
+
+    Subclasses are checked at creation time to make sure that we can always send
+    notifications and do not fail due to broken templates or missing ``To``.
+    """
 
     to: ClassVar[Set[EmailRecipientType]]
-    cc: ClassVar[Set[EmailRecipientType]] = set()
-    bcc: ClassVar[Set[EmailRecipientType]] = set()
+    """Set of recipients which will be set as ``To``. Must be set by subclasses,
+    otherwise a :exc:`~os_credits.exceptions.MissingToError` is raised."""
 
-    """:class:`string.Template` object created on class instantiation from the content
-    of :attr:`subject_template`."""
-    subject: ClassVar[Template]
-    """Contains the template for the subject of mail in string form. Must be defined by
-    any subclass."""
+    cc: ClassVar[Set[EmailRecipientType]] = set()
+    """Set of recipients which will be set as ``Cc``."""
+
+    bcc: ClassVar[Set[EmailRecipientType]] = set()
+    """Set of recipients which will be set as ``Bcc``."""
+
+    _subject: ClassVar[Template]
+    """:class:`string.Template` object created at class creatiom from the content of
+    :attr:`subject_template`."""
+
     subject_template: ClassVar[str]
+    """String which will be parsed as :class:`string.Template` and used as the subject
+    of the mail. See :attr:`custom_placeholders` and :func:`construct_message` to know which
+    placeholders inside the templates are supported and how they can be customized."""
+
+    _body: ClassVar[Template]
     """:class:`string.Template` object created on class instantiation from the content
     of :attr:`body_template`."""
-    body: ClassVar[Template]
-    """Contains the template for the body of mail in string form. Must be defined by any
-    subclass."""
+
     body_template: ClassVar[str]
-    """Mapping between placeholders and values which can used inside subject and body
-    templates. See :func:`construct_message` for default mappings provided by the base
-    class. Feel free to overwrite/extend the function or add custom mappings to this
-    attribute inside the constructor of your subclass.
+    """String which will be parsed as :class:`string.Template` and used as the body 
+    of the mail. See :attr:`custom_placeholders` and :func:`construct_message` to know which
+    placeholders inside the templates are supported and how they can be customized."""
+
+    custom_placeholders: Dict[str, str] = {}
+    """Custom mapping of additional placeholders and values which can be used inside
+    :attr:`body_template` and :attr:`subject_template` templates. Intended to be used by
+    subclasses which can add values either as class variable or at runtime in their
+    constructor.
+    See :func:`construct_message` for default mappings provided by the base class whose
+    values are shadowed by values defined in this attribute.
     """
-    placeholders: Dict[str, str] = {}
 
     def __init_subclass__(cls) -> None:
         """Automatically constructs a template from the body provided by the subclass.
@@ -80,14 +118,33 @@ class EmailNotificationBase(Exception):
         self.message = message
 
     def construct_message(self) -> MIMEText:
-        placeholder = {
+        """Constructs a :class:`~email.mime.text.MIMEText` object from the notification's
+        attributes.
+
+        The recipient placeholders are resolved, body and subject templates are rendered
+        with the following default placeholders:
+
+        ``project``
+            Name of the Project as stored in Perun.
+        ``credits_used``
+            The current value of :class:`~os_credits.perun.attributes.DenbiCreditsUsed`.
+        ``credits_granted``
+            The current value of :class:`~os_credits.perun.attributes.DenbiCreditsGranted`.
+
+        Subclasses are advised to add their own placeholders to
+        :attr:`custom_placeholders` instead of overwriting this method. If any
+        placeholder of a template cannot be resolved it will be left in place to ensure
+        that the message can be constructed and sent.
+        """
+
+        placeholders = {
             "project": self.group.name,
             "credits_used": str(self.group.credits_used.value),
             "credits_granted": str(self.group.credits_granted.value),
-            **self.placeholders,
+            **self.custom_placeholders,
         }
         try:
-            rendered_subject = self._subject.substitute(placeholder)
+            rendered_subject = self._subject.substitute(placeholders)
         except KeyError as e:
             internal_logger.error(
                 "Subject of Notification %s contains unknown placeholder %s. Sending "
@@ -95,7 +152,7 @@ class EmailNotificationBase(Exception):
                 type(self).__name__,
                 e,
             )
-            rendered_subject = self._subject.safe_substitute(placeholder)
+            rendered_subject = self._subject.safe_substitute(placeholders)
         except ValueError as e:
             internal_logger.error(
                 "Subject of Notification %s contains invalid placeholder %s.",
@@ -104,7 +161,7 @@ class EmailNotificationBase(Exception):
             )
             raise BrokenTemplateError(f"Subject of Notification {type(self).__name__}")
         try:
-            rendered_body = self._body.substitute(placeholder)
+            rendered_body = self._body.substitute(placeholders)
         except KeyError as e:
             internal_logger.error(
                 "Body of Notification %s contains unknown placeholder %s. Sending "
@@ -112,7 +169,7 @@ class EmailNotificationBase(Exception):
                 type(self).__name__,
                 e,
             )
-            rendered_body = self._body.safe_substitute(placeholder)
+            rendered_body = self._body.safe_substitute(placeholders)
         except ValueError as e:
             internal_logger.error(
                 "Body of Notification %s contains invalid placeholder %s.",
