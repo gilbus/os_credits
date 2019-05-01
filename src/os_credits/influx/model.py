@@ -23,7 +23,6 @@ class InfluxDBPoint:
     To define a data model as shown in the official InfluxDB Line Tutorial extend in the
     following way
 
-    >>> from __future__ import annotations  # to ensure that type hints are strings
     >>> from dataclasses import dataclass, field
     >>> from os_credits.influx.model import InfluxDBPoint
     >>> @dataclass(frozen=True)
