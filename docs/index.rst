@@ -15,10 +15,10 @@ Welcome to OpenStack Credits Service's documentation!
    settings
    notifications
    exceptions
+   influx
    os_credits
    os_credits.credits
    os_credits.perun
-   os_credits.influx
 
 
 

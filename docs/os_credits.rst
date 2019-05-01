@@ -8,7 +8,6 @@ Subpackages
 
     settings
     os_credits.credits
-    os_credits.influx
     os_credits.perun
 
 Submodules
