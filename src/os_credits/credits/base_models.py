@@ -3,20 +3,36 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import lru_cache
-from typing import Any, ClassVar, Dict, Type, TypeVar
+from typing import Any, ClassVar, Dict, NewType, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
 from os_credits.influx.model import InfluxDBPoint
+from os_credits.influx.valueTypes import InfluxValueType
 from os_credits.log import internal_logger
+from os_credits.settings import config
 
 REGISTERED_MEASUREMENTS = {}
+
+Credits = NewType("Credits", Decimal)
+"""Distinct Credits type to prevent mixing of regular Decimals and Credits, since we
+MUST apply quantize"""
+
+
+class CreditsValueType(InfluxValueType[float], types=["Credits"]):
+    @staticmethod
+    def encode(value: Any) -> float:
+        return float(value)
+
+    @staticmethod
+    def decode(value: Any) -> Credits:
+        return Credits(Decimal(value).quantize(config["OS_CREDITS_PRECISION"]))
 
 
 @dataclass(init=False, frozen=True)
 class UsageMeasurement(InfluxDBPoint):
-    location_id: int = field(metadata={"component": "tag", "decoder": int})
-    project_name: str = field(metadata={"component": "tag"})
-    value: float = field(metadata={"component": "field", "decoder": float})
+    location_id: int = field(metadata={"tag": True})
+    project_name: str = field(metadata={"tag": True})
+    value: float
     metric: Type[Metric] = field(
         repr=False, init=False, compare=False, metadata={"component": None}
     )
@@ -52,7 +68,7 @@ class Metric:
     @classmethod
     def calculate_credits(
         cls, *, current_measurement: MT, older_measurement: MT
-    ) -> Decimal:
+    ) -> Credits:
         raise NotImplementedError("Must be implemented by subclass.")
 
     @classmethod
@@ -77,7 +93,7 @@ class Metric:
         return {m.friendly_name: m for m in Metric._metrics.values()}
 
     @classmethod
-    def costs_per_hour(cls, spec: int) -> Decimal:
+    def costs_per_hour(cls, spec: int) -> Credits:
         raise NotImplementedError("Must be implemented by subclass.")
 
 
@@ -107,17 +123,21 @@ class TotalUsageMetric(
         super().__init_subclass__(**kwargs)
 
     @classmethod
-    def costs_per_hour(cls, spec: int) -> Decimal:
+    def costs_per_hour(cls, spec: int) -> Credits:
         """
         Simple base implementation according to _calculate_credits. Expected to be
         overwritten in more complex measurement classes.
         """
-        return spec * cls.CREDITS_PER_VIRTUAL_HOUR
+        return Credits(
+            (spec * cls.CREDITS_PER_VIRTUAL_HOUR).quantize(
+                config["OS_CREDITS_PRECISION"]
+            )
+        )
 
     @classmethod
     def calculate_credits(
         cls, *, current_measurement: MT, older_measurement: MT
-    ) -> Decimal:
+    ) -> Credits:
         """
         Base implementation how to bill two measurements of the same type. Expected to
         be overwritten by subclasses whose billing logic goes beyond subtracting usage
@@ -131,7 +151,9 @@ class TotalUsageMetric(
                 "Passed current_measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."
             )
-        return (
-            Decimal(current_measurement.value - older_measurement.value)
-            * cls.CREDITS_PER_VIRTUAL_HOUR
+        return Credits(
+            (
+                Decimal(current_measurement.value - older_measurement.value)
+                * cls.CREDITS_PER_VIRTUAL_HOUR
+            ).quantize(config["OS_CREDITS_PRECISION"])
         )

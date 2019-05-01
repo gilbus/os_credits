@@ -21,7 +21,7 @@ from os_credits.perun.groupsManager import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config
 
-from .base_models import UsageMeasurement
+from .base_models import Credits, UsageMeasurement
 from .billing import calculate_credits
 from .models import BillingHistory, measurement_by_name
 
@@ -197,9 +197,7 @@ async def update_credits(
     ] = current_measurement.time
 
     previous_group_credits = group.credits_used.value
-    group.credits_used.value = (group.credits_used.value + credits_to_bill).quantize(
-        config["OS_CREDITS_PRECISION"]
-    )
+    group.credits_used.value = group.credits_used.value + credits_to_bill
     # Comparing the actual values makes sure that this case even triggers if
     # credits_to_bill is not zero but so small that its changes are dropped due to
     # rounding
@@ -220,7 +218,7 @@ async def update_credits(
     billing_entry = BillingHistory(
         measurement=group.name,
         time=current_measurement.time,
-        credits_left=group.credits_granted.value - group.credits_used.value,
+        credits_left=Credits(group.credits_granted.value - group.credits_used.value),
         metric_name=current_measurement.metric.name,
         metric_friendly_name=current_measurement.metric.friendly_name,
     )

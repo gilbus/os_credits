@@ -1,3 +1,13 @@
+"""This module contains our :class:`InfluxDBClient` which is a subclass of the one
+provided by the ``aioinflux`` package.
+
+Ours does not rewrite any functionality, it only contains additional functions to ease
+writing and querying our custom data models which are all based on
+:class:`~os_credits.influx.model.InfluxDBPoint`.
+
+When querying :class:`~collections.abc.AsyncGenerator` are used whenever possible, to
+prevent excessive loading data when only e.g. the last 5 entries are needed.
+"""
 from __future__ import annotations
 
 from datetime import datetime

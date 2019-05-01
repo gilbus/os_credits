@@ -1,17 +1,17 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from aioinflux import iterpoints
 from pytest import approx
 
-from aioinflux import iterpoints
 from os_credits.influx.model import InfluxDBPoint
 from os_credits.settings import config
 
 
 @dataclass(frozen=True)
 class _TestPoint(InfluxDBPoint):
-    field1: str = field(metadata={"component": "field"})
-    tag1: str = field(metadata={"component": "tag"})
+    field1: str
+    tag1: str = field(metadata={"tag": True})
 
 
 async def test_missing_db_exception(influx_client):

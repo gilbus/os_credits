@@ -9,6 +9,7 @@ from os_credits.log import internal_logger
 
 from .base_models import (
     REGISTERED_MEASUREMENTS,
+    Credits,
     Metric,
     TotalUsageMetric,
     UsageMeasurement,
@@ -60,9 +61,9 @@ class _RAMMeasurement(UsageMeasurement):
 @dataclass(frozen=True)
 class BillingHistory(InfluxDBPoint):
 
-    credits_left: Decimal = field(metadata={"component": "field", "decoder": Decimal})
-    metric_name: str = field(metadata={"component": "tag"})
-    metric_friendly_name: str = field(metadata={"component": "tag"})
+    credits_left: Credits
+    metric_name: str = field(metadata={"tag": True})
+    metric_friendly_name: str = field(metadata={"tag": True})
 
     def __post_init__(self) -> None:
         internal_logger.debug("Constructed billing history point %s", self)

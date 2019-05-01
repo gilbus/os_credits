@@ -12,7 +12,7 @@ and don't have to worry about stopping further execution. All notifications are 
     :undoc-members:
 
     .. autoattribute:: body_template
-        :annotation: = 'Dear Project Maintainer,...'
+        :annotation: = 'Dear Project Maintainer,[...]'
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from string import Template
 from typing import ClassVar, Dict, Optional, Set, Union
 
 from aiosmtplib import SMTP
+
 from os_credits.exceptions import (
     BrokenTemplateError,
     MissingTemplateError,

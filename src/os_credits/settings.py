@@ -1,5 +1,5 @@
 """All settings can be set/overwritten by environment variables of the same name. They
-are set when the module is loaded.
+are set when the :mod:`os_credits.settings` module is loaded.
 
 The settings can be accessed via the :attr:`config` dictionary which is a
 :class:`collections.ChainMap` containing the parsed and processed environment variables,
