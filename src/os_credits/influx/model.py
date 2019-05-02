@@ -6,7 +6,7 @@ from typing import Any, AnyStr, Dict, List, Type, TypeVar
 
 from os_credits.log import internal_logger
 
-from .valueTypes import get_influxdb_converter
+from .helper import deserialize, serialize
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
@@ -39,10 +39,11 @@ class InfluxDBPoint:
 
     Unfortunately *InfluxDB* does store all timestamps as nanoseconds which are not
     natively supported by python. We are therefore losing some precision but this is
-    negligible since the timestamps *Prometheus* are only milliseconds.
+    negligible since the timestamps of *Prometheus* are only milliseconds.
     """
 
     measurement: str
+    """The name of this measurement"""
     time: datetime
 
     @classmethod
@@ -57,7 +58,7 @@ class InfluxDBPoint:
         combined_dict = dict(zip(meta["columns"], values))
         args: Dict[str, Any] = {
             "measurement": measurement_name,
-            "time": get_influxdb_converter(datetime).decode(combined_dict["time"]),
+            "time": deserialize(combined_dict["time"], datetime),
         }
         for f in fields(cls):
             if f.default is not MISSING:
@@ -65,7 +66,7 @@ class InfluxDBPoint:
             # values of this fields are already known
             if f.name in {"measurement", "time"}:
                 continue
-            args[f.name] = get_influxdb_converter(f.type).decode(combined_dict[f.name])
+            args[f.name] = deserialize(combined_dict[f.name], f)
         new_point = cls(**args)
         internal_logger.debug("Constructed %s", new_point)
         return new_point
@@ -83,7 +84,7 @@ class InfluxDBPoint:
         else:
             influx_line = influx_line_
         internal_logger.debug("Converting InfluxDB Line `%s`", influx_line)
-        measurement_and_tag, field_set, time_str = influx_line.strip().split()
+        measurement_and_tag, field_set, timestamp_str = influx_line.strip().split()
         measurement_name, tag_set = measurement_and_tag.split(",", 1)
         tag_field_dict: Dict[str, str] = {}
         for tag_pair in tag_set.split(","):
@@ -94,7 +95,7 @@ class InfluxDBPoint:
             tag_field_dict.update({field_name: field_value})
         args: Dict[str, Any] = {
             "measurement": measurement_name,
-            "time": get_influxdb_converter(datetime).decode(time_str),
+            "time": deserialize(timestamp_str, datetime),
         }
         for f in fields(cls):
             if f.default is not MISSING:
@@ -107,13 +108,14 @@ class InfluxDBPoint:
                 is_tag = True
             if f.name not in tag_field_dict:
                 raise KeyError(
-                    f"InfluxDB Line does not contain {'tag' if is_tag else 'field'} `{f.name}`"
+                    f"InfluxDB Line does not contain {'tag' if is_tag else 'field'} "
+                    "`{f.name}`"
                 )
             value = tag_field_dict[f.name]
             # string field values are quoted, strip them
             if not is_tag and isinstance(value, str):
                 value = value.strip('"')
-            args[f.name] = get_influxdb_converter(f.type).decode(value)
+            args[f.name] = deserialize(value, f)
         new_point = cls(**args)
         internal_logger.debug("Constructed %s", new_point)
         return new_point
@@ -122,7 +124,7 @@ class InfluxDBPoint:
         tag_dict: Dict[str, str] = {}
         field_dict: Dict[str, str] = {}
         measurement = self.measurement
-        time = format(get_influxdb_converter(datetime).encode(self.time), ".0f")
+        time = format(serialize(self.time), ".0f")
         for f in fields(self):
             if f.name in {"measurement", "time"}:
                 continue
@@ -132,18 +134,14 @@ class InfluxDBPoint:
                 continue
             value = getattr(self, f.name)
             if f.metadata and f.metadata.get("tag", False):
-                tag_dict[f.name] = str(get_influxdb_converter(f.type).encode(value))
+                tag_dict[f.name] = str(serialize(value, f))
             else:
-                component_value = get_influxdb_converter(f.type).encode(value)
+                component_value = serialize(value, f)
                 # string field values must be quoted
                 if isinstance(component_value, str):
-                    field_dict[f.name] = str(
-                        get_influxdb_converter(f.type).encode(f'"{component_value}"')
-                    )
+                    field_dict[f.name] = str(serialize(f'"{component_value}"', f))
                 else:
-                    field_dict[f.name] = str(
-                        get_influxdb_converter(f.type).encode(component_value)
-                    )
+                    field_dict[f.name] = str(serialize(component_value, f))
         tag_str = ",".join(f"{key}={value}" for key, value in tag_dict.items())
         field_str = ",".join(f"{key}={value}" for key, value in field_dict.items())
         influx_line = " ".join([",".join([measurement, tag_str]), field_str, str(time)])

@@ -6,8 +6,8 @@ from functools import lru_cache
 from typing import Any, ClassVar, Dict, NewType, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
+from os_credits.influx.helper import InfluxSerializer
 from os_credits.influx.model import InfluxDBPoint
-from os_credits.influx.valueTypes import InfluxValueType
 from os_credits.log import internal_logger
 from os_credits.settings import config
 
@@ -18,13 +18,13 @@ Credits = NewType("Credits", Decimal)
 MUST apply quantize"""
 
 
-class CreditsValueType(InfluxValueType[float], types=["Credits"]):
+class CreditsValueType(InfluxSerializer, types=["Credits"]):
     @staticmethod
-    def encode(value: Any) -> float:
+    def serialize(value: Any) -> float:
         return float(value)
 
     @staticmethod
-    def decode(value: Any) -> Credits:
+    def deserialize(value: Any) -> Credits:
         return Credits(Decimal(value).quantize(config["OS_CREDITS_PRECISION"]))
 
 
