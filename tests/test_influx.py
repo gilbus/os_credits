@@ -71,3 +71,28 @@ async def test_influx_read_write(influx_client):
     result = await influx_client.query("SELECT * FROM test_influx_read_write")
     parsed_point = list(iterpoints(result, _TestPoint.from_iterpoint))[0]
     assert parsed_point == point2
+
+
+async def test_bool_serializer(influx_client):
+    """Separate test since it is the only default serializer currently not in use
+    """
+
+    @dataclass(frozen=True)
+    class BoolTest(InfluxDBPoint):
+        t: bool
+        f: bool = field(metadata={"tag": True})
+
+    influx_line = b"bool_test,t=T f=FALSE 1553342599293000000"
+
+    test1 = BoolTest.from_lineprotocol(influx_line)
+    test2 = BoolTest(
+        measurement="bool_test",
+        time=datetime(2019, 3, 23, 13, 3, 19, 293000),
+        f=False,
+        t=True,
+    )
+    assert test1 == test2
+    await influx_client.write(test2)
+    result = await influx_client.query("SELECT * FROM bool_test")
+    parsed_point = list(iterpoints(result, BoolTest.from_iterpoint))[0]
+    assert parsed_point == test2

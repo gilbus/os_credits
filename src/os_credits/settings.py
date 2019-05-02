@@ -277,7 +277,6 @@ config = cast(
     # once the problem with pytest is resolved remove `environ` from this list
     ChainMap(parse_config_from_environment(), environ, default_config, _EmptyConfig()),
 )
-"""The actual config object"""
 
 
 DEFAULT_LOG_LEVEL = {

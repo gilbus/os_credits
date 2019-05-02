@@ -187,7 +187,6 @@ class _BoolSerializer(InfluxSerializer, types=["bool"]):
             return False
         else:
             raise ValueError("Unknown bool representation")
-        return True if value in true_values else False
 
 
 class _DatetimeSerializer(InfluxSerializer, types=["datetime"]):
