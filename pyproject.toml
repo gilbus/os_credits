@@ -12,6 +12,7 @@ aiohttp-swagger = "^1.0"
 prometheus_async = {version = "^19.2",extras = ["aiohttp"]}
 aiohttp_jinja2 = "^1.1"
 aiosmtplib = "^1.0"
+mypy_extensions = "^0.4.1"
 
 [tool.poetry.dev-dependencies]
 aiohttp-devtools = "^0.11.0"
