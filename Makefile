@@ -43,7 +43,7 @@ docs:
 	cd docs && $(MAKE) html
 
 test:
-	poetry run pytest --color=yes
+	poetry run pytest --color=yes tests src
 
 mypy:
 	poetry run mypy src/os_credits --html-report=htmlcov/mypy

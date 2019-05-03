@@ -2,7 +2,9 @@
 """
 Small helper script to generate a configurable amount of BilligHistory points inside an
 InfluxDB with random credit losses per entry.
-Use the docker-compose inside the repo to create an InfluxDB without authentication
+Use the docker-compose inside the repo to create an InfluxDB without authentication.
+InfluxDB connection information are taken from the environment, see the documentation
+about ``Settings`` and ``InfluxDB interaction``.
 """
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
@@ -75,7 +77,7 @@ async def main() -> int:
     billing_point = BillingHistory(
         measurement=args.project,
         time=datetime.now() - billing_interval * args.entries,
-        credits=args.initial_credits - randint(*args.credits_interval),
+        credits_left=args.initial_credits - randint(*args.credits_interval),
         metric_name=args.metric,
         metric_friendly_name=args.metric,
     )
@@ -84,7 +86,7 @@ async def main() -> int:
     for _ in range(args.entries - 1):
         billing_point = replace(
             billing_point,
-            credits=billing_point.credits - randint(*args.credits_interval),
+            credits_left=billing_point.credits_left - randint(*args.credits_interval),
             time=billing_point.time + billing_interval,
         )
         points.append(billing_point)
