@@ -27,7 +27,6 @@ pytest-localserver = "^0.5.0"
 pytest-cov = "^2.6"
 sphinxcontrib-trio = "^1.0"
 lxml = "^4.3"
-sphinx_rtd_theme = "^0.4.3"
 pytest-notifier = "^1.0"
 pytest-docker-compose = "^1.0"
 

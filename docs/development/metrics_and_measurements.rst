@@ -18,6 +18,9 @@ measurement since those contain the amount of time a resource has been in use, s
 .. inheritance-diagram:: os_credits.credits.models.VCPUMetric os_credits.credits.models.RAMMetric
    :parts: 1
 
+.. autoclass:: os_credits.credits.base_models.Metric
+   :members:
+
 
 .. _UsageMeasurement: :class:`~os_credits.credits.base_models.UsageMeasurement`
 .. _Metric: :class:`~os_credits.credits.base_models.Metric`

@@ -53,15 +53,6 @@ MT = TypeVar("MT", bound=UsageMeasurement)
 class Metric:
     """Metrics hold the information and logic how to bill measurements.
 
-    Every metric is identified by :attr:`name` which corresponds to the name of a
-    measurement stored inside *InfluxDB*, this name is also used by
-    :func:~os_credits.credits.models.measurement_by_name` to determine whether a
-    submitted measurement is billable or not.
-    In addition every metric has a :attr:`friendly_name` which is a human readable
-    string and a :attr:`description` providing further information about the metric,
-    i.e. that the :class:`~os_credits.credits.models.RAMMetric` contains the amount of
-    used Memory in MiB.
-
     The essential functions of every Metric are :func:`calculate_credits` and
     :func:`costs_per_hour`.
     """
@@ -69,10 +60,20 @@ class Metric:
     _metrics_by_name: Dict[str, Type[Metric]] = {}
     metrics_by_friendly_name: Dict[str, Type[Metric]] = {}
 
-    description: ClassVar[str] = ""
-
     name: ClassVar[str]
+    """Corresponds to the name of a measurement stored inside *InfluxDB*.
+
+    This name is also used by :func:`~os_credits.credits.models.measurement_by_name` to
+    determine whether a submitted measurement is billable or not.
+    """
     friendly_name: ClassVar[str]
+    """Human readable name of the metric.
+    """
+    description: ClassVar[str] = ""
+    """Provides further information about the metric, i.e. that the
+    :class:`~os_credits.credits.models.RAMMetric` contains the amount of used Memory in
+    MiB.
+    """
 
     def __init_subclass__(cls, name: str, friendly_name: str) -> None:
         if None in (name, friendly_name):
@@ -103,9 +104,11 @@ class Metric:
     ) -> Credits:
         """Given two measurements determine how many credits should be billed. This
         function should not be called directly but rather through the high level
-        function :func:`~os_credits.credits.billing.calculate_credits`.
+        function :func:`~os_credits.credits.billing.calculate_credits`. 
 
-        To prevent mistakes the arguments are keyword only.
+        To prevent mistakes the arguments are keyword only. Defining their type as
+        ``MT`` (:data:`MT`) shows a type checker that both arguments should be the same
+        (sub)class of :class:`UsageMeasurement`.
 
         :param current_measurement: The measurement submitted by *InfluxDB* which is
             processed by the current task. Represents the most recent measurement of this
@@ -121,6 +124,7 @@ class Metric:
         """
         Returns a dictionary containing the description and type information of this
         metric.
+
         :return: Dictionary holding information about this metric, see
             :func:`costs_per_hour` to understand the relevance of ``type``.
         """
