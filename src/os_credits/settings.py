@@ -333,10 +333,5 @@ DEFAULT_LOGGING_CONFIG = {
             "handlers": ["with_task_id"],
             "filters": ["task_id_filter"],
         },
-        "aioinflux": {
-            "level": "DEBUG",
-            "handlers": ["with_task_id"],
-            "filters": ["task_id_filter"],
-        },
     },
 }

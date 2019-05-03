@@ -10,8 +10,9 @@ def calculate_credits(measurement1: MT, measurement2: MT) -> Credits:
     High-level function to calculate the credits based on the differences of the two
     usage measurements.
 
-    Will sort the two measurements according to their time and use the `usage_type`
-    instance of the **more recent** measurement to calculate the credits.
+    Will sort the two measurements according to their time and call the
+    :func:`~os_credits.credits.base_models.Metric.calculate_credits` method of the
+    **more recent** measurement's metric to calculate the credits.
 
     :return: Non-negative amount of credits
     :raises CalculationResultError: If the amount credits would be negative

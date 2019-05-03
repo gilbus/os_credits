@@ -1,17 +1,20 @@
-"""
-Contains all view function, the routes are specified inside main.py, django style like.
+"""Contains all http endpoint functionality, see :mod:`os_credits.main` for the route
+setup.
+
+The endpoint can also be explored via the *Swagger UI*, usually ``/api/doc``.
 """
 import logging.config
 from datetime import datetime
 from decimal import Decimal
 from json import JSONDecodeError, loads
 from traceback import format_stack
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from aiohttp import web
 from aiohttp_jinja2 import template
 from os_credits.credits.base_models import Metric
 from os_credits.influx.client import InfluxDBClient
+from os_credits.influx.exceptions import InfluxDBError
 from os_credits.log import internal_logger
 from os_credits.settings import config
 
@@ -20,6 +23,9 @@ async def ping(_: web.Request) -> web.Response:
     """
     Simple ping endpoint to be able to determine whether the application is up and
     running.
+
+    :return: Response with the text body ``Pong``.
+
     ---
     description: This end-point allow to test that service is up.
     tags:
@@ -27,26 +33,122 @@ async def ping(_: web.Request) -> web.Response:
     produces:
     - text/plain
     responses:
-        "200":
-            description: successful operation. Return "pong" text
-        "405":
+        200:
+            description: successful operation. Return "Pong" text
+        405:
             description: invalid HTTP Method
     """
     return web.Response(text="Pong")
 
 
 async def credits_history_api(request: web.Request) -> web.Response:
-    project_name = request.match_info["project_name"]
+    """Endpoint for the website provided by :func:`credits_history` to retrieve its
+    data, the credits history of a given project.
+
+    ---
+    description: >
+      Provides the history of credits of the given project. The return format is
+      currently optimized against ``c3.js`` which is used by the internal visualization.
+      The first entry of every response array is a string follows by the data. The
+      ``metrics`` array contains the ``friendly_name`` of the metric responsible for
+      this billing.  To generate test entries take a look at
+      ``bin/generate_credits_history.py`` at the root of this project.
+      Timestamps are formatted ``%Y-%m-%d %H:%M:%S`` and are sorted descending.
+    tags:
+      - Service
+    produces:
+    - application/json
+    parameters:
+      - name: project_name
+        in: path
+        type: string
+        description: Name of the project
+      - name: start_date
+        in: query
+        type: string
+        format: date
+        description: Start date of the credits data, format ``%Y-%m-%d %H:%M:%S``
+      - name: end_date
+        in: query
+        type: string
+        format: date
+        description: End date of the credits data, format ``%Y-%m-%d %H:%M:%S``
+    responses:
+      200:
+        description: Credits history
+        schema:
+          type: object
+          required: [timestamps, credits, metrics]
+          properties:
+            timestamps:
+              type: array
+              items:
+                type: str
+            credits:
+              type: array
+              items:
+                type: float
+            metrics:
+              type: array
+              items:
+                type: str
+      200:
+        description: Response with requested data.
+      204:
+        description: Project does have credits history but not for given parameters.
+      400:
+        description: Bad value of one or more parameters.
+      404:
+        description: Could not find any history data.
+    """
+    datetime_format = "%Y-%m-%d %H:%M:%S"
+    try:
+        start_date = datetime.strptime(request.query["start_date"], datetime_format)
+    except KeyError:
+        start_date = datetime.fromtimestamp(0)
+    except ValueError:
+        raise web.HTTPBadRequest(reason="Invalid content for ``start_date``")
+    try:
+        end_date: Optional[datetime] = datetime.strptime(
+            request.query["end_date"], datetime_format
+        )
+    except KeyError:
+        end_date = None
+    except ValueError:
+        raise web.HTTPBadRequest(reason="Invalid content for ``end_date``")
+    if end_date and end_date <= start_date:
+        raise web.HTTPBadRequest(
+            reason="``start_date`` must be older than ``end_date``."
+        )
+    try:
+        project_name = request.match_info["project_name"]
+        # Swagger UI sends '{project_name}' if none is specified -.-'
+        if project_name == "{project_name}" or not project_name.strip():
+            raise KeyError
+    except KeyError:
+        raise web.HTTPBadRequest(reason="No non-empty ``project_name`` provided")
     influx_client: InfluxDBClient = request.app["influx_client"]
     time_column = ["timestamps"]
     credits_column: List[Union[str, float]] = ["credits"]
     metric_column = ["metrics"]
-    async for point in await influx_client.query_billing_history(
-        project_name, since=datetime(2019, 4, 19)
-    ):
-        time_column.append(point.time.strftime("%Y-%m-%d %H:%M:%S"))
-        credits_column.append(float(point.credits_left))
-        metric_column.append(point.metric_friendly_name)
+    result = await influx_client.query_billing_history(project_name, since=start_date)
+    try:
+        async for point in result:
+            # entries are sorted by timestamp descending
+            if end_date:
+                if point.time > end_date:
+                    continue
+            time_column.append(point.time.strftime(datetime_format))
+            credits_column.append(float(point.credits_left))
+            metric_column.append(point.metric_friendly_name)
+    except InfluxDBError:
+        raise web.HTTPBadRequest(reason="Invalid project name")
+    # check whether any data were retrieved
+    if credits_column == ["credits"]:
+        # let's check whether the project has history at all
+        if await influx_client.project_has_history(project_name):
+            raise web.HTTPNoContent(reason="Try changing *_date parameters")
+        raise web.HTTPNotFound(reason="No data available for given parameters.")
     return web.json_response(
         {"timestamps": time_column, "credits": credits_column, "metrics": metric_column}
     )
@@ -54,13 +156,21 @@ async def credits_history_api(request: web.Request) -> web.Response:
 
 @template("credits_history.html.j2")
 async def credits_history(request: web.Request) -> Dict[str, Any]:
+    """Shows a functional draft for visualization of a project's credits history.
+
+    To generate test entries take a look at ``bin/generate_credits_history.py`` at the
+    root of this project.
+    """
     return {"project_name": request.match_info["project_name"]}
 
 
 async def influxdb_write_endpoint(request: web.Request) -> web.Response:
     """
-    Consumes the Line Protocol of InfluxDB, see
-    https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/
+    Consumes the `Line Protocol
+    <https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/>`_
+    of InfluxDB.
+
+    :param request: Incoming request with one or multiple *InfluxDB Line* instances.
     ---
     description: Used by InfluxDB to post subscription updates
     tags:
@@ -69,22 +179,23 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
       - text/plain
     parameters:
       - in: body
+
         name: line
-        description: Point in [`Line Protocol format`](https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial)
+
+        description: Point in Line Protocol format (https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial)
         schema:
           type: string
+
           example: weather,location=us-midwest temperature=82 1465839830100400200
         required: true
     responses:
       202:
         description: A corresponding task object will be created. See application log
           for further information
-      400:
-        description: Empty content provided
     """
     # .text() performs automatic decoding from bytes
     influxdb_lines = await request.text()
-    # an unknown number of lines will be send, create separate tasks for all of them
+    # an unknown number of lines will be send, put them all into the queue
     for influx_line in influxdb_lines.splitlines():
         await request.app["task_queue"].put(influx_line)
         internal_logger.debug(
@@ -92,7 +203,7 @@ async def influxdb_write_endpoint(request: web.Request) -> web.Response:
             influx_line,
             request.app["task_queue"].qsize(),
         )
-    # always answer 202, even if some lines may be invalid/not needed
+    # always answer 202
     return web.HTTPAccepted()
 
 

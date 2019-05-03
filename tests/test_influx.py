@@ -4,6 +4,7 @@ from datetime import datetime
 from pytest import approx
 
 from aioinflux import iterpoints
+from os_credits.credits.models import BillingHistory
 from os_credits.influx.client import InfluxDBClient
 from os_credits.influx.model import InfluxDBPoint
 from os_credits.settings import config
@@ -21,6 +22,25 @@ async def test_missing_db_exception(influx_client):
     assert (
         not await influx_client.ensure_history_db_exists()
     ), "Did not detect missing database"
+
+
+async def test_history_exists(influx_client):
+
+    now = datetime.now()
+
+    credits_left = 300
+    metric_name = metric_friendly_name = "test_history_metric"
+    project_name = "test_history_measurement"
+    point = BillingHistory(
+        measurement=project_name,
+        time=now,
+        credits_left=credits_left,
+        metric_name=metric_name,
+        metric_friendly_name=metric_friendly_name,
+    )
+    await influx_client.write_billing_history(point)
+    assert await influx_client.project_has_history(project_name)
+    assert not await influx_client.project_has_history(f"not{project_name}")
 
 
 def test_influx_line_conversion():

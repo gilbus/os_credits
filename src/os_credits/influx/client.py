@@ -172,6 +172,21 @@ class InfluxDBClient(_InfluxDBClient):
     ) -> None:
         await self.write(point, db=config["CREDITS_HISTORY_DB"])
 
+    async def project_has_history(self, project_name: str) -> bool:
+        """Checks whether a project has any history stored or not
+
+        :param project_name: Project name to check
+        :return: History present or not
+        """
+        r = await self.show_series(db=config["CREDITS_HISTORY_DB"])
+        for project_measurement in chain.from_iterable(
+            r["results"][0]["series"][0]["values"]
+        ):
+            if project_measurement.startswith(project_name):
+                return True
+
+        return False
+
     async def query_billing_history(
         self, project_name: str, since: datetime = _DEFINITELY_PAST
     ) -> AsyncGenerator[BillingHistory, None]:
