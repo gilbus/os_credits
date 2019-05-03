@@ -17,12 +17,13 @@ from typing import AsyncGenerator, Dict, Iterable, List, Optional, Type, Union
 
 from aioinflux import iterpoints
 from aioinflux.client import InfluxDBClient as _InfluxDBClient
-
+from aioinflux.client import InfluxDBError as _InfluxDBError
 from os_credits.credits.base_models import UsageMeasurement
 from os_credits.credits.models import BillingHistory
 from os_credits.log import influxdb_logger
 from os_credits.settings import config
 
+from .exceptions import InfluxDBError
 from .model import PT
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
@@ -50,6 +51,28 @@ class InfluxDBClient(_InfluxDBClient):
         return config["CREDITS_HISTORY_DB"] in chain.from_iterable(
             r["results"][0]["series"][0]["values"]
         )
+
+    @staticmethod
+    def sanitize_parameter(parameter: str) -> str:
+        """Sanitizes the provided parameter to prevent SQL Injection when querying with
+        user provided content.
+
+        :param parameter: Content to sanitize
+        :return: Sanitized string
+        """
+        # TODO: probably way to restrictive/wrong, but works for now, better fail than
+        # SQL injection
+        critical_chars = {"'", '"', "\\", ";", " ", ","}
+        sanitized_param_chars: List[str] = []
+        for char in parameter:
+            if char in critical_chars:
+                sanitized_param_chars.append(f"\\{char}")
+            else:
+                sanitized_param_chars.append(char)
+        sanitized_param = "".join(sanitized_param_chars)
+        if sanitized_param != parameter:
+            influxdb_logger.debug("Sanitized %s to %s", parameter, sanitized_param)
+        return sanitized_param
 
     async def query_points(
         self,
@@ -83,9 +106,15 @@ class InfluxDBClient(_InfluxDBClient):
             "Sending query `%s` to InfluxDB",
             shorten(query.replace("\n", ""), len(query)),
         )
-        async for chunk in await self.query(query, chunked=True, db=db):
-            for point in iterpoints(chunk, point_class.from_iterpoint):
-                yield point
+        result = await self.query(query, chunked=True, db=db)
+        try:
+            # If an error occurs it is raised here due to ``chunked=True``
+            async for chunk in result:
+                for point in iterpoints(chunk, point_class.from_iterpoint):
+                    yield point
+        except _InfluxDBError as e:
+            influxdb_logger.exception("Exception when querying InfluxDB")
+            raise InfluxDBError(*e.args)
 
     async def query_points_since(
         self,
@@ -126,12 +155,15 @@ class InfluxDBClient(_InfluxDBClient):
         :return: Dictionary of measurements accessible by their timestamp which are
             sorted descending.
         """
+        sanitized_project_name = InfluxDBClient.sanitize_parameter(
+            measurement.project_name
+        )
         previous_measurements = self.query_points_since(
             measurement=measurement.metric.name,
             point_class=type(measurement),
             db=config["INFLUXDB_DB"],
             since=since,
-            query_constraints=[f"project_name = '{measurement.project_name}'"],
+            query_constraints=[f"project_name = '{sanitized_project_name}'"],
         )
         return {point.time: point async for point in previous_measurements}
 
@@ -150,8 +182,9 @@ class InfluxDBClient(_InfluxDBClient):
         :return: Asynchronously yielded instances of ``BillingHistory`` sorted by their
             timestamp descending.
         """
+        sanitized_project_name = InfluxDBClient.sanitize_parameter(project_name)
         return self.query_points_since(
-            measurement=project_name,
+            measurement=sanitized_project_name,
             db=config["CREDITS_HISTORY_DB"],
             point_class=BillingHistory,
             since=since,

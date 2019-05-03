@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from aioinflux import iterpoints
 from pytest import approx
 
+from aioinflux import iterpoints
+from os_credits.influx.client import InfluxDBClient
 from os_credits.influx.model import InfluxDBPoint
 from os_credits.settings import config
 
@@ -96,3 +97,12 @@ async def test_bool_serializer(influx_client):
     result = await influx_client.query("SELECT * FROM bool_test")
     parsed_point = list(iterpoints(result, BoolTest.from_iterpoint))[0]
     assert parsed_point == test2
+
+
+def test_sanitize_parameter():
+    bad_param = "'\"\\;"
+    sanitized_param = "\\'\\\"\\\\\\;"
+
+    assert (
+        InfluxDBClient.sanitize_parameter(bad_param) == sanitized_param
+    ), "Sanitization of parameters for InfluxDB query failed"
