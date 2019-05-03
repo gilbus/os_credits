@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Union
 
 from aiohttp import web
 from aiohttp_jinja2 import template
-
 from os_credits.credits.base_models import Metric
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
@@ -230,7 +229,7 @@ async def get_metrics(_: web.Request) -> web.Response:
     """
     metric_information = {
         friendly_name: metric.api_information()
-        for friendly_name, metric in Metric.friendly_name_to_usage().items()
+        for friendly_name, metric in Metric.metrics_by_friendly_name.items()
     }
     return web.json_response(metric_information)
 
@@ -260,7 +259,7 @@ async def costs_per_hour(request: web.Request) -> web.Response:
     costs_per_hour = Decimal(0)
     for friendly_name, spec in machine_specs.items():
         try:
-            costs_per_hour += Metric.friendly_name_to_usage()[
+            costs_per_hour += Metric.metrics_by_friendly_name[
                 friendly_name
             ].costs_per_hour(spec)
         except KeyError:

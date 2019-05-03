@@ -6,8 +6,8 @@ Subpackages
 
 .. toctree::
 
-    settings
     os_credits.credits
+    os_credits.influx
     os_credits.perun
 
 Submodules
@@ -21,6 +21,13 @@ os\_credits.cli module
     :undoc-members:
     :show-inheritance:
 
+os\_credits.exceptions module
+-----------------------------
+
+.. automodule:: os_credits.exceptions
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 os\_credits.log module
 ----------------------
@@ -30,11 +37,18 @@ os\_credits.log module
     :undoc-members:
     :show-inheritance:
 
-
 os\_credits.main module
 -----------------------
 
 .. automodule:: os_credits.main
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.notifications module
+--------------------------------
+
+.. automodule:: os_credits.notifications
     :members:
     :undoc-members:
     :show-inheritance:
@@ -47,6 +61,13 @@ os\_credits.prometheus\_metrics module
     :undoc-members:
     :show-inheritance:
 
+os\_credits.settings module
+---------------------------
+
+.. automodule:: os_credits.settings
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 os\_credits.views module
 ------------------------

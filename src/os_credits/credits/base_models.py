@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from decimal import Decimal
-from functools import lru_cache
 from typing import Any, ClassVar, Dict, NewType, Type, TypeVar
 
 from os_credits.exceptions import MeasurementError
@@ -15,10 +14,14 @@ REGISTERED_MEASUREMENTS = {}
 
 Credits = NewType("Credits", Decimal)
 """Distinct Credits type to prevent mixing of regular Decimals and Credits, since we
-MUST apply quantize"""
+MUST apply quantize to every instance of it."""
 
 
 class CreditsValueType(InfluxSerializer, types=["Credits"]):
+    """Implementation of the :class:`~os_credits.influx.helper.InfluxSerializer`
+    interface to be able to store our new :class:`Credits` inside *InfluxDB*.
+    """
+
     @staticmethod
     def serialize(value: Any) -> float:
         return float(value)
@@ -30,12 +33,14 @@ class CreditsValueType(InfluxSerializer, types=["Credits"]):
 
 @dataclass(init=False, frozen=True)
 class UsageMeasurement(InfluxDBPoint):
+    """Base data class of all incoming measurements. Cannot be used directly since no
+    metric is attached to it which is why ``init=False``.
+    """
+
     location_id: int = field(metadata={"tag": True})
     project_name: str = field(metadata={"tag": True})
     value: float
-    metric: Type[Metric] = field(
-        repr=False, init=False, compare=False, metadata={"component": None}
-    )
+    metric: Type[Metric] = field(repr=False, init=False, compare=False)
 
     def __init_subclass__(cls: Type[UsageMeasurement]) -> None:
         REGISTERED_MEASUREMENTS[cls.metric.name] = cls
@@ -46,7 +51,23 @@ MT = TypeVar("MT", bound=UsageMeasurement)
 
 
 class Metric:
-    _metrics: Dict[str, Type[Metric]] = {}
+    """Metrics hold the information and logic how to bill measurements.
+
+    Every metric is identified by :attr:`name` which corresponds to the name of a
+    measurement stored inside *InfluxDB*, this name is also used by
+    :func:~os_credits.credits.models.measurement_by_name` to determine whether a
+    submitted measurement is billable or not.
+    In addition every metric has a :attr:`friendly_name` which is a human readable
+    string and a :attr:`description` providing further information about the metric,
+    i.e. that the :class:`~os_credits.credits.models.RAMMetric` contains the amount of
+    used Memory in MiB.
+
+    The essential functions of every Metric are :func:`calculate_credits` and
+    :func:`costs_per_hour`.
+    """
+
+    _metrics_by_name: Dict[str, Type[Metric]] = {}
+    metrics_by_friendly_name: Dict[str, Type[Metric]] = {}
 
     description: ClassVar[str] = ""
 
@@ -60,7 +81,18 @@ class Metric:
                 "are None."
             )
             return
-        Metric._metrics.update({name: cls})
+        if name in Metric._metrics_by_name:
+            raise ValueError(
+                f"Metric with name {name} is already registered: "
+                f"{Metric._metrics_by_name[name]}"
+            )
+        if friendly_name in Metric.metrics_by_friendly_name:
+            raise ValueError(
+                f"Metric with friendly_name {friendly_name} is already registered: "
+                f"{Metric.metrics_by_friendly_name[friendly_name]}"
+            )
+        Metric._metrics_by_name.update({name: cls})
+        Metric.metrics_by_friendly_name.update({friendly_name: cls})
         cls.name = name
         cls.friendly_name = friendly_name
         internal_logger.debug("Registered subclass of `Metric`: %s", cls)
@@ -69,16 +101,28 @@ class Metric:
     def calculate_credits(
         cls, *, current_measurement: MT, older_measurement: MT
     ) -> Credits:
+        """Given two measurements determine how many credits should be billed. This
+        function should not be called directly but rather through the high level
+        function :func:`~os_credits.credits.billing.calculate_credits`.
+
+        To prevent mistakes the arguments are keyword only.
+
+        :param current_measurement: The measurement submitted by *InfluxDB* which is
+            processed by the current task. Represents the most recent measurement of this
+            metric.
+        :param older_measurement: Measurement of the same type as
+            :attr:`current_measurement` which is the most recent one on whose basis
+            credits have been billed.
+        """
         raise NotImplementedError("Must be implemented by subclass.")
 
     @classmethod
     def api_information(cls) -> Dict[str, Any]:
         """
         Returns a dictionary containing the description and type information of this
-        measurement.
-
-        This is just a simple base implementation and should be overridden by subclasses
-        if necessary.
+        metric.
+        :return: Dictionary holding information about this metric, see
+            :func:`costs_per_hour` to understand the relevance of ``type``.
         """
         return {
             "type": "int",
@@ -88,12 +132,14 @@ class Metric:
         }
 
     @classmethod
-    @lru_cache()
-    def friendly_name_to_usage(cls) -> Dict[str, Type[Metric]]:
-        return {m.friendly_name: m for m in Metric._metrics.values()}
+    def costs_per_hour(cls, spec: Any) -> Credits:
+        """Used by the :func:`~os_credits.views.costs_per_hour` endpoint to calculate
+        the projected costs per hour of a virtual machine.
 
-    @classmethod
-    def costs_per_hour(cls, spec: int) -> Credits:
+        :param spec: Of the same type as ``type`` of :func:`api_information`, indicates
+            the amount of resources used by the machine to be billed, e.g. the amount of
+            vCPU or MiB of RAM.
+        """
         raise NotImplementedError("Must be implemented by subclass.")
 
 
@@ -113,6 +159,11 @@ class TotalUsageMetric(
     """
 
     CREDITS_PER_VIRTUAL_HOUR: ClassVar[Decimal]
+    """Amount of credits which have to be paid for every virtual hour of usage of this
+    resource. Explicitly not defined as :class:`Credits` since the price of one virtual
+    hour may be lower than the precision given by ``OS_CREDITS_PRECISION``,
+    :ref:`Settings`, which means that no :func:`~decimal.Decimal.quantize` has been
+    applied to it, therefore it is no ``Credits`` type."""
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         if cls.CREDITS_PER_VIRTUAL_HOUR <= 0:
@@ -124,10 +175,6 @@ class TotalUsageMetric(
 
     @classmethod
     def costs_per_hour(cls, spec: int) -> Credits:
-        """
-        Simple base implementation according to _calculate_credits. Expected to be
-        overwritten in more complex measurement classes.
-        """
         return Credits(
             (spec * cls.CREDITS_PER_VIRTUAL_HOUR).quantize(
                 config["OS_CREDITS_PRECISION"]
@@ -153,7 +200,7 @@ class TotalUsageMetric(
             )
         return Credits(
             (
-                Decimal(current_measurement.value - older_measurement.value)
+                (Decimal(current_measurement.value) - Decimal(older_measurement.value))
                 * cls.CREDITS_PER_VIRTUAL_HOUR
             ).quantize(config["OS_CREDITS_PRECISION"])
         )

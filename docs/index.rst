@@ -12,13 +12,12 @@ Welcome to OpenStack Credits Service's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   development
    settings
    notifications
    exceptions
    influx
-   os_credits
-   os_credits.credits
-   os_credits.perun
+   modules
 
 
 

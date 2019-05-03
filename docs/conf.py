@@ -32,6 +32,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.coverage",
     "sphinx.ext.doctest",
+    "sphinx.ext.inheritance_diagram",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
@@ -52,6 +53,12 @@ add_module_names = False
 # -- Intersphinx -------------------------------------------------------------
 
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+
+# -- Inheritance Diagram -----------------------------------------------------
+
+inheritance_node_attrs = dict(
+    shape="ellipse", fontsize=18, height=1, color="dodgerblue1", style="filled"
+)
 
 # -- Options for HTML output -------------------------------------------------
 

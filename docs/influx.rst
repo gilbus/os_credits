@@ -32,6 +32,7 @@ InfluxDBPoint
 -------------
 
 .. autoclass:: os_credits.influx.model.InfluxDBPoint
+   :noindex:
    :members:
    :undoc-members:
 
@@ -39,3 +40,4 @@ InfluxDB Serialization
 ----------------------
 
 .. automodule:: os_credits.influx.helper
+   :noindex:

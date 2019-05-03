@@ -20,6 +20,22 @@ os\_credits.perun.attributesManager module
     :undoc-members:
     :show-inheritance:
 
+os\_credits.perun.base\_attributes module
+-----------------------------------------
+
+.. automodule:: os_credits.perun.base_attributes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.perun.exceptions module
+-----------------------------------
+
+.. automodule:: os_credits.perun.exceptions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 os\_credits.perun.groupsManager module
 --------------------------------------
 

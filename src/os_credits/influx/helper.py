@@ -112,7 +112,6 @@ class InfluxSerializer:
     def __init_subclass__(cls, types: List[str]):
         """Used to register new serializers with their supported type.
 
-
         :param types: Types as reported by :func:`dataclasses.fields` for which ``cls``
             provides decode and encode support.
         """
@@ -135,47 +134,47 @@ class InfluxSerializer:
 
 class _StringSerializer(InfluxSerializer, types=["str"]):
     @staticmethod
-    def serialize(value: Any) -> str:
+    def serialize(value) -> str:
         return str(value)
 
 
 class _IntSerializer(InfluxSerializer, types=["int"]):
     @staticmethod
-    def serialize(value: Any) -> int:
-        return int(value)
+    def serialize(value: int) -> int:
+        return value
 
     @staticmethod
-    def deserialize(value: Any) -> int:
+    def deserialize(value: _InfluxDataTypes) -> int:
         return int(value)
 
 
 class _FloatSerializer(InfluxSerializer, types=["float"]):
     @staticmethod
-    def serialize(value: Any) -> float:
-        return float(value)
+    def serialize(value: float) -> float:
+        return value
 
     @staticmethod
-    def deserialize(value: Any) -> float:
+    def deserialize(value: _InfluxDataTypes) -> float:
         return float(value)
 
 
 class _DecimalSerializer(InfluxSerializer, types=["Decimal"]):
     @staticmethod
-    def serialize(value: Any) -> float:
+    def serialize(value: Decimal) -> float:
         return float(value)
 
     @staticmethod
-    def deserialize(value: Any) -> Decimal:
+    def deserialize(value: _InfluxDataTypes) -> Decimal:
         return Decimal(value)
 
 
 class _BoolSerializer(InfluxSerializer, types=["bool"]):
     @staticmethod
-    def serialize(value: Any) -> bool:
-        return bool(value)
+    def serialize(value: bool) -> bool:
+        return value
 
     @staticmethod
-    def deserialize(value: Any) -> bool:
+    def deserialize(value: _InfluxDataTypes) -> bool:
         """InfluxDB knows multiple ways to express a boolean value"""
         # also including True and False since ``value`` will already be a bool when
         # using the input from ``iterpoints``
@@ -195,6 +194,6 @@ class _DatetimeSerializer(InfluxSerializer, types=["datetime"]):
         return int(value.timestamp() * 1e9)
 
     @staticmethod
-    def deserialize(value: Any) -> datetime:
+    def deserialize(value: _InfluxDataTypes) -> datetime:
         # does lose some preciseness unfortunately, but only nanoseconds
         return datetime.fromtimestamp(int(value) / 1e9)
