@@ -33,7 +33,7 @@ async def test_history_exists(influx_client):
     project_name = "test_history_measurement"
     point = BillingHistory(
         measurement=project_name,
-        time=now,
+        timestamp=now,
         credits_left=credits_left,
         metric_name=metric_name,
         metric_friendly_name=metric_friendly_name,
@@ -52,7 +52,7 @@ def test_influx_line_conversion():
         measurement="measurement",
         field1="test",
         tag1="test",
-        time=datetime(2019, 3, 23, 13, 3, 19, 293000),
+        timestamp=datetime(2019, 3, 23, 13, 3, 19, 293000),
     )
     assert point1 == point2, "Parsing from Line Protocol failed"
     # time has to be compared separately
@@ -69,7 +69,7 @@ async def test_query_points(influx_client):
         measurement="test_project_entries_query_measurement",
         tag1="test_project_entries_query",
         field1="test",
-        time=datetime.now(),
+        timestamp=datetime.now(),
     )
     await influx_client.write(point)
     previous_points = [
@@ -86,7 +86,7 @@ async def test_influx_read_write(influx_client):
         measurement="test_influx_read_write",
         tag1="test_influx_read_write",
         field1="test",
-        time=datetime.now(),
+        timestamp=datetime.now(),
     )
     await influx_client.write(point2)
     result = await influx_client.query("SELECT * FROM test_influx_read_write")
@@ -108,7 +108,7 @@ async def test_bool_serializer(influx_client):
     test1 = BoolTest.from_lineprotocol(influx_line)
     test2 = BoolTest(
         measurement="bool_test",
-        time=datetime(2019, 3, 23, 13, 3, 19, 293000),
+        timestamp=datetime(2019, 3, 23, 13, 3, 19, 293000),
         f=False,
         t=True,
     )

@@ -30,8 +30,8 @@ class InfluxDBPoint:
     ...     location: str = field(metadata={'tag': True})
     ...     temperature: int
     >>> from datetime import datetime
-    >>> time = datetime(2016, 6, 13, 19, 43, 50, 100400)
-    >>> weather = Weather('weather', time, 'us-midwest', 82)
+    >>> timestamp = datetime(2016, 6, 13, 19, 43, 50, 100400)
+    >>> weather = Weather('weather', timestamp, 'us-midwest', 82)
     >>> print(weather.to_lineprotocol())
     b'weather,location=us-midwest temperature=82 1465839830100399872'
     >>> Weather.from_lineprotocol(weather.to_lineprotocol()) == weather
@@ -44,7 +44,7 @@ class InfluxDBPoint:
 
     measurement: str
     """The name of this measurement"""
-    time: datetime
+    timestamp: datetime
 
     @classmethod
     def from_iterpoint(cls: Type[PT], values: List[Any], meta: Dict[str, str]) -> PT:
@@ -58,13 +58,13 @@ class InfluxDBPoint:
         combined_dict = dict(zip(meta["columns"], values))
         args: Dict[str, Any] = {
             "measurement": measurement_name,
-            "time": deserialize(combined_dict["time"], datetime),
+            "timestamp": deserialize(combined_dict["time"], datetime),
         }
         for f in fields(cls):
             if f.default is not MISSING:
                 continue
             # values of this fields are already known
-            if f.name in {"measurement", "time"}:
+            if f.name in args:
                 continue
             args[f.name] = deserialize(combined_dict[f.name], f)
         new_point = cls(**args)
@@ -95,13 +95,13 @@ class InfluxDBPoint:
             tag_field_dict.update({field_name: field_value})
         args: Dict[str, Any] = {
             "measurement": measurement_name,
-            "time": deserialize(timestamp_str, datetime),
+            "timestamp": deserialize(timestamp_str, datetime),
         }
         for f in fields(cls):
             if f.default is not MISSING:
                 continue
             # values of this fields are already known
-            if f.name in {"measurement", "time"}:
+            if f.name in args:
                 continue
             is_tag = False
             if f.metadata and f.metadata.get("tag", False):
@@ -124,9 +124,9 @@ class InfluxDBPoint:
         tag_dict: Dict[str, str] = {}
         field_dict: Dict[str, str] = {}
         measurement = self.measurement
-        time = format(serialize(self.time), ".0f")
+        timestamp = format(serialize(self.timestamp), ".0f")
         for f in fields(self):
-            if f.name in {"measurement", "time"}:
+            if f.name in {"measurement", "timestamp"}:
                 continue
             # For now skip all fields and tags which have a default value
             # TODO: evaluate
@@ -144,5 +144,7 @@ class InfluxDBPoint:
                     field_dict[f.name] = str(serialize(component_value, f))
         tag_str = ",".join(f"{key}={value}" for key, value in tag_dict.items())
         field_str = ",".join(f"{key}={value}" for key, value in field_dict.items())
-        influx_line = " ".join([",".join([measurement, tag_str]), field_str, str(time)])
+        influx_line = " ".join(
+            [",".join([measurement, tag_str]), field_str, str(timestamp)]
+        )
         return influx_line.encode()

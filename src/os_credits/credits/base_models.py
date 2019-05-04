@@ -197,7 +197,7 @@ class TotalUsageMetric(
         """
         if current_measurement.metric is not older_measurement.metric:
             raise TypeError("Measurements must be of same type")
-        if current_measurement.time < older_measurement.time:
+        if current_measurement.timestamp < older_measurement.timestamp:
             raise MeasurementError(
                 "Passed current_measurement must be older. Use the top-level "
                 "`calculate_credits` function to prevent this error."

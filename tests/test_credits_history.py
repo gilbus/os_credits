@@ -18,7 +18,7 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     project_name = "test_history_measurement"
     point = BillingHistory(
         measurement=project_name,
-        time=now,
+        timestamp=now,
         credits_left=credits_left,
         metric_name=metric_name,
         metric_friendly_name=metric_friendly_name,
@@ -42,7 +42,7 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     expected_resp = dict(
         credits=["credits", point.credits_left],
         metrics=["metrics", point.metric_friendly_name],
-        timestamps=["timestamps", point.time.strftime(datetime_format)],
+        timestamps=["timestamps", point.timestamp.strftime(datetime_format)],
     )
     assert resp1.status == resp2.status == HTTPStatus.OK
     assert await resp1.json() == await resp2.json() == expected_resp

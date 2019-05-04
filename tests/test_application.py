@@ -151,7 +151,7 @@ class _TestMeasurement(UsageMeasurement):
 
 measurement1 = _TestMeasurement(
     measurement=test_metric_name,
-    time=start_date,
+    timestamp=start_date,
     location_id=test_location_id,
     project_name=test_group_name,
     value=100,
@@ -196,12 +196,12 @@ async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
     # let's send the second measurement
     measurement2 = replace(
         measurement1,
-        time=start_date + timedelta(days=7),
+        timestamp=start_date + timedelta(days=7),
         value=measurement1.value + test_usage_delta,
     )
     billing_point = BillingHistory(
         measurement=test_group_name,
-        time=measurement2.time,
+        timestamp=measurement2.timestamp,
         credits_left=TEST_INITIAL_CREDITS_GRANTED - test_usage_delta,
         metric_name=measurement2.metric.name,
         metric_friendly_name=measurement2.metric.friendly_name,
@@ -236,7 +236,7 @@ async def test_50_percent_notification(
     # let's send the second measurement
     measurement2 = replace(
         measurement1,
-        time=start_date + timedelta(days=7),
+        timestamp=start_date + timedelta(days=7),
         value=measurement1.value + test_usage_delta,
     )
     half_of_granted_credits = Decimal(TEST_INITIAL_CREDITS_GRANTED / 2)
@@ -247,7 +247,7 @@ async def test_50_percent_notification(
     await test_group.connect()
     billing_point = BillingHistory(
         measurement=test_group_name,
-        time=measurement2.time,
+        timestamp=measurement2.timestamp,
         credits_left=half_of_granted_credits - test_usage_delta,
         metric_name=measurement2.metric.name,
         metric_friendly_name=measurement2.metric.friendly_name,
@@ -342,7 +342,7 @@ async def test_equal_usage_values(aiohttp_client, os_credits_offline, influx_cli
 
     await first_write(app, http_client, influx_client)
     # let's send the second measurement
-    measurement2 = replace(measurement1, time=start_date + timedelta(days=7))
+    measurement2 = replace(measurement1, timestamp=start_date + timedelta(days=7))
 
     await write_and_mirror(app, http_client, influx_client, measurement2)
     await test_group.connect()
@@ -382,7 +382,7 @@ async def test_no_billing_due_to_rounding(
 
     measurement = _TestMeasurementCheap(
         measurement=test_metric_name,
-        time=start_date,
+        timestamp=start_date,
         location_id=test_location_id,
         project_name=test_group_name,
         value=100,
@@ -400,7 +400,7 @@ async def test_no_billing_due_to_rounding(
     for i in range(1, 6):
         measurement = replace(
             measurement,
-            time=measurement.time + timedelta(days=7),
+            timestamp=measurement.timestamp + timedelta(days=7),
             value=measurement.value + test_usage_delta,
         )
 
@@ -420,7 +420,7 @@ async def test_no_billing_due_to_rounding(
     # this measurement should to a bill
     measurement = replace(
         measurement,
-        time=measurement.time + timedelta(days=7),
+        timestamp=measurement.timestamp + timedelta(days=7),
         value=measurement.value + test_usage_delta,
     )
     await write_and_mirror(app, http_client, influx_client, measurement)
@@ -431,7 +431,7 @@ async def test_no_billing_due_to_rounding(
     expected_credits = config["OS_CREDITS_PRECISION"]
     billing_point = BillingHistory(
         measurement=test_group_name,
-        time=measurement.time,
+        timestamp=measurement.timestamp,
         credits_left=(
             Decimal(TEST_INITIAL_CREDITS_GRANTED) - config["OS_CREDITS_PRECISION"]
         ),
@@ -439,7 +439,7 @@ async def test_no_billing_due_to_rounding(
         metric_friendly_name=measurement.metric.friendly_name,
     )
     assert (
-        test_group.credits_timestamps.value[test_metric_name] == measurement.time
+        test_group.credits_timestamps.value[test_metric_name] == measurement.timestamp
     ), "Timestamp from measurement was updated although no credits were billed"
     assert (
         test_group.credits_used.value == expected_credits
@@ -467,7 +467,7 @@ async def test_missing_previous_values(
     # let's send the second measurement
     measurement2 = replace(
         measurement1,
-        time=start_date + timedelta(days=7),
+        timestamp=start_date + timedelta(days=7),
         value=measurement1.value + test_usage_delta,
     )
 

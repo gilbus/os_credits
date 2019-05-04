@@ -17,7 +17,7 @@ def calculate_credits(measurement1: MT, measurement2: MT) -> Credits:
     :return: Non-negative amount of credits
     :raises CalculationResultError: If the amount credits would be negative
     """
-    if measurement1.time < measurement2.time:
+    if measurement1.timestamp < measurement2.timestamp:
         older_measurement, new_measurement = measurement1, measurement2
     else:
         older_measurement, new_measurement = measurement2, measurement1

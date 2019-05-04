@@ -136,9 +136,9 @@ async def credits_history_api(request: web.Request) -> web.Response:
         async for point in result:
             # entries are sorted by timestamp descending
             if end_date:
-                if point.time > end_date:
+                if point.timestamp > end_date:
                     continue
-            time_column.append(point.time.strftime(datetime_format))
+            time_column.append(point.timestamp.strftime(datetime_format))
             credits_column.append(float(point.credits_left))
             metric_column.append(point.metric_friendly_name)
     except InfluxDBError:

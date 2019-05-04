@@ -18,6 +18,7 @@ from typing import AsyncGenerator, Dict, Iterable, List, Optional, Type, Union
 from aioinflux import iterpoints
 from aioinflux.client import InfluxDBClient as _InfluxDBClient
 from aioinflux.client import InfluxDBError as _InfluxDBError
+
 from os_credits.credits.base_models import UsageMeasurement
 from os_credits.credits.models import BillingHistory
 from os_credits.log import influxdb_logger
@@ -138,7 +139,7 @@ class InfluxDBClient(_InfluxDBClient):
             db=db,
             query_constraints=query_constraints,
         ):
-            if point.time >= since:
+            if point.timestamp >= since:
                 yield point
             else:
                 return
@@ -165,7 +166,7 @@ class InfluxDBClient(_InfluxDBClient):
             since=since,
             query_constraints=[f"project_name = '{sanitized_project_name}'"],
         )
-        return {point.time: point async for point in previous_measurements}
+        return {point.timestamp: point async for point in previous_measurements}
 
     async def write_billing_history(
         self, point: Union[BillingHistory, Iterable[BillingHistory]]

@@ -113,7 +113,7 @@ async def update_credits(
         return
     if group.credits_used.value is None:
         # let's check whether any measurement timestamps are present, if so we are
-        # having a problem since this means that this group has been processed before!
+        # having a problem since this means that this group has been billed before!
         if group.credits_timestamps.value:
             raise DenbiCreditsCurrentError(
                 f"Group {group.name} has been billed before but is missing "
@@ -142,7 +142,7 @@ async def update_credits(
         # the next measurements are submitted
         group.credits_timestamps.value[
             current_measurement.measurement
-        ] = current_measurement.time
+        ] = current_measurement.timestamp
         await group.save()
         return
     task_logger.debug(
@@ -150,7 +150,7 @@ async def update_credits(
         group.credits_timestamps.value[current_measurement.measurement],
     )
 
-    if current_measurement.time <= last_measurement_timestamp:
+    if current_measurement.timestamp <= last_measurement_timestamp:
         task_logger.warning(
             "Current measurement is not more recent than the last measurement. HOW? "
             "Ignoring"
@@ -194,7 +194,7 @@ async def update_credits(
     credits_to_bill = calculate_credits(current_measurement, last_measurement)
     group.credits_timestamps.value[
         current_measurement.measurement
-    ] = current_measurement.time
+    ] = current_measurement.timestamp
 
     previous_group_credits = group.credits_used.value
     group.credits_used.value = group.credits_used.value + credits_to_bill
@@ -217,7 +217,7 @@ async def update_credits(
     )
     billing_entry = BillingHistory(
         measurement=group.name,
-        time=current_measurement.time,
+        timestamp=current_measurement.timestamp,
         credits_left=Credits(group.credits_granted.value - group.credits_used.value),
         metric_name=current_measurement.metric.name,
         metric_friendly_name=current_measurement.metric.friendly_name,

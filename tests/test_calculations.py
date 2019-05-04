@@ -42,23 +42,23 @@ class _TestMeasurement3(UsageMeasurement):
 now = datetime.now()
 
 m21 = _TestMeasurement2(
-    measurement="test2", value=100.0, time=now, project_name="", location_id=0
+    measurement="test2", value=100.0, timestamp=now, project_name="", location_id=0
 )
 m22 = _TestMeasurement2(
     measurement="test2",
     value=110.0,
-    time=now + timedelta(hours=1),
+    timestamp=now + timedelta(hours=1),
     project_name="",
     location_id=0,
 )
 
 m31 = _TestMeasurement3(
-    measurement="test3", value=100.0, time=now, project_name="", location_id=0
+    measurement="test3", value=100.0, timestamp=now, project_name="", location_id=0
 )
 m32 = _TestMeasurement3(
     measurement="test3",
     value=110.0,
-    time=now + timedelta(hours=1),
+    timestamp=now + timedelta(hours=1),
     project_name="",
     location_id=0,
 )
