@@ -14,10 +14,7 @@ from datetime import datetime
 from itertools import chain
 from textwrap import shorten
 from typing import AsyncGenerator, Dict, Iterable, List, Optional, Type, Union
-
-from aioinflux import iterpoints
-from aioinflux.client import InfluxDBClient as _InfluxDBClient
-from aioinflux.client import InfluxDBError as _InfluxDBError
+from warnings import catch_warnings, filterwarnings
 
 from os_credits.credits.base_models import UsageMeasurement
 from os_credits.credits.models import BillingHistory
@@ -26,6 +23,15 @@ from os_credits.settings import config
 
 from .exceptions import InfluxDBError
 from .model import PT
+
+# Suppress warning about missing support for DataFrames since pandas is not installed
+# Would increase the size of the application too much
+with catch_warnings():
+    filterwarnings("ignore", category=UserWarning)
+    from aioinflux import iterpoints
+    from aioinflux.client import InfluxDBClient as _InfluxDBClient
+    from aioinflux.client import InfluxDBError as _InfluxDBError
+
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
@@ -46,6 +52,9 @@ class InfluxDBClient(_InfluxDBClient):
     async def ensure_history_db_exists(self) -> bool:
         """Checks whether the required database for credits history exists.
 
+        The name of the database is stored inside the
+        :class:`~os_credits.config.Config`.
+
         :return: Whether the database exists
         """
         r = await self.show_databases()
@@ -61,7 +70,7 @@ class InfluxDBClient(_InfluxDBClient):
         :param parameter: Content to sanitize
         :return: Sanitized string
         """
-        # TODO: probably way to restrictive/wrong, but works for now, better fail than
+        # TODO: probably way too restrictive/wrong, but works for now, better fail than
         # SQL injection
         critical_chars = {"'", '"', "\\", ";", " ", ","}
         sanitized_param_chars: List[str] = []

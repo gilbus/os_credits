@@ -1,5 +1,6 @@
-"""Provides helper classes and functions to serialize and deserialize python data types
-into basic ones support by *InfluxDB*.
+"""We use helper classes and functions to serialize and deserialize python data types
+into basic ones support by *InfluxDB*. The default ones are implemented in
+:mod:`os_credits.influx.helper` module.
 For example if we'd like to store :class:`~fractions.Fraction` one basic way could be
 the following:
 
@@ -19,8 +20,8 @@ the following:
 >>> deserialize('1/4', Fraction)
 Fraction(1, 4)
 
-See :class:`~os_credits.credits.base_models.Credits` for another example. The high level
-functions :func:`~os_credits.influx.helper.serialize` and
+See :class:`~os_credits.credits.base_models.CreditsSerializer` for another example. The
+high level functions :func:`~os_credits.influx.helper.serialize` and
 :func:`~os_credits.influx.helper.deserialize` determine which serializer is responsible
 for the provided value.
 
@@ -32,16 +33,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Type, Union
 
-_InfluxDataTypes = Union[bool, float, str, int]
+InfluxDataTypes = Union[bool, float, str, int]
 _registered_serializers: Dict[str, Type[InfluxSerializer]] = {}
 
 
 def serialize(
     value: Any, field_or_type: Optional[Union[Field, Type[Any]]] = None
-) -> _InfluxDataTypes:
+) -> InfluxDataTypes:
     """Determines the correct subclass of :class:`InfluxSerializer` with the help of
-    :attr:`field` and calls its :func:`encode` method to convert the given value into a
-    datatype natively supported by *InfluxDB*.
+    :attr:`field_or_type` and calls its :func:`encode` method to convert the given value
+    into a datatype natively supported by *InfluxDB*.
 
     One usage is the conversion of python datetime objects into timestamps with
     (simulated) nanosecond precision. This methods are automatically invoked by
@@ -49,10 +50,10 @@ def serialize(
 
     :param value: Value to encode. 
     :param field_or_type: Either a :class:`~dataclasses.Field` object of which we
-    require the `type` information, which should be a string since we use ``from
-    __future__ import annotations`` (available for Python3.7+) but the older case of
-    classes is also supported.  Alternatively the raw type to use for encoding. If not
-    specified ``type(value)`` is used instead.
+        require the `type` information, which should be a string since we use ``from
+        __future__ import annotations`` (available for Python3.7+) but the older case of
+        classes is also supported.  Alternatively the raw type to use for encoding. If
+        not specified ``type(value)`` is used instead.
     :return: Encoded value
     """
     # TODO: This prevents `None` from being specified as type
@@ -75,20 +76,20 @@ def serialize(
 
 def deserialize(value: Any, field_or_type: Union[Field, Type[Any]]) -> Any:
     """Determines the correct subclass of :class:`InfluxSerializer` with the help of
-    :attr:`field` and calls its :func:`decode` method to convert the given value into
-    the python datatype indicated by ``field.type``.
+    :attr:`field_or_type` and calls its :func:`decode` method to convert the given value
+    into the python datatype indicated by ``field.type``.
 
     If we are decoding an *InfluxDB Line* :attr:`value` will always be a :class:`str`
     but if we are called from
     :func:`~os_credits.influx.model.InfluxDBPoint.from_iterpoint` it can be any value of
-    :attr:`InfluxValueType`. Additional decoding allows for storing more abstract data types inside
-    the *InfluxDB* such as datetime objects.
+    :attr:`InfluxDataTypes`. Additional decoding allows for storing more abstract data
+    types inside the *InfluxDB* such as datetime objects.
 
     :param value: Value to encode. 
     :param field_or_type: Either a :class:`~dataclasses.Field` object of which we
-    require the `type` information, which should be a string since declare ``from
-    __future__ import annotations`` but the older case of classes is also supported.
-    Alternatively the raw type to use for encoding.
+        require the `type` information, which should be a string since declare ``from
+        __future__ import annotations`` but the older case of classes is also supported.
+        Alternatively the raw type to use for encoding.
     :return: Encoded value
     """
     if isinstance(field_or_type, Field):
@@ -119,13 +120,13 @@ class InfluxSerializer:
             _registered_serializers[type_] = cls
 
     @staticmethod
-    def serialize(value: Any) -> _InfluxDataTypes:
+    def serialize(value: Any) -> InfluxDataTypes:
         """Encodes the given value to a type which is supported natively by InfluxDB.
         """
         raise NotImplementedError("Must be implemented by subclass")
 
     @staticmethod
-    def deserialize(value: _InfluxDataTypes) -> Any:
+    def deserialize(value: InfluxDataTypes) -> Any:
         """Decodes a value stored inside the InfluxDB or from the InfluxDB Line Protocol
         to its proper python type.
         """
@@ -144,7 +145,7 @@ class _IntSerializer(InfluxSerializer, types=["int"]):
         return value
 
     @staticmethod
-    def deserialize(value: _InfluxDataTypes) -> int:
+    def deserialize(value: InfluxDataTypes) -> int:
         return int(value)
 
 
@@ -154,7 +155,7 @@ class _FloatSerializer(InfluxSerializer, types=["float"]):
         return value
 
     @staticmethod
-    def deserialize(value: _InfluxDataTypes) -> float:
+    def deserialize(value: InfluxDataTypes) -> float:
         return float(value)
 
 
@@ -164,7 +165,7 @@ class _DecimalSerializer(InfluxSerializer, types=["Decimal"]):
         return float(value)
 
     @staticmethod
-    def deserialize(value: _InfluxDataTypes) -> Decimal:
+    def deserialize(value: InfluxDataTypes) -> Decimal:
         return Decimal(value)
 
 
@@ -174,7 +175,7 @@ class _BoolSerializer(InfluxSerializer, types=["bool"]):
         return value
 
     @staticmethod
-    def deserialize(value: _InfluxDataTypes) -> bool:
+    def deserialize(value: InfluxDataTypes) -> bool:
         """InfluxDB knows multiple ways to express a boolean value"""
         # also including True and False since ``value`` will already be a bool when
         # using the input from ``iterpoints``
@@ -194,6 +195,6 @@ class _DatetimeSerializer(InfluxSerializer, types=["datetime"]):
         return int(value.timestamp() * 1e9)
 
     @staticmethod
-    def deserialize(value: _InfluxDataTypes) -> datetime:
+    def deserialize(value: InfluxDataTypes) -> datetime:
         # does lose some preciseness unfortunately, but only nanoseconds
         return datetime.fromtimestamp(int(value) / 1e9)

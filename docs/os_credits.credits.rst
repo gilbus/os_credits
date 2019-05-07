@@ -1,9 +1,6 @@
 os\_credits.credits package
 ===========================
 
-Submodules
-----------
-
 os\_credits.credits.base\_models module
 ---------------------------------------
 

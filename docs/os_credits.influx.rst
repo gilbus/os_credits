@@ -1,13 +1,18 @@
 os\_credits.influx package
 ==========================
 
-Submodules
-----------
-
 os\_credits.influx.client module
 --------------------------------
 
 .. automodule:: os_credits.influx.client
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+os\_credits.influx.exceptions module
+------------------------------------
+
+.. automodule:: os_credits.influx.exceptions
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,17 +1,11 @@
 os\_credits package
 ===================
 
-Subpackages
------------
-
 .. toctree::
 
     os_credits.credits
     os_credits.influx
     os_credits.perun
-
-Submodules
-----------
 
 os\_credits.cli module
 ----------------------

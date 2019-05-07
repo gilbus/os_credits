@@ -1,9 +1,6 @@
 os\_credits.perun package
 =========================
 
-Submodules
-----------
-
 os\_credits.perun.attributes module
 -----------------------------------
 

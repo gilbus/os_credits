@@ -17,7 +17,7 @@ Credits = NewType("Credits", Decimal)
 MUST apply quantize to every instance of it."""
 
 
-class CreditsValueType(InfluxSerializer, types=["Credits"]):
+class CreditsSerializer(InfluxSerializer, types=["Credits"]):
     """Implementation of the :class:`~os_credits.influx.helper.InfluxSerializer`
     interface to be able to store our new :class:`Credits` inside *InfluxDB*.
     """
