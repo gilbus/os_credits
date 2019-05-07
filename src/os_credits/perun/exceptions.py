@@ -41,9 +41,9 @@ class GroupAttributeError(CreditsError):
     pass
 
 
-class DenbiCreditsCurrentError(GroupAttributeError):
-    """Raised if a group does not have any value for DenbiCreditsCurrent and has been
-    billed before"""
+class DenbiCreditsUsedMissing(GroupAttributeError):
+    """Raised if a group does not have any value for
+    :class:`~os_credits.perun.attributes.DenbiCreditsUsed` and has been billed before"""
 
     pass
 

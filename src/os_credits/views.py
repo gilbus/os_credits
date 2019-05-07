@@ -49,11 +49,12 @@ async def credits_history_api(request: web.Request) -> web.Response:
     description: >
       Provides the history of credits of the given project. The return format is
       currently optimized against ``c3.js`` which is used by the internal visualization.
-      The first entry of every response array is a string follows by the data. The
+      The first entry of every response array is a string followed by the data. The
       ``metrics`` array contains the ``friendly_name`` of the metric responsible for
-      this billing.  To generate test entries take a look at
-      ``bin/generate_credits_history.py`` at the root of this project.
-      Timestamps are formatted ``%Y-%m-%d %H:%M:%S`` and are sorted descending.
+      this billing. The ``timestamps`` array contains the timestamps of the measurements
+      which caused the billing. To generate test entries take a look at
+      ``bin/generate_credits_history.py`` at the root of this project.  Timestamps are
+      formatted ``%Y-%m-%d %H:%M:%S`` and sorted descending.
     tags:
       - Service
     produces:

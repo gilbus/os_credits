@@ -16,7 +16,7 @@ from os_credits.notifications import (
     HalfOfCreditsLeft,
     send_notification,
 )
-from os_credits.perun.exceptions import DenbiCreditsCurrentError, GroupNotExistsError
+from os_credits.perun.exceptions import DenbiCreditsUsedMissing, GroupNotExistsError
 from os_credits.perun.groupsManager import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config
@@ -52,6 +52,7 @@ async def worker(name: str, app: Application) -> None:
         # necessary since the tasks must continue working despite any exceptions that
         # occurred
         except Exception as e:
+            worker_exceptions_counter.inc()
             task_logger.exception(
                 "Worker %s exited task with unhandled exception: %s, stacktrace attached",
                 name,
@@ -61,7 +62,6 @@ async def worker(name: str, app: Application) -> None:
             task_queue.task_done()
 
 
-@worker_exceptions_counter.count_exceptions()
 async def process_influx_line(
     influx_line: str, app: Application, group_locks: Dict[str, Lock]
 ) -> None:
@@ -113,11 +113,11 @@ async def update_credits(
         return
     if group.credits_used.value is None:
         # let's check whether any measurement timestamps are present, if so we are
-        # having a problem since this means that this group has been billed before!
+        # having a problem since this means that this group has been processed before!
         if group.credits_timestamps.value:
-            raise DenbiCreditsCurrentError(
-                f"Group {group.name} has been billed before but is missing "
-                "`credits_used` now. "
+            raise DenbiCreditsUsedMissing(
+                f"Group {group.name} has non-empty credits_timestamps and therefore "
+                "processed before but is missing `credits_used` now. "
                 "Did someone modify the values by hand? Aborting"
             )
         else:
@@ -185,6 +185,10 @@ async def update_credits(
         await group.save()
         return
 
+    # TODO: metrics decide how to react to a dropped value, this specific behaviour is
+    # tied to TotalUsageMetrics!
+    # Idea: Something like `raise ProceedWithoutBilling` in case of a lower value with
+    # notification to cloud governance.
     if current_measurement.value == last_measurement.value:
         task_logger.info(
             "Values of this and previously billed measurement do not differ, dropping it."

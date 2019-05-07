@@ -141,6 +141,8 @@ class Group:
             self.assigned_resource_ids = {
                 resource["id"] for resource in await get_assigned_resources(self.id)
             }
+            # TODO: should an error be raised in this case? Perhaps notification to
+            # cloud governance?
             if self.resource_id not in self.assigned_resource_ids:
                 internal_logger.warning(
                     "Group `%s` is not connected with resource with id `%s`. "
