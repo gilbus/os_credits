@@ -13,10 +13,10 @@ from typing import Type
 from pytest import fixture
 
 import os_credits.perun.attributesManager
-import os_credits.perun.groupsManager
+import os_credits.perun.group
 from os_credits.credits.base_models import Metric, TotalUsageMetric, UsageMeasurement
 from os_credits.credits.models import BillingHistory
-from os_credits.perun.groupsManager import Group
+from os_credits.perun.group import Group
 
 from . import patches
 from .conftest import TEST_INITIAL_CREDITS_GRANTED
@@ -33,33 +33,25 @@ from .patches import (
 def fixture_os_credits_offline(monkeypatch):
 
     monkeypatch.setattr(
-        os_credits.perun.groupsManager,
+        os_credits.perun.group,
         "get_resource_bound_attributes",
         get_resource_bound_attributes,
     )
     monkeypatch.setattr(
-        os_credits.perun.groupsManager,
+        os_credits.perun.group,
         "set_resource_bound_attributes",
         set_resource_bound_attributes,
     )
+    monkeypatch.setattr(os_credits.perun.group, "get_attributes", get_attributes)
+    monkeypatch.setattr(os_credits.perun.group, "set_attributes", set_attributes)
     monkeypatch.setattr(
-        os_credits.perun.groupsManager, "get_attributes", get_attributes
-    )
-    monkeypatch.setattr(
-        os_credits.perun.groupsManager, "set_attributes", set_attributes
-    )
-    monkeypatch.setattr(
-        os_credits.perun.groupsManager.Group._retrieve_resource_bound_attributes,
+        os_credits.perun.group.Group._retrieve_resource_bound_attributes,
         "__defaults__",
         (True,),
     )
-    monkeypatch.setattr(
-        os_credits.perun.groupsManager.Group.save, "__defaults__", (True,)
-    )
+    monkeypatch.setattr(os_credits.perun.group.Group.save, "__defaults__", (True,))
 
-    monkeypatch.setattr(
-        os_credits.perun.groupsManager, "get_group_by_name", get_group_by_name
-    )
+    monkeypatch.setattr(os_credits.perun.group, "get_group_by_name", get_group_by_name)
     yield
     # reset internal storage of group values by reloading the module
     reload(patches)

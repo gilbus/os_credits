@@ -8,7 +8,6 @@ from decimal import Decimal
 from typing import Dict, cast
 
 from aiohttp.web import Application
-
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import TASK_ID, task_logger
 from os_credits.notifications import (
@@ -17,7 +16,7 @@ from os_credits.notifications import (
     send_notification,
 )
 from os_credits.perun.exceptions import DenbiCreditsUsedMissing, GroupNotExistsError
-from os_credits.perun.groupsManager import Group
+from os_credits.perun.group import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config
 

@@ -23,14 +23,13 @@ from string import Template
 from typing import ClassVar, Dict, Optional, Set, Union
 
 from aiosmtplib import SMTP
-
 from os_credits.exceptions import (
     BrokenTemplateError,
     MissingTemplateError,
     MissingToError,
 )
 from os_credits.log import internal_logger
-from os_credits.perun.groupsManager import Group
+from os_credits.perun.group import Group
 from os_credits.settings import config
 
 

@@ -14,7 +14,7 @@ from os_credits.notifications import (
     send_notification,
 )
 from os_credits.perun.attributes import DenbiCreditsGranted, DenbiCreditsUsed, ToEmail
-from os_credits.perun.groupsManager import Group
+from os_credits.perun.group import Group
 
 from .conftest import TEST_INITIAL_CREDITS_GRANTED
 
