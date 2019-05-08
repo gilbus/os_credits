@@ -23,6 +23,7 @@ from string import Template
 from typing import ClassVar, Dict, Optional, Set, Union
 
 from aiosmtplib import SMTP
+
 from os_credits.exceptions import (
     BrokenTemplateError,
     MissingTemplateError,

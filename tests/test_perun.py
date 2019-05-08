@@ -1,16 +1,10 @@
-from datetime import datetime
 from importlib import reload
 from os import getenv
 from random import randint
 
 import pytest
 
-from os_credits.perun.attributes import (
-    DenbiCreditsGranted,
-    DenbiCreditsUsed,
-    DenbiCreditTimestamps,
-    ToEmail,
-)
+from os_credits.perun.attributes import DenbiCreditsUsed, DenbiCreditTimestamps, ToEmail
 from os_credits.perun.attributesManager import (
     get_attributes,
     get_resource_bound_attributes,
@@ -21,6 +15,7 @@ from os_credits.perun.exceptions import (
     BadCredentialsException,
     DenbiCreditsGrantedMissing,
     GroupNotExistsError,
+    GroupResourceNotAssociatedError,
 )
 from os_credits.perun.group import Group
 from os_credits.perun.groupsManager import get_group_by_name
@@ -74,8 +69,18 @@ async def test_set_attributes(perun_test_group: Group, loop):
 
 
 async def test_credits_granted_missing(perun_test_group: Group):
+    # name of Perun group without any value
+    perun_test_group.name = f"{perun_test_group.name}_credits_granted"
     # attr should not be set
     with pytest.raises(DenbiCreditsGrantedMissing):
+        await perun_test_group.connect()
+
+
+async def test_group_resource_not_associated(perun_test_group: Group):
+    # name of Perun group without association
+    perun_test_group.name = f"{perun_test_group.name}_no_resource"
+    # attr should not be set
+    with pytest.raises(GroupResourceNotAssociatedError):
         await perun_test_group.connect()
 
 
@@ -101,3 +106,10 @@ async def test_set_resource_bound_attributes(perun_test_group: Group):
     )
     # value is stored as str inside Perun
     assert resp[0]["value"] == random_value
+
+
+async def test_group_repr(perun_test_group):
+    await perun_test_group.connect()
+    # make sure that __repr__ never fails
+    repr(perun_test_group)
+    assert True

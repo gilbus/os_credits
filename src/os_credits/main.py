@@ -6,6 +6,7 @@ from datetime import datetime
 from logging.config import dictConfig
 from pathlib import Path
 from pprint import pformat
+from typing import Optional
 
 from aiohttp import BasicAuth, ClientSession, web
 from aiohttp_jinja2 import setup
@@ -75,7 +76,9 @@ def create_new_group_lock() -> Lock:
     return Lock()
 
 
-async def create_app() -> web.Application:
+async def create_app(
+    _existing_influxdb_client: Optional[InfluxDBClient] = None
+) -> web.Application:
     """
     Separated from main function to be usable via `python -m aiohttp.web [...]`. Takes
     care of any application related setup, e.g. which config to use.
@@ -114,7 +117,7 @@ async def create_app() -> web.Application:
     )
     app.update(
         name="os-credits",
-        influx_client=InfluxDBClient(),
+        influx_client=_existing_influxdb_client or InfluxDBClient(),
         task_queue=Queue(),
         group_locks=defaultdict(create_new_group_lock),
         start_time=datetime.now(),

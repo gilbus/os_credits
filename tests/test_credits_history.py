@@ -24,7 +24,7 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
         metric_friendly_name=metric_friendly_name,
     )
     await influx_client.write_billing_history(point)
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
     resp1 = await http_client.get(
         app.router["api_credits_history"].url_for(project_name=project_name)
@@ -60,7 +60,7 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
 
 
 async def test_invalid_params(aiohttp_client, influx_client):
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     resp = await http_client.get(

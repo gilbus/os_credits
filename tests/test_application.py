@@ -60,7 +60,7 @@ async def test_startup(aiohttp_client, influx_client):
     "Test startup of the application and try to connect to its `/ping` endpoint"
     from os_credits.main import create_app
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     client = await aiohttp_client(app)
     resp = await client.get("/ping")
     text = await resp.text()
@@ -73,7 +73,7 @@ async def test_credits_endpoint(aiohttp_client, influx_client):
     from os_credits.main import create_app
     from os_credits.credits.base_models import TotalUsageMetric
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     client = await aiohttp_client(app)
 
     class _MetricA(TotalUsageMetric, name="metric_a", friendly_name="metric_a"):
@@ -177,7 +177,7 @@ async def test_regular_run(aiohttp_client, os_credits_offline, influx_client):
     scenarios (first measurement vs second measurement)"""
     from os_credits.main import create_app
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     await first_write(app, http_client, influx_client)
@@ -220,7 +220,7 @@ async def test_50_percent_notification(
     """
     from os_credits.main import create_app
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     await first_write(app, http_client, influx_client)
@@ -280,7 +280,7 @@ async def test_exception_during_send_notification(
         os_credits.credits.tasks, "process_influx_line", fake_process_influx_line
     )
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     resp = await http_client.post("/write", data=measurement1.to_lineprotocol())
@@ -298,7 +298,7 @@ async def test_measurement_from_the_past(
     not older than the stored one, which should never happen... But you never know"""
     from os_credits.main import create_app
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     await first_write(app, http_client, influx_client)
@@ -328,7 +328,7 @@ async def test_equal_usage_values(aiohttp_client, os_credits_offline, influx_cli
     higher usage value than the first one"""
     from os_credits.main import create_app
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     await first_write(app, http_client, influx_client)
@@ -380,7 +380,7 @@ async def test_no_billing_due_to_rounding(
     )
     test_usage_delta = 1
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     await first_write(app, http_client, influx_client, measurement=measurement)
@@ -448,7 +448,7 @@ async def test_missing_previous_values(
     scenarios (first measurement vs second measurement)"""
     from os_credits.main import create_app
 
-    app = await create_app()
+    app = await create_app(_existing_influxdb_client=influx_client)
     http_client = await aiohttp_client(app)
 
     # do not store the measurement in the InfluxDB (in contrast to `test_regular_run`)
