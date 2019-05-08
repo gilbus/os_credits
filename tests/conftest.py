@@ -8,6 +8,7 @@ from pytest import fixture
 from pytest_docker_compose import NetworkInfo
 
 from os_credits.influx.client import InfluxDBClient
+from os_credits.perun.group import Group
 from os_credits.settings import config
 
 pytest_plugins = ["docker_compose"]
@@ -16,12 +17,26 @@ pytest_plugins = ["docker_compose"]
 TEST_INITIAL_CREDITS_GRANTED = 200
 
 
-@fixture(name="one_worker_task", autouse=True)
-def fixture_one_worker_task(monkeypatch):
-    "Makes sure that only one worker task is used and that all settings are reset"
+@fixture(name="perun_test_group")
+def fixture_perun_test_group() -> Group:
+    # these are real objects inside Perun so do not change them, otherwise all perun
+    # tests will fail
+    group_id = 11482
+    group_name = "os_credits_test"
+    resource_id = 8456
+    # resource_name = "test"
+
+    group = Group(group_name, resource_id)
+    # set the group_id already
+    group.id = group_id
+    return group
+
+
+@fixture(name="settings_reload_after_use", autouse=True)
+def fixture_settings_reload_after_use():
+    "Make sure that settings are reset after every run"
     from os_credits import settings
 
-    monkeypatch.setenv("OS_CREDITS_WORKERS", "1")
     reload(settings)
     yield
     reload(settings)
@@ -32,7 +47,6 @@ def fixture_smtpserver(smtpserver, monkeypatch):
     monkeypatch.setenv("MAIL_SMTP_SERVER", str(smtpserver.addr[0]))
     monkeypatch.setenv("MAIL_SMTP_PORT", str(smtpserver.addr[1]))
     monkeypatch.setenv("MAIL_NOT_STARTTLS", "1")
-    monkeypatch.setenv("CLOUD_GOVERNANCE_MAIL", "cloud@governance")
     return smtpserver
 
 

@@ -5,7 +5,7 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Optional, cast
 
 from .requests import perun_get
 

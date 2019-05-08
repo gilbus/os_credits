@@ -3,30 +3,50 @@ from importlib import reload
 
 import pytest
 
-from os_credits.exceptions import (
-    BrokenTemplateError,
-    MissingTemplateError,
-    MissingToError,
-)
-from os_credits.notifications import (
-    EmailNotificationBase,
-    EmailRecipient,
-    send_notification,
-)
-from os_credits.perun.attributes import DenbiCreditsGranted, DenbiCreditsUsed, ToEmail
-from os_credits.perun.group import Group
 
-from .conftest import TEST_INITIAL_CREDITS_GRANTED
+@pytest.fixture
+def notification_group():
+    from os_credits.perun.attributes import (
+        DenbiCreditsGranted,
+        DenbiCreditsUsed,
+        ToEmail,
+    )
+    from os_credits.perun.group import Group
+    from .conftest import TEST_INITIAL_CREDITS_GRANTED
 
-test_group = Group("TestGroup")
-test_group.email = ToEmail(value=["admin@project"])
-test_group.credits_used = DenbiCreditsUsed(value=str(TEST_INITIAL_CREDITS_GRANTED))
-test_group.credits_granted = DenbiCreditsGranted(
-    value=str(TEST_INITIAL_CREDITS_GRANTED)
-)
+    test_group = Group("TestGroup")
+    test_group.email = ToEmail(value=["admin@project"])
+    test_group.credits_used = DenbiCreditsUsed(value=str(TEST_INITIAL_CREDITS_GRANTED))
+    test_group.credits_granted = DenbiCreditsGranted(
+        value=str(TEST_INITIAL_CREDITS_GRANTED)
+    )
+    return test_group
 
 
-def test_detect_invalid_notifications():
+@pytest.fixture
+def NotificationClass():
+    from os_credits.notifications import EmailNotificationBase, EmailRecipient
+
+    class NotificationTest1(EmailNotificationBase):
+        body_template = "$credits_granted - $project"
+        subject_template = "Test: $credits_used"
+        to = {"test3@local", EmailRecipient.PROJECT_MAINTAINERS}
+        cc = {EmailRecipient.CLOUD_GOVERNANCE}
+        bcc = {"test2@local"}
+
+        def __init__(self, group):
+            super().__init__(group, "")
+
+    return NotificationTest1
+
+
+def test_detect_invalid_notifications(notification_group):
+    from os_credits.notifications import EmailNotificationBase
+    from os_credits.exceptions import (
+        BrokenTemplateError,
+        MissingTemplateError,
+        MissingToError,
+    )
 
     with pytest.raises(MissingTemplateError):
 
@@ -64,27 +84,31 @@ def test_detect_invalid_notifications():
             def __init__(self, group):
                 super().__init__(group, "")
 
-        BrokenTemplate(test_group).construct_message()
+        BrokenTemplate(notification_group).construct_message()
 
 
-class NotificationTest1(EmailNotificationBase):
-    body_template = "$credits_granted - $project"
-    subject_template = "Test: $credits_used"
-    to = {"test3@local", EmailRecipient.PROJECT_MAINTAINERS}
-    cc = {EmailRecipient.CLOUD_GOVERNANCE}
-    bcc = {"test2@local"}
-
-    def __init__(self, group):
-        super().__init__(group, "")
-
-
-def test_notification_to_overwrite(smtpserver, monkeypatch):
-    from os_credits import settings
+def test_notification_to_overwrite(NotificationClass, notification_group):
+    from os_credits.settings import config
 
     overwrite_mail = "overwrite@mail"
-    monkeypatch.setenv("NOTIFICATION_TO_OVERWRITE", overwrite_mail)
-    reload(settings)
-    notification = NotificationTest1(test_group)
+    config["NOTIFICATION_TO_OVERWRITE"] = overwrite_mail
+    from os_credits import notifications
+
+    # necessary since the module imports config and does not see the changes
+    reload(notifications)
+    from os_credits.notifications import EmailNotificationBase, EmailRecipient
+
+    class NotificationClass(EmailNotificationBase):
+        body_template = "$credits_granted - $project"
+        subject_template = "Test: $credits_used"
+        to = {"test3@local", EmailRecipient.PROJECT_MAINTAINERS}
+        cc = {EmailRecipient.CLOUD_GOVERNANCE}
+        bcc = {"test2@local"}
+
+        def __init__(self, group):
+            super().__init__(group, "")
+
+    notification = NotificationClass(notification_group)
     msg = notification.construct_message()
     assert (
         msg["Cc"] == msg["Bcc"] == None
@@ -92,15 +116,16 @@ def test_notification_to_overwrite(smtpserver, monkeypatch):
     assert (
         msg["To"] == overwrite_mail
     ), "NOTIFICATION_TO_OVERWRITE not applied correctly"
+    del config["NOTIFICATION_TO_OVERWRITE"]
 
 
-def test_message_construction(smtpserver):
+def test_message_construction(NotificationClass, notification_group):
     """Require smtpserver fixture to ensure that the value of
     config['CLOUD_GOVERNANCE_MAIL'] is set"""
 
     from os_credits.settings import config
 
-    notification = NotificationTest1(test_group)
+    notification = NotificationClass(notification_group)
     msg = notification.construct_message()
     # using sets to test independent of order
     assert set(msg["To"].split(",")) == set(
@@ -113,15 +138,17 @@ def test_message_construction(smtpserver):
         msg["Bcc"] == "test2@local"
     ), "Wrong Bcc in header of construct_message message"
     assert (
-        msg["Subject"] == f"Test: {test_group.credits_used.value}"
+        msg["Subject"] == f"Test: {notification_group.credits_used.value}"
     ), "Bad substitution of Subject"
     assert (
-        msg._payload == f"{test_group.credits_granted.value} - TestGroup"
+        msg._payload == f"{notification_group.credits_granted.value} - TestGroup"
     ), "Bad substitution of Body"
 
 
-async def test_sending(smtpserver, loop):
-    notification = NotificationTest1(test_group)
+async def test_sending(smtpserver, loop, NotificationClass, notification_group):
+    from os_credits.notifications import EmailNotificationBase, send_notification
+
+    notification = NotificationClass(notification_group)
 
     with pytest.raises(EmailNotificationBase):
         raise notification
@@ -131,30 +158,30 @@ async def test_sending(smtpserver, loop):
     assert len(smtpserver.outbox) == 1
 
 
-def test_construction_with_missing_placeholder(smtpserver):
+def test_construction_with_missing_placeholder(NotificationClass, notification_group):
     """Test whether a notification with an unresolvable placeholder in a template
     constructs a message with the placeholder unresolved. Requires the smtpserver
     fixture to ensure that the value of config['CLOUD_GOVERNANCE_MAIL'] is set"""
 
-    class NotificationWithUnresolvableTemplate(NotificationTest1):
+    class NotificationWithUnresolvableTemplate(NotificationClass):
         subject_template = "$unresolvable"
 
         def __init__(self, group):
             super().__init__(group)
 
-    notification = NotificationWithUnresolvableTemplate(test_group)
+    notification = NotificationWithUnresolvableTemplate(notification_group)
     msg = notification.construct_message()
     assert msg["Subject"] == NotificationWithUnresolvableTemplate.subject_template
 
 
-def test_placeholder_overwrite_default(smtpserver):
-    class NotificationWithCustomPlaceholder(NotificationTest1):
+def test_placeholder_overwrite_default(NotificationClass, notification_group):
+    class NotificationWithCustomPlaceholder(NotificationClass):
         subject_template = "$credits_used"
         custom_placeholders = {"credits_used": "MyPlaceholder"}
 
         def __init__(self, group):
             super().__init__(group)
 
-    notification = NotificationWithCustomPlaceholder(test_group)
+    notification = NotificationWithCustomPlaceholder(notification_group)
     msg = notification.construct_message()
     assert msg["Subject"] == "MyPlaceholder"

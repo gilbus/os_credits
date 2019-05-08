@@ -667,6 +667,18 @@ pytest = ">=3.4"
 
 [[package]]
 category = "dev"
+description = "A py.test plugin that parses environment files before running tests"
+name = "pytest-dotenv"
+optional = false
+python-versions = "*"
+version = "0.4.0"
+
+[package.dependencies]
+pytest = ">=2.6.0"
+python-dotenv = ">=0.9.1"
+
+[[package]]
+category = "dev"
 description = "py.test plugin to test server connections locally."
 name = "pytest-localserver"
 optional = false
@@ -686,6 +698,14 @@ version = "1.0.2"
 
 [package.dependencies]
 pytest = "*"
+
+[[package]]
+category = "dev"
+description = "Add .env support to your django/flask apps in development and deployments"
+name = "python-dotenv"
+optional = false
+python-versions = "*"
+version = "0.10.1"
 
 [[package]]
 category = "dev"
@@ -935,7 +955,7 @@ python-versions = ">=2.7"
 version = "0.3.3"
 
 [metadata]
-content-hash = "99abd2658bb958bbf34d5f21ad10259d2fc3845fee681ff9e5afc85068e94d81"
+content-hash = "f6eb8b29e8a828aac4f2937adbecf74d93e3f3ab96909037453917692040dada"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -1002,8 +1022,10 @@ pytest = ["3773f4c235918987d51daf1db66d51c99fac654c81d6f2f709a046ab446d5e5d", "b
 pytest-aiohttp = ["0b9b660b146a65e1313e2083d0d2e1f63047797354af9a28d6b7c9f0726fa33d", "c929854339637977375838703b62fef63528598bc0a9d451639eba95f4aaa44f"]
 pytest-cov = ["0ab664b25c6aa9716cbf203b17ddb301932383046082c081b9848a0edf5add33", "230ef817450ab0699c6cc3c9c8f7a829c34674456f2ed8df1fe1d39780f7c87f"]
 pytest-docker-compose = ["3589b15c209628e9d408671acecf10444d32fa3cc65295c8212ff10bc187a2f9", "ca82c60c9fb59e098a6be306f7b1d36fb2a494cbc2e4baf2d9b6aa5844a9bc58"]
+pytest-dotenv = ["12ff70de238cdc2c8d838ef92b720325ceb6ae2c9967be5f4e606a36de48345c", "a3a0adf9e17cf7c9e38ec597a74cc902ac76baa1cc5a9bd7581a3711930ad057"]
 pytest-localserver = ["3a5427909d1dfda10772c1bae4b9803679c0a8f04adb66c338ac607773bfefc2"]
 pytest-notifier = ["c9f31d07c92f536f179d98b752d33936b286e02af8535fd8f41f97230a3331b9", "d78df614436b750017948311dd9d302e2ea30de470506e08ca1c7fe3055a1700"]
+python-dotenv = ["a84569d0e00d178bc5b957f7ff208bf49287cbf61857c31c258c4a91f571527b", "c9b1ddd3cdbe75c7d462cb84674d87130f4b948f090f02c7d7144779afb99ae0"]
 pytz = ["303879e36b721603cc54604edcac9d20401bdbe31e1e4fdee5b9f98d5d31dfda", "d747dd3d23d77ef44c6a3526e274af6efeb0a6f1afd5a69ba4d5be4098c8e141"]
 pywin32 = ["22e218832a54ed206452c8f3ca9eff07ef327f8e597569a4c2828be5eaa09a77", "32b37abafbfeddb0fe718008d6aada5a71efa2874f068bee1f9e703983dcc49a", "35451edb44162d2f603b5b18bd427bc88fcbc74849eaa7a7e7cfe0f507e5c0c8", "4eda2e1e50faa706ff8226195b84fbcbd542b08c842a9b15e303589f85bfb41c", "5f265d72588806e134c8e1ede8561739071626ea4cc25c12d526aa7b82416ae5", "6852ceac5fdd7a146b570655c37d9eacd520ed1eaeec051ff41c6fc94243d8bf", "6dbc4219fe45ece6a0cc6baafe0105604fdee551b5e876dc475d3955b77190ec", "9bd07746ce7f2198021a9fa187fa80df7b221ec5e4c234ab6f00ea355a3baf99"]
 pyyaml = ["3d7da3009c0f3e783b2c873687652d83b1bbfd5c88e9813fb7e5b03c0dd3108b", "3ef3092145e9b70e3ddd2c7ad59bdd0252a94dfe3949721633e41344de00a6bf", "40c71b8e076d0550b2e6380bada1f1cd1017b882f7e16f09a65be98e017f211a", "558dd60b890ba8fd982e05941927a3911dc409a63dcb8b634feaa0cda69330d3", "a7c28b45d9f99102fa092bb213aa12e0aaf9a6a1f5e395d36166639c1f96c3a1", "aa7dd4a6a427aed7df6fb7f08a580d68d9b118d90310374716ae90b710280af1", "bc558586e6045763782014934bfaf39d48b8ae85a2713117d16c39864085c613", "d46d7982b62e0729ad0175a9bc7e10a566fc07b224d2c79fafb5e032727eaa04", "d5eef459e30b09f5a098b9cea68bebfeb268697f78d647bd255a085371ac7f3f", "e01d3203230e1786cd91ccfdc8f8454c8069c91bee3962ad93b87a4b2860f537", "e170a9e6fcfd19021dd29845af83bb79236068bf5fd4df3327c1be18182b2531"]

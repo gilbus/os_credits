@@ -28,6 +28,7 @@ pytest-cov = "^2.6"
 sphinxcontrib-trio = "^1.0"
 lxml = "^4.3"
 pytest-notifier = "^1.0"
+pytest-dotenv = "^0.4.0"
 pytest-docker-compose = "^1.0"
 
 [tool.poetry.scripts]

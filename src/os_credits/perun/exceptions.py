@@ -16,11 +16,6 @@ class GroupNotExistsError(PerunBaseException):
     pass
 
 
-class AttributeNotExistsError(PerunBaseException):
-    "Python mapping of Perun's AttributeNotExistsException"
-    pass
-
-
 class InternalError(PerunBaseException):
     "Python mapping of Perun's InternalErrorException"
     pass
@@ -33,6 +28,11 @@ class ConsistencyError(PerunBaseException):
 
 class RequestError(PerunBaseException):
     "Generic Exception in case no specific exception has been thrown"
+    pass
+
+
+class GroupResourceNotAssociatedError(PerunBaseException):
+    "Raised if a group and a resource are not associated but should be"
     pass
 
 

@@ -2,11 +2,11 @@ from contextvars import ContextVar
 from typing import Any, Dict, Optional
 
 from aiohttp import BasicAuth, ClientSession
+
 from os_credits.log import requests_logger
 from os_credits.settings import config
 
 from .exceptions import (
-    AttributeNotExistsError,
     BadCredentialsException,
     ConsistencyError,
     GroupNotExistsError,
@@ -60,8 +60,6 @@ async def _perun_rpc(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
             # Some kind of error has occured
             if response_content["name"] == "GroupNotExistsException":
                 raise GroupNotExistsError(response_content["message"])
-            elif response_content["name"] == "AttributeNotExistsException":
-                raise AttributeNotExistsError(response_content["message"])
             elif response_content["name"] == "InternalErrorException":
                 raise InternalError(response_content["message"])
             elif response_content["name"] == "ConsistencyErrorException":

@@ -18,6 +18,7 @@ from .attributesManager import (
     set_resource_bound_attributes,
 )
 from .base_attributes import PerunAttribute
+from .exceptions import GroupResourceNotAssociatedError
 from .groupsManager import get_group_by_name
 from .resourcesManager import get_assigned_resources
 
@@ -100,11 +101,11 @@ class Group:
         #. :func:`get_perun_attributes` is used to determine
            which attributes of the class must be retrieved from *Perun*.
 
-            #. If any of these attributes is *resource bound* we check whether this
-               group is actually assigned to the resource whose ID is stored in
-               :attr:`resource_id`. This check is necessary since *Perun* is happy to
-               return and store attributes of *invalid* combinations of groups and
-               resources. The result is stored in :attr:`assigned_resource` and
+            #. If any of these attributes is *resource bound* we check whether the
+               resource whose ID is stored in :attr:`resource_id` this is actually
+               associated with this group  . This check is necessary since *Perun* is
+               happy to return and store attributes of *invalid* combinations of groups
+               and resources. The result is stored in :attr:`assigned_resource` and
                performed by :func:`is_assigned_resource`.
 
         #. All attributes of the group are retrieved by calling
@@ -113,6 +114,10 @@ class Group:
            necessary and stored inside this group.
 
         :return: Self, to allow chaining such as ``g=await Group([...]).connect()``
+        :raises GroupResourceNotAssociatedError: In case group :attr:`name` is not
+            assigned to resource with :attr:`resource_id` inside *Perun*.
+        :raises ~os_credits.perun.exceptions.PerunBaseException: Or any other subclass
+            of exception indicating errors during communication with perun.
         """
         group_response = await get_group_by_name(self.name)
         self.id = int(group_response["id"])
@@ -132,7 +137,6 @@ class Group:
                 requested_resource_bound_attributes.append(attr_class.get_full_name())
             else:
                 requested_attributes.append(attr_class.get_full_name())
-            # only store attributes which are requested via class annotations
         # will hold the contents of all retrieved attributes
         attributes: Dict[str, Dict[str, Any]] = {}
         if requested_attributes:
@@ -143,38 +147,36 @@ class Group:
 
         if requested_resource_bound_attributes:
             self.assigned_resource = await self.is_assigned_resource()
-            # TODO: should an error be raised in this case? Perhaps notification to
-            # cloud governance?
             if not self.assigned_resource:
-                internal_logger.warning(
-                    "Group `%s` is not connected with resource with id `%s`. "
-                    "Skipping retrieval of resource bound attributes: %s ",
-                    self.name,
-                    self.resource_id,
-                    requested_resource_bound_attributes,
+                raise GroupResourceNotAssociatedError(
+                    f"Group `{self.name}` is not associated with resource with id "
+                    "`{self.resource_id}` but resource bound attributes have been "
+                    "requested "
                 )
-            else:
-                for attr in await get_resource_bound_attributes(
-                    self.id,
-                    self.resource_id,
-                    attribute_full_names=requested_resource_bound_attributes,
-                ):
-                    attributes[attr["friendlyName"]] = attr
+            for attr in await get_resource_bound_attributes(
+                self.id,
+                self.resource_id,
+                attribute_full_names=requested_resource_bound_attributes,
+            ):
+                attributes[attr["friendlyName"]] = attr
         internal_logger.debug("Retrieved attributes Group %s: %s", self, attributes)
         for friendly_name, group_attr_name in friendly_name_to_group_attr_name.items():
             attr_class = type(self).get_perun_attributes()[group_attr_name]
 
             try:
-                self.__setattr__(
-                    group_attr_name, attr_class(**attributes[friendly_name])
-                )
+                setattr(self, group_attr_name, attr_class(**attributes[friendly_name]))
             except KeyError:
-                self.__setattr__(group_attr_name, attr_class(value=None))
+                # in case we got no content for this attribute by perun
+                setattr(self, group_attr_name, attr_class(value=None))
 
         return self
 
     async def is_assigned_resource(self) -> bool:
-        """
+        """Explicit check whether the resource :attr:`resource_id` is associated with
+        group :attr:`name`.
+
+        Does so by testing whether :attr:`resource_id` is part of the response of
+        :func:`~os_credits.perun.resourcesManager.get_assigned_resources`
         """
         # using a generator expression saves time
         return self.resource_id in (
