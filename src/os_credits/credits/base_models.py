@@ -33,14 +33,36 @@ class CreditsSerializer(InfluxSerializer, types=["Credits"]):
 
 @dataclass(init=False, frozen=True)
 class UsageMeasurement(InfluxDBPoint):
-    """Base data class of all incoming measurements. Cannot be used directly since no
+    """Base data class of all usage measurements. Cannot be used directly since no
     metric is attached to it which is why ``init=False``.
+
+    Pure dataclasses which should not be extended with any kind of logic other than
+    holding information.
     """
 
     location_id: int = field(metadata={"tag": True})
+    """The ID of the ``Resource`` in *Perun* representing the location from which this
+    measurement has been received.
+
+    Must be present to bill a group based on this measurement.
+    """
+
     project_name: str = field(metadata={"tag": True})
+    """The name of the project to which this measurement belongs.
+    """
+
     value: float
+    """Value of the measurement, stored by Prometheus inside this field when using
+    InfluxDB as remote storage.
+    """
+
     metric: Type[Metric] = field(repr=False, init=False, compare=False)
+    """Every Measurement class must be connected with a metric, since the latter
+    contains the logic to bill a project based on ``value``.
+
+    :attr:`Metric.name` is also used to determine which measurement should be created
+    based on the content of an incoming usage measurement in Influx Line protocol.
+    """
 
     def __init_subclass__(cls: Type[UsageMeasurement]) -> None:
         REGISTERED_MEASUREMENTS[cls.metric.name] = cls

@@ -18,7 +18,7 @@ to the current design. An operation and development manual can be found inside t
 ``docs/`` folder of this repository which can be build via ``make docs``.
 
 Development
-----------
+-----------
 
 The project has been developed with Python 3.7 and uses the `aiohttp
 <https://docs.aiohttp.org>`_ framework communication. Its dependencies are managed via

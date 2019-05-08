@@ -37,9 +37,18 @@ class RAMMetric(TotalUsageMetric, name="project_mb_usage", friendly_name="ram"):
 # located next to the metrics to ensure that their classes are initialized and therefore
 # registered in REGISTERED_MEASUREMENTS
 def measurement_by_name(name: AnyStr) -> Type[UsageMeasurement]:
-    """
+    """Returns the correct :class:`UsageMeasurement` subclass corresponding to the given
+    Influx Line.
+
+    The measurement itself does not know its name, but its connected metric does.
+
     :param name: The name of the measurement or a text in InfluxDB Line Protocol from
         which the name is extracted.
+    :return: Subclass of :class:`~os_credits.credits.base_models.UsageMeasurement`
+        responsible for this measurement.
+    :raises ValueError: No
+        :class:`~os_credits.credits.base_models.UsageMeasurement`
+        responsible/available, i.e. the passed measurement is not needed/supported.
     """
     if isinstance(name, bytes):
         influx_line = name.decode()

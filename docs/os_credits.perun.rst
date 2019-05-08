@@ -33,6 +33,14 @@ os\_credits.perun.exceptions module
     :undoc-members:
     :show-inheritance:
 
+os\_credits.perun.group module
+--------------------------------------
+
+.. automodule:: os_credits.perun.group
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 os\_credits.perun.groupsManager module
 --------------------------------------
 

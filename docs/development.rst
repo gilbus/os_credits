@@ -7,5 +7,3 @@ by additional *metrics*, *Perun* attributes or models to store inside the *Influ
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-   development/metrics_and_measurements
