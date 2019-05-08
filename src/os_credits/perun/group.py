@@ -159,7 +159,11 @@ class Group:
                 attribute_full_names=requested_resource_bound_attributes,
             ):
                 attributes[attr["friendlyName"]] = attr
-        internal_logger.debug("Retrieved attributes Group %s: %s", self, attributes)
+        internal_logger.debug(
+            "Retrieved attributes Group %s: %s",
+            self,
+            {attr_name: attr["value"] for attr_name, attr in attributes.items()},
+        )
         for friendly_name, group_attr_name in friendly_name_to_group_attr_name.items():
             attr_class = type(self).get_perun_attributes()[group_attr_name]
 

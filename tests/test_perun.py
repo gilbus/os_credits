@@ -53,7 +53,7 @@ async def test_get_attributes(perun_test_group: Group):
     resp = await get_attributes(
         perun_test_group.id, attribute_full_names=[ToEmail.get_full_name()]
     )
-    assert resp[0]["value"] == ["DO NOT CHANGE THIS VALUE"], "Unexpected response"
+    assert resp[0]["value"] == ["DO NOT CHANGE THIS VALUES"], "Unexpected response"
 
 
 async def test_set_attributes(perun_test_group: Group, loop):

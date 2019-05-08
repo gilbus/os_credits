@@ -19,7 +19,7 @@ def fixture_perun_test_group() -> Group:
     # tests will fail
     group_id = 11482
     group_name = "os_credits_test"
-    resource_id = 8456
+    resource_id = 8676
     # resource_name = "test"
 
     group = Group(group_name, resource_id)

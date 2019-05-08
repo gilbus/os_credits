@@ -3,8 +3,7 @@ PORT=8080
 DOCKER_USERNAME=$(USER)
 DOCKER_IMAGENAME=os_credits
 
-.PHONY: clean-pyc docker-build docker-build-dev docker-run docs test mypy coverage lint run run-dev
-
+.PHONY: clean-pyc docker-build docker-build-dev docker-run docs test test-online test-online-only mypy coverage lint run run-dev
 rule all:
 	@echo 'Please provide a Phony target'
 
@@ -42,10 +41,18 @@ docker-run-dev:
 docs:
 	cd docs && $(MAKE) html
 
+# sleep is necessary to wait until launched services are ready
 test:
 	poetry run docker-compose -f tests/docker-compose.yml up --detach
+	sleep 5
 	poetry run pytest --color=yes tests src
 	poetry run docker-compose -f tests/docker-compose.yml down --volumes --remove-orphans
+
+test-online:
+	env TEST_ONLINE=1 $(MAKE) test
+
+test-online-only:
+	poetry run env TEST_ONLINE=1 pytest --color=yes --no-cov tests/test_perun.py
 
 mypy:
 	poetry run mypy src/os_credits --html-report=htmlcov/mypy
