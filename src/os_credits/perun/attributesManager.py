@@ -14,13 +14,11 @@ _URL = "attributesManager"
 
 
 async def get_resource_bound_attributes(
-    group_id: int,
-    resource_id: int,
-    attribute_friendly_names: Optional[List[str]] = None,
+    group_id: int, resource_id: int, attribute_full_names: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
     params: Dict[str, Any] = {"group": group_id, "resource": resource_id}
-    if attribute_friendly_names:
-        params.update({"attrNames": attribute_friendly_names})
+    if attribute_full_names:
+        params.update({"attrNames": attribute_full_names})
     # cast is only for type checking purposes
     return cast(
         List[Dict[str, Any]], await perun_get(f"{_URL}/getAttributes", params=params)
@@ -28,11 +26,11 @@ async def get_resource_bound_attributes(
 
 
 async def get_attributes(
-    group_id: int, attribute_friendly_names: Optional[List[str]] = None
+    group_id: int, attribute_full_names: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
     params: Dict[str, Any] = {"group": group_id}
-    if attribute_friendly_names:
-        params.update({"attrNames": attribute_friendly_names})
+    if attribute_full_names:
+        params.update({"attrNames": attribute_full_names})
     # cast is only for type checking purposes
     return cast(
         List[Dict[str, Any]], await perun_get(f"{_URL}/getAttributes", params=params)

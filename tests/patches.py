@@ -38,7 +38,7 @@ _test_mode_resource_attributes: Dict[
 # Insert any initial values by using a defaultdict
 _test_mode_group_attributes: Dict[int, Dict[str, Dict[str, Any]]] = defaultdict(
     lambda: {
-        DenbiCreditsGranted.friendlyName: DenbiCreditsGranted(
+        DenbiCreditsGranted.get_full_name(): DenbiCreditsGranted(
             value=TEST_INITIAL_CREDITS_GRANTED
         ).to_perun_dict()
     }
@@ -47,38 +47,26 @@ _test_mode_group_attributes: Dict[int, Dict[str, Dict[str, Any]]] = defaultdict(
 
 # replaces `os_credits.perun.attributesManager.get_resource_bound_attributes`
 async def get_resource_bound_attributes(
-    group_id: int,
-    resource_id: int,
-    attribute_friendly_names: Optional[List[str]] = None,
+    group_id: int, resource_id: int, attribute_full_names: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
-    print("Test")
-    if attribute_friendly_names:
-        return [
-            _test_mode_resource_attributes[(group_id, resource_id)][friendly_name]
-            for friendly_name in attribute_friendly_names
-        ]
-    else:
-        return [
-            attribute
-            for attribute in _test_mode_resource_attributes[
-                (group_id, resource_id)
-            ].values()
-        ]
+    return [
+        attribute
+        for attribute in _test_mode_resource_attributes[
+            (group_id, resource_id)
+        ].values()
+    ]
 
 
 async def get_attributes(
-    group_id: int, attribute_friendly_names: Optional[List[str]] = None
+    group_id: int, attribute_full_names: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
-    if attribute_friendly_names:
-        return [
-            _test_mode_group_attributes[group_id][friendly_name]
-            for friendly_name in attribute_friendly_names
-        ]
+    return [attribute for attribute in _test_mode_group_attributes[group_id].values()]
 
-    else:
-        return [
-            attribute for attribute in _test_mode_group_attributes[group_id].values()
-        ]
+
+async def is_assigned_resource(self) -> bool:
+    """
+    """
+    return True
 
 
 # Original function currently not in use

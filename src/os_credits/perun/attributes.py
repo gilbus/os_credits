@@ -4,8 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from . import PERUN_DATETIME_FORMAT
 from .base_attributes import (
+    PERUN_DATETIME_FORMAT,
     CreditTimestamps,
     ToEmails,
     _ContainerPerunAttribute,

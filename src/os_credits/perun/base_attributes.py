@@ -3,11 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Callable, Dict, Generic, List, Type, TypeVar
 
-from . import PERUN_DATETIME_FORMAT
-
-registered_attributes: Dict[str, Type[PerunAttribute[Any]]] = {}
-
-
+PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 # ValueType
 VT = TypeVar("VT")
 
@@ -32,6 +28,8 @@ class PerunAttribute(Generic[VT]):
 
     _updated = False
 
+    registered_attributes: Dict[str, Type["PerunAttribute"[Any]]] = {}
+
     def __init_subclass__(
         cls,
         perun_id: int,
@@ -40,14 +38,13 @@ class PerunAttribute(Generic[VT]):
         perun_namespace: str
         # perun_namespace: str,
     ) -> None:
-        super().__init_subclass__()
         cls.friendlyName = perun_friendly_name
         cls.id = perun_id
         cls.type = perun_type
         cls.namespace = perun_namespace
         if cls.__name__.startswith("_"):
             return
-        registered_attributes.update({cls.__name__: cls})
+        PerunAttribute.registered_attributes[cls.__name__] = cls
 
     def __init__(self, value: Any, **kwargs: Any) -> None:
         """
@@ -87,6 +84,10 @@ class PerunAttribute(Generic[VT]):
             "friendlyName": self.friendlyName,
             "type": self.type,
         }
+
+    @classmethod
+    def get_full_name(cls) -> str:
+        return f"{cls.namespace}:{cls.friendlyName}"
 
     def perun_decode(self, value: Any) -> Any:
         return value

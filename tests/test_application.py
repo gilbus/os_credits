@@ -24,6 +24,7 @@ from .patches import (
     get_attributes,
     get_group_by_name,
     get_resource_bound_attributes,
+    is_assigned_resource,
     set_attributes,
     set_resource_bound_attributes,
 )
@@ -45,9 +46,7 @@ def fixture_os_credits_offline(monkeypatch):
     monkeypatch.setattr(os_credits.perun.group, "get_attributes", get_attributes)
     monkeypatch.setattr(os_credits.perun.group, "set_attributes", set_attributes)
     monkeypatch.setattr(
-        os_credits.perun.group.Group._retrieve_resource_bound_attributes,
-        "__defaults__",
-        (True,),
+        os_credits.perun.group.Group, "is_assigned_resource", is_assigned_resource
     )
     monkeypatch.setattr(os_credits.perun.group.Group.save, "__defaults__", (True,))
 
