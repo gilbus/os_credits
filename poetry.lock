@@ -655,18 +655,6 @@ pytest = ">=3.6"
 
 [[package]]
 category = "dev"
-description = "Manages Docker containers during your integration tests"
-name = "pytest-docker-compose"
-optional = false
-python-versions = "*"
-version = "1.0.1"
-
-[package.dependencies]
-docker-compose = "*"
-pytest = ">=3.4"
-
-[[package]]
-category = "dev"
 description = "A py.test plugin that parses environment files before running tests"
 name = "pytest-dotenv"
 optional = false
@@ -955,7 +943,7 @@ python-versions = ">=2.7"
 version = "0.3.3"
 
 [metadata]
-content-hash = "f6eb8b29e8a828aac4f2937adbecf74d93e3f3ab96909037453917692040dada"
+content-hash = "dc0896e8d8e488873e1eccb0e86487761a02fd413c961494bd334885828a6166"
 python-versions = "^3.7"
 
 [metadata.hashes]
@@ -1021,7 +1009,6 @@ pypiwin32 = ["67adf399debc1d5d14dffc1ab5acacb800da569754fafdc576b2a039485aa775",
 pytest = ["3773f4c235918987d51daf1db66d51c99fac654c81d6f2f709a046ab446d5e5d", "b7802283b70ca24d7119b32915efa7c409982f59913c1a6c0640aacf118b95f5"]
 pytest-aiohttp = ["0b9b660b146a65e1313e2083d0d2e1f63047797354af9a28d6b7c9f0726fa33d", "c929854339637977375838703b62fef63528598bc0a9d451639eba95f4aaa44f"]
 pytest-cov = ["0ab664b25c6aa9716cbf203b17ddb301932383046082c081b9848a0edf5add33", "230ef817450ab0699c6cc3c9c8f7a829c34674456f2ed8df1fe1d39780f7c87f"]
-pytest-docker-compose = ["3589b15c209628e9d408671acecf10444d32fa3cc65295c8212ff10bc187a2f9", "ca82c60c9fb59e098a6be306f7b1d36fb2a494cbc2e4baf2d9b6aa5844a9bc58"]
 pytest-dotenv = ["12ff70de238cdc2c8d838ef92b720325ceb6ae2c9967be5f4e606a36de48345c", "a3a0adf9e17cf7c9e38ec597a74cc902ac76baa1cc5a9bd7581a3711930ad057"]
 pytest-localserver = ["3a5427909d1dfda10772c1bae4b9803679c0a8f04adb66c338ac607773bfefc2"]
 pytest-notifier = ["c9f31d07c92f536f179d98b752d33936b286e02af8535fd8f41f97230a3331b9", "d78df614436b750017948311dd9d302e2ea30de470506e08ca1c7fe3055a1700"]

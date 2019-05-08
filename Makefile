@@ -43,7 +43,9 @@ docs:
 	cd docs && $(MAKE) html
 
 test:
+	poetry run docker-compose -f tests/docker-compose.yml up --detach
 	poetry run pytest --color=yes tests src
+	poetry run docker-compose -f tests/docker-compose.yml down --volumes --remove-orphans
 
 mypy:
 	poetry run mypy src/os_credits --html-report=htmlcov/mypy

@@ -39,13 +39,14 @@ _DEFINITELY_PAST = datetime.fromtimestamp(0)
 
 
 class InfluxDBClient(_InfluxDBClient):
-    def __init__(self) -> None:
+    def __init__(self, loop=None) -> None:
         super().__init__(
             host=config["INFLUXDB_HOST"],
             port=config["INFLUXDB_PORT"],
             username=config["INFLUXDB_USER"],
             password=config["INFLUXDB_USER_PASSWORD"],
             database=config["INFLUXDB_DB"],
+            loop=loop,
             output="json",
         )
 
