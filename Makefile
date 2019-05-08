@@ -62,3 +62,8 @@ run:
 
 run-dev:
 	poetry run adev runserver --port $(PORT) --host $(HOST) src/os_credits 
+
+setup:
+	poetry install
+	poetry run pre-commit install -t pre-commit
+	poetry run pre-commit install -t pre-push
