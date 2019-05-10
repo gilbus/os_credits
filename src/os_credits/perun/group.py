@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from os_credits.log import internal_logger
 
@@ -29,10 +29,10 @@ class Group:
     """
     Represents a Group object inside Perun.
 
-    Every attribute requested via class variable annotations, where the annotation
-    is a subclass of PerunAttribute, will be set on the class with the chosen name. This
-    happens during `connect()` which tries to fill the Attributes with information from
-    Perun.
+    Every attribute requested via class variable annotations, where the annotation is a
+    subclass of :class:`~os_credits.perun.base_attributes.PerunAttribute`, will be set
+    on the class with the chosen name. This happens during `connect()` which tries to
+    fill the Attributes with information from Perun.
     """
 
     name: str
@@ -45,10 +45,12 @@ class Group:
     required by constructor.
     """
 
-    assigned_resource: bool
+    assigned_resource: Optional[bool] = None
     """Indicator whether this group is actually assigned to resource with
-    ``resource_id``. Initially empty, populated when :func:`connect` is called, but only
-    if any of the annotated PerunAttribute subclasses are resource attributes.
+    ``resource_id``. Initially None, set to bool when :func:`connect` is called, but
+    only if any of the annotated
+    :class:`~os_credits.perun.base_attributes.PerunAttribute` subclasses are *resource
+    bound* attributes.
     """
 
     id: int
@@ -73,12 +75,6 @@ class Group:
     :class:`~os_credits.perun.attributes.DenbiCreditTimestamps`.
     """
 
-    """
-    Since we process every measurement independently but store the results in the same
-    group object inside perun we need to make sure that all transactions are performed
-    atomically.
-    """
-
     def __init__(self, name: str, resource_id: int = 0) -> None:
         """
         Calling this method only creates the object, but does not query perun yet. Call
@@ -101,12 +97,12 @@ class Group:
         #. :func:`get_perun_attributes` is used to determine
            which attributes of the class must be retrieved from *Perun*.
 
-            #. If any of these attributes is *resource bound* we check whether the
-               resource whose ID is stored in :attr:`resource_id` this is actually
-               associated with this group  . This check is necessary since *Perun* is
-               happy to return and store attributes of *invalid* combinations of groups
-               and resources. The result is stored in :attr:`assigned_resource` and
-               performed by :func:`is_assigned_resource`.
+            #. If any of these attributes are *resource bound* we check whether the
+               resource whose ID is stored in :attr:`resource_id` is actually associated
+               with this group. This check is necessary since *Perun* is happy to return
+               and store attributes of *invalid* combinations of groups and resources.
+               The result is stored in :attr:`assigned_resource` and performed by
+               :func:`is_assigned_resource`.
 
         #. All attributes of the group are retrieved by calling
            :func:`~os_credits.perun.attributesManager.get_attributes` and
@@ -131,7 +127,6 @@ class Group:
         requested_resource_bound_attributes: List[str] = []
 
         for (attr_name, attr_class) in type(self).get_perun_attributes().items():
-            # `group_attributes` does not contain any resource-bound attributes
             friendly_name_to_group_attr_name[attr_class.friendlyName] = attr_name
             if attr_class.is_resource_bound():
                 requested_resource_bound_attributes.append(attr_class.get_full_name())
@@ -188,7 +183,13 @@ class Group:
         )
 
     async def save(self, _save_all: bool = False) -> None:
-        """
+        """Collects all annotated
+        :class:`~os_credits.perun.base_attributes.PerunAttribute` of this group and
+        sends/saves them to *Perun* in case their value has changed since retrieval.
+
+        Uses the :attr:`~os_credits.perun.base_attributes.PerunAttribute.has_changed`
+        attribute.
+
         :param _save_all: Save all attributes regardless whether their value was
             actually changed since retrieval. Also used for testing.
         """
@@ -222,9 +223,9 @@ class Group:
             else:
                 internal_logger.warning(
                     "Not sending modified attribute to perun, since Group %s is not "
-                    "connected with resource with id %s"
-                    "",
-                    self,
+                    "associated with resource with id %s. How did we even retrieve any "
+                    "such attributes?",
+                    self.name,
                     self.resource_id,
                 )
 
@@ -236,6 +237,8 @@ class Group:
         for attribute in type(self).get_perun_attributes():
             param_repr.append(f"{attribute}={repr(self.__getattribute__(attribute))}")
 
+        # using square instead of regular brackets to indicate that you cannot copy
+        # paste this output to construct a group
         return f"Group[{','.join(param_repr)}]"
 
     def __str__(self) -> str:

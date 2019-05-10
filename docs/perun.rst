@@ -7,6 +7,9 @@ attributes and individual locations (Bielefeld, Gießen,...) are partly modeled 
 Resources. Groups and Attributes are implemented in the :mod:`os_credits.perun` module,
 resources are not since we are only interested in their ID's.
 
+Groups
+^^^^^^
+
 Most of the attributes are directly assigned to groups but there also ones which are
 assigned to a connection between a group and a resource (a group assigned to a
 resource). We call this attributes *resource bound*. One example is
@@ -16,3 +19,16 @@ resource). We call this attributes *resource bound*. One example is
    :members:
    :undoc-members:
    :noindex:
+
+Attributes
+^^^^^^^^^^
+
+.. autoclass:: os_credits.perun.base_attributes.PerunAttribute
+   :members:
+   :undoc-members:
+   :noindex:
+
+
+.. inheritance-diagram:: os_credits.perun.attributes.DenbiCreditTimestamps os_credits.perun.attributes.DenbiCreditsGranted
+   :private-bases:
+   :parts: 1

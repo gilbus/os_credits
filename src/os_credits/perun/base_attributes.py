@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Callable, Dict, Generic, List, Type, TypeVar
+from typing import Any, Dict, Generic, List, Type, TypeVar
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 # ValueType
@@ -9,74 +9,48 @@ VT = TypeVar("VT")
 
 
 class PerunAttribute(Generic[VT]):
-    displayName: str
-    # writable: bool
-    _value: VT
-    # valueModifiedAt: datetime
+    """Base class of all *Perun* attributes.
 
-    # mapping between the name of a subclass of PerunAttribute and the actual class
-    # object, needed to determine the class of a requested attribute of a group, see
-    # groupsManager.Group
-
-    # decoder functions for the subattribute of an Attribute
-    _subattr_decoder: Dict[str, Callable[[str], Any]] = {
-        "valueModifiedAt": lambda value: datetime.strptime(
-            value, PERUN_DATETIME_FORMAT
-        ),
-        "id": int,
-    }
+    Consists of multiple "subattributes", such as :attr:`valueModifiedAt`. The most
+    relevant one is ``value``.
+    """
 
     _updated = False
+    _value: VT
 
     registered_attributes: Dict[str, Type["PerunAttribute"[Any]]] = {}
+    """Mapping between the name of a subclass of PerunAttribute and the actual class
+     object, needed to determine the class of a requested attribute of a group, see
+     :func:`~os_credits.perun.group.Group.get_perun_attributes`.
+     """
 
     def __init_subclass__(
         cls,
         perun_id: int,
         perun_friendly_name: str,
         perun_type: str,
-        perun_namespace: str
-        # perun_namespace: str,
+        perun_namespace: str,
     ) -> None:
         cls.friendlyName = perun_friendly_name
         cls.id = perun_id
         cls.type = perun_type
         cls.namespace = perun_namespace
+        # do not register any intermediate base classes
         if cls.__name__.startswith("_"):
             return
         PerunAttribute.registered_attributes[cls.__name__] = cls
 
     def __init__(self, value: Any, **kwargs: Any) -> None:
-        """
-        lala
-
+        """Using kwargs since :func:`~os_credits.perun.group.Group.connect` calls us
+        with all "subattributes" received from *Perun* but we are currently only
+        interested in ``value``.
         """
         self._value = self.perun_decode(value)
-        # non-true value means that the attribute does not exist inside perun so there
-        # are no further subattributes to decode
-        if not self._value:
-            return
-        for attribute_attr_name in PerunAttribute.__annotations__:
-            # ignore any non public attributes here, such as _subattr_decoder
-            if attribute_attr_name.startswith("_"):
-                continue
-            # check whether any parser function is defined and apply it if so
-            try:
-                if attribute_attr_name in PerunAttribute._subattr_decoder:
-                    attribute_attr_value = PerunAttribute._subattr_decoder[
-                        attribute_attr_name
-                    ](kwargs[attribute_attr_name])
-                else:
-                    attribute_attr_value = kwargs[attribute_attr_name]
-            except KeyError:
-                # should only happen in offline mode where e.g. displayMode is not
-                # transmitted by Perun
-                attribute_attr_value = None
-            self.__setattr__(attribute_attr_name, attribute_attr_value)
 
     def to_perun_dict(self) -> Dict[str, Any]:
         """Serialize the attribute into a dictionary which can passed as JSON content to
-        the perun API"""
+        the perun API to identify an attribute.
+        """
         return {
             "value": self.perun_encode(self._value),
             "namespace": self.namespace,
@@ -107,8 +81,6 @@ class PerunAttribute(Generic[VT]):
     def has_changed(self) -> bool:
         """
         Whether the `value` of this attribute has been changed since creation.
-
-        Exposed as function to enable overwriting in subclasses.
         """
         return self._updated
 
