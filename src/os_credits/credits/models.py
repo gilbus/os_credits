@@ -63,12 +63,12 @@ def measurement_by_name(name: AnyStr) -> Type[UsageMeasurement]:
 
 
 @dataclass(frozen=True)
-class _VCPUMeasurement(UsageMeasurement):
+class VCPUMeasurement(UsageMeasurement):
     metric: Type[Metric] = VCPUMetric
 
 
 @dataclass(frozen=True)
-class _RAMMeasurement(UsageMeasurement):
+class RAMMeasurement(UsageMeasurement):
     metric: Type[Metric] = RAMMetric
 
 

@@ -7,3 +7,5 @@ file is included in the ``.gitignore`` and referenced by multiple make targets, 
 coordinated with the ``project_usage`` repository.
 
 .. automodule:: os_credits.settings
+
+.. autoclass:: Config

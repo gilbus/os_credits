@@ -1,3 +1,6 @@
+"""Contains all leaf subclasses of
+:class:`~os_credits.perun.base_attributes.PerunAttribute`.
+"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,11 +29,28 @@ class DenbiCreditsUsed(
     perun_type="java.lang.String",
     perun_namespace=PERUN_NAMESPACE_OPT,
 ):
+    """Stores the amount of used credits per Project.
+
+    Does currently not use the :class:`~os_credits.credits.base_models.Credits` type,
+    which would pin its precision to the value defined in the :ref:`Settings`.
+    The amount of credits to bill is rounded to this precision and therefore any change
+    in precision of this value must have been caused directly in *Perun* and not by us.
+
+    Stored as string inside *Perun* which is good since the floats **must never be
+    stored as such** since it will lead to loss in precision! 
+
+    .. todo::
+
+        Fix friendly_name once changed on Perun site, if the change is not performed
+        synchronously things will break!
+        We used to track spent credits instead of used ones, therefore the current name
+        of the attribute inside Perun.
+    """
+
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_deserialize(self, value: Optional[str]) -> Optional[Decimal]:
-        """Stored as str inside perun, unfortunately"""
         return Decimal(value) if value else None
 
     def perun_serialize(self, value: Optional[Decimal]) -> Optional[str]:
@@ -48,7 +68,7 @@ class DenbiCreditsGranted(
     confirmed.
 
     Expected to be an integer and implemented read-only since we **MUST** never change
-    it since the Cloud portal owns this value.
+    it since the Cloud portal owns this value and will change it without telling us.
     """
 
     def __init__(self, **kwargs: Any) -> None:
@@ -72,11 +92,15 @@ class ToEmail(
     perun_type="java.util.ArrayList",
     perun_namespace=PERUN_NAMESPACE_DEF,
 ):
+    """Contains the mail addresses of the project administrators.
+
+    Used to send :ref:`Notifications` in case of expired credits or other events.
+    """
+
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_deserialize(self, value: Optional[List[str]]) -> ToEmails:
-        # see explanation in DenbiCreditTimestamps why initialising is no problem
         return value if value else []
 
 
@@ -87,16 +111,19 @@ class DenbiCreditTimestamps(
     perun_type="java.util.LinkedHashMap",
     perun_namespace=PERUN_NAMESPACE_GROUP_RESOURCE_OPT,
 ):
+    """This attribute is the most important one when it comes to billing projects. It is
+    not directly associated to group but to a combination of resource and group where
+    the former is associated with the latter.
+
+    The contained dictionary is a mapping between a metric's name and a timestamp of a
+    measurement, see :ref:`Metrics and Measurements`. The measurement, whose timestamp
+    is stored, is the most recent one used to bill this metric.
+    """
+
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
     def perun_deserialize(self, value: Optional[Dict[str, str]]) -> CreditTimestamps:
-        """Decodes the HashMap stored inside Perun and eases setting timestamps in case
-        the attribute did not exist yet"""
-
-        """Creating the empty dictionary although no value is stored inside Perun is
-        no problem, since its contents will not be send to perun during save unless
-        any changes of its content (only adding in this case) have been done"""
         measurement_timestamps = {}
         if value is not None:
             for measurement_str, timestamp_str in value.items():
@@ -109,8 +136,7 @@ class DenbiCreditTimestamps(
                 )
         return measurement_timestamps
 
-    @classmethod
-    def perun_serialize(cls, value: CreditTimestamps) -> Dict[str, str]:
+    def perun_serialize(self, value: CreditTimestamps) -> Dict[str, str]:
         return {
             measurement: timestamp.strftime(PERUN_DATETIME_FORMAT)
             for measurement, timestamp in value.items()

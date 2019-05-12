@@ -6,8 +6,6 @@ The settings can be accessed via the :attr:`config` dictionary which is a
 the default config values and a special dictionary :class:`_EmptyConfig` whose only
 purpose is to log any access to non existing settings and raise a
 :exc:`~os_credits.exceptions.MissingConfigError`.
-
-.. autoclass:: Config
 """
 
 from __future__ import annotations

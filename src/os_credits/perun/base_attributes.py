@@ -1,3 +1,7 @@
+"""Contains all subclasses of and
+:class:`~os_credits.perun.base_attributes.PerunAttribute` itself but not any leaf
+subclasses.
+"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -240,12 +244,22 @@ class ContainerPerunAttribute(
     perun_namespace=None,
 ):
     """
-    Base class for container attributes, e.g. ToEmails where `value` is a list of the
-    actual mail addresses.
+    Base class for container attributes, e.g. :data:`ToEmails` where `value` is a list
+    of the actual mail addresses.
 
     The `has_changed` logic of PerunAttribute has to be overwritten for this classes
     since any changes are not reflected by updating `value` as an attribute but by
     updating its contents. Therefore `value` does not have a setter.
+
+    If Perun does not have any value yet for this attribute
+    :func:`~Perun.perun_deserialize` must set not it to ``None`` but to an empty
+    container. This eases the handling since no checks for ``None`` are needed.
+
+    In addition ``None`` cannot be used since we create a shallow copy of the attribute
+    once it has been serialized to be able to detect changes to its values; ``None`` has
+    no ``copy`` function but all several container data structures such as ``list``,
+    ``dict`` and ``set`` support it. Finally it allows to us skip defining a setter for
+    :attr:`value` since only its contents are allowed to change.
     """
 
     _value: CVT
@@ -256,9 +270,6 @@ class ContainerPerunAttribute(
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        # the super class will set self._value and we will save a copy here
-        # also ensures that `value` of a container attribute will never be None since it
-        # does not support `copy`
         self._value_copy = self._value.copy()
 
     @property

@@ -32,12 +32,3 @@ os\_credits.influx.model module
     :members:
     :undoc-members:
     :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: os_credits.influx
-    :members:
-    :undoc-members:
-    :show-inheritance:

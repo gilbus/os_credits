@@ -15,3 +15,4 @@ Notifications
 
       .. autoattribute:: body_template
          :annotation: = 'Dear Project Maintainer,[...]'
+         :noindex:

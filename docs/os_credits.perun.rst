@@ -64,12 +64,3 @@ os\_credits.perun.resourcesManager module
     :members:
     :undoc-members:
     :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: os_credits.perun
-    :members:
-    :undoc-members:
-    :show-inheritance:

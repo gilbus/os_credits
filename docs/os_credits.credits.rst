@@ -32,12 +32,3 @@ os\_credits.credits.tasks module
     :members:
     :undoc-members:
     :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: os_credits.credits
-    :members:
-    :undoc-members:
-    :show-inheritance:

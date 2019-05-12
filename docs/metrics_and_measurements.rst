@@ -34,13 +34,13 @@ measurement since those contain the amount of time a resource has been in use, s
 Measurements
 ^^^^^^^^^^^^
 
-Actual measurement classes are prefixed with ``_`` to indicate that they are not
-expected to be called directly. They are currently only created from *Influx Lines* and
+Actual measurement classes are are currently only created from *Influx Lines* and
 the correct subclass is returned by
 :func:`~os_credits.credits.models.measurement_by_name`
 
-.. inheritance-diagram:: os_credits.credits.models._VCPUMeasurement os_credits.credits.models._RAMMeasurement
+.. inheritance-diagram:: os_credits.credits.models.VCPUMeasurement os_credits.credits.models.RAMMeasurement
    :parts: 1
+   :private-bases:
 
 .. autoclass:: os_credits.credits.base_models.UsageMeasurement
    :members:
