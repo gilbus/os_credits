@@ -213,10 +213,10 @@ async def update_credits(
         )
         return
     task_logger.info(
-        "Credits: %f - %f = %f",
-        previous_group_credits,
+        "Credits billed: %f, total Usage: %s/%d",
         credits_to_bill,
         group.credits_used.value,
+        group.credits_granted.value,
     )
     billing_entry = BillingHistory(
         measurement=group.name,

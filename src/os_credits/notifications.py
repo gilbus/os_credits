@@ -12,7 +12,6 @@ from string import Template
 from typing import ClassVar, Dict, Optional, Set, Union
 
 from aiosmtplib import SMTP
-
 from os_credits.exceptions import (
     BrokenTemplateError,
     MissingTemplateError,
@@ -112,6 +111,9 @@ class EmailNotificationBase(Exception):
     def __init__(self, group: Group, message: str) -> None:
         self.group = group
         self.message = message
+
+    def __str__(self) -> str:
+        return f"{type(self)}@{self.group.name}"
 
     def construct_message(self) -> MIMEText:
         """Constructs a :class:`~email.mime.text.MIMEText` object from the notification's

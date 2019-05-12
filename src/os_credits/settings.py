@@ -280,10 +280,10 @@ config = cast(
 
 
 DEFAULT_LOG_LEVEL = {
-    "os_credits.tasks": "DEBUG",
-    "os_credits.internal": "DEBUG",
+    "os_credits.tasks": "INFO",
+    "os_credits.internal": "INFO",
     "os_credits.requests": "INFO",
-    "os_credits.influxdb": "DEBUG",
+    "os_credits.influxdb": "INFO",
 }
 
 DEFAULT_LOGGING_CONFIG = {

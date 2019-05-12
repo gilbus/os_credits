@@ -145,7 +145,7 @@ class Group:
             if not self.assigned_resource:
                 raise GroupResourceNotAssociatedError(
                     f"Group `{self.name}` is not associated with resource with id "
-                    "`{self.resource_id}` but resource bound attributes have been "
+                    f"`{self.resource_id}` but resource bound attributes have been "
                     "requested "
                 )
             for attr in await get_resource_bound_attributes(
