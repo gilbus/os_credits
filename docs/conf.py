@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
+    "sphinxcontrib.programoutput",
     "sphinxcontrib_trio",
 ]
 
@@ -60,6 +61,10 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 inheritance_node_attrs = dict(
     shape="ellipse", fontsize=18, height=1, color="dodgerblue1", style="filled"
 )
+
+# -- ToDo Notes --------------------------------------------------------------
+
+todo_include_todos = True
 
 # -- Options for HTML output -------------------------------------------------
 

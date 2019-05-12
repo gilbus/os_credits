@@ -19,6 +19,7 @@ Welcome to OpenStack Credits Service's documentation!
    notifications
    exceptions
    development
+   extending
    modules
 
 

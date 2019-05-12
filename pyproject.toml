@@ -29,6 +29,7 @@ sphinxcontrib-trio = "^1.0"
 lxml = "^4.3"
 pytest-notifier = "^1.0"
 pytest-dotenv = "^0.4.0"
+sphinxcontrib-programoutput = "^0.14.0"
 docker-compose = "^1.24"
 
 [tool.poetry.scripts]

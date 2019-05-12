@@ -12,9 +12,10 @@ The service is integrated into the *Portal stack* of the `project_usage project
 <https://github.com/deNBI/project_usage>`_, please refer to its wiki for corresponding
 setup instructions/required services.
 
-The development has been part of the master thesis **INSERT_TITLE_HERE** which therefore
+The development has been part of the master thesis **Accounting and Reporting of
+OpenStack Cloud instances via Prometheus** which therefore
 contains a large introduction to the area of *Cloud Billing* and motivations which lead
-to the current design. An operation and development manual can be found inside the
+to the current design. A development manual can be found inside the
 ``docs/`` folder of this repository which can be build via ``make docs``.
 
 Development
@@ -22,10 +23,7 @@ Development
 
 The project has been developed with Python 3.7 and uses the `aiohttp
 <https://docs.aiohttp.org>`_ framework communication. Its dependencies are managed via
-`Poetry <https://pypi.org/project/poetry/>`_, so you’ll have to install it and then
-execute ``poetry install`` to get up and running. Your first action should be ``poetry
-run pre-commit install`` to install `Pre-Commit Hooks <https://pre-commit.com/>`_, to
-make sure that every of your commits results in a well-tested application.
+`Poetry <https://pypi.org/project/poetry/>`_.
 
 Monitoring/Debugging
 ~~~~~~~~~~~~~~~~~~~~
@@ -59,9 +57,3 @@ the
 which will restart your app on any code change. But since the code is
 bind mounted inside the container you can simply continue editing and
 have it restart on any change.
-
-Tests
-~~~~~
-
-Tests are written against ```pytest`` <https://pytest.org>`__ and can be
-executed from the project directory via ``make test``.
