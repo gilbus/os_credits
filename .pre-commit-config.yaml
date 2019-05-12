@@ -4,30 +4,45 @@ repos:
   # required linters/fixers are already part of poetry dev-setup
   - repo: local
     hooks:
+      # Not using `types: python` since we also want to run tests if
+      # dependencies have been upgraded which is indicated by changes in
+      # `poetry.lock`
+      #
       # run mypy first since its errors will probably also be the cause of
       # failing tests but its faster than the whole pytest suite
       - id: mypy
         name: Static type checker
         entry: make mypy
         language: system
-        types: [python]
+        files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)$'
+        stages: [commit]
+        # no not pass filenames since we want to check whole project not only
+        # changed files
+        pass_filenames: false
       - id: black
         name: Blacken code
         entry: poetry run black
         language: system
+        stages: [commit]
         types: [python]
-      - id: offline_pytest
-        name: Run offline tests
+      - id: pytest
+        name: Tests (not against Perun)
         entry: make test
         pass_filenames: false
+        stages: [commit]
         language: system
-        types: [python]
-        exclude: 'docs/conf.py'
+        files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)$'
       - id: online_pytest
-        name: Run tests against Perun
+        name: Tests (also against Perun)
         entry: make test-online-only
         # we must have an internet connection when pushing
         stages: [push]
         pass_filenames: false
+        files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)$'
         language: system
-        types: [python]
+      - id: docs-doctest
+        name: Doctests inside documentation
+        entry: make docs-doctest
+        stages: [commit]
+        files: '^docs/.+\.rst$'
+        language: system

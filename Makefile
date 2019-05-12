@@ -35,11 +35,16 @@ docker-run-dev:
 		--network project_usage_portal \
 		--volume $(PWD)/src:/code/src:ro \
 		--env-file .env \
+		--env MAIL_NOT_STARTTLS=1 \
+		--env MAIL_SMTP_SERVER=portal_smtp_server \
 		--detach \
 		os_credits-dev:latest
 
 docs:
 	cd docs && $(MAKE) html
+
+docs-doctest:
+	cd docs && $(MAKE) doctest
 
 # sleep is necessary to wait until launched services are ready
 test:
@@ -54,8 +59,9 @@ test-online:
 test-online-only:
 	poetry run env TEST_ONLINE=1 pytest --color=yes --no-cov tests/test_perun.py
 
+# if tests contain errors they cannot test correct
 mypy:
-	poetry run mypy src/os_credits --html-report=htmlcov/mypy
+	poetry run mypy src/os_credits tests --html-report=htmlcov/mypy
 
 run:
 	poetry run os-credits --port $(PORT) --host $(HOST)
