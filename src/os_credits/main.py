@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from asyncio import Lock, Queue, gather
+from asyncio import Lock, Queue, create_task, gather
 from collections import defaultdict
 from datetime import datetime
 from logging.config import dictConfig
@@ -36,7 +36,7 @@ APP_ROOT = Path(__file__).parent
 
 async def create_worker(app: web.Application) -> None:
     app["task_workers"] = {
-        f"worker-{i}": app.loop.create_task(worker(f"worker-{i}", app))
+        f"worker-{i}": create_task(worker(f"worker-{i}", app))
         for i in range(app["config"]["OS_CREDITS_WORKERS"])
     }
     internal_logger.info("Created %d workers", len(app["task_workers"]))
