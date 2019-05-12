@@ -9,10 +9,26 @@ VT = TypeVar("VT")
 
 
 class PerunAttribute(Generic[VT]):
-    """Base class of all *Perun* attributes.
+    """Base class of all *Perun* attributes. The :class:`~typing.Generic` base class is
+    used to allow attributes to specify the type of their deserialized value. This
+    allows a static type checker to check for correct usage.
 
-    Consists of multiple "subattributes", such as :attr:`valueModifiedAt`. The most
-    relevant one is ``value``.
+    Should not be extended or called directly but rather one of the other base classes
+    defined in this file which extend this one. Its main task is to collect all
+    available attributes via :ref:`Subclass Hooks` and make them available to
+    :func:`os_credits.perun.group.Group.get_perun_attributes`.
+
+    The actual value of an attribute is stored inside :data:`_value` and must be
+    provided as :class:`property` by a subclass. Subclasses are also responsible for
+    overwriting :func:`perun_serialize` and :func:`perun_deserialize` if necessary. When
+    doing so they have to make sure that their deserialized version of ``value=None``,
+    i.e. the attribute has currently no value inside *Perun*, such as ``0`` or ``[]``
+    evaluates to false when calling ``bool(attr.value)``.
+
+    Information such as :data:`id`, :data:`friendlyName`, :data:`type`,
+    :data:`namespace` have to known inside the code since they must be sent to *Perun*
+    when initially setting the value of an attribute.
+
     """
 
     _updated = False
@@ -24,6 +40,22 @@ class PerunAttribute(Generic[VT]):
      :func:`~os_credits.perun.group.Group.get_perun_attributes`.
      """
 
+    friendlyName: str
+    """Human readable name of the attribute inside Perun.
+    """
+
+    id: int
+    """ID of the attribute inside Perun.
+    """
+
+    type: str
+    """Type of the attribute inside Perun.
+    """
+
+    namespace: str
+    """Namespace of the attribute inside Perun.
+    """
+
     def __init_subclass__(
         cls,
         perun_id: int,
@@ -31,28 +63,31 @@ class PerunAttribute(Generic[VT]):
         perun_type: str,
         perun_namespace: str,
     ) -> None:
+        # Only process real attribute, not intermediate base classes
+        if not perun_id:
+            return
         cls.friendlyName = perun_friendly_name
         cls.id = perun_id
         cls.type = perun_type
         cls.namespace = perun_namespace
-        # do not register any intermediate base classes
-        if cls.__name__.startswith("_"):
-            return
         PerunAttribute.registered_attributes[cls.__name__] = cls
 
     def __init__(self, value: Any, **kwargs: Any) -> None:
         """Using kwargs since :func:`~os_credits.perun.group.Group.connect` calls us
-        with all "subattributes" received from *Perun* but we are currently only
+        with all *subattributes* received from *Perun* but we are currently only
         interested in ``value``.
+
+        Once other *subattributes* are needed by the code, e.g. ``value_modified_at``,
+        they should be added to the function signature and set inside this constructor.
         """
-        self._value = self.perun_decode(value)
+        self._value = self.perun_deserialize(value)
 
     def to_perun_dict(self) -> Dict[str, Any]:
         """Serialize the attribute into a dictionary which can passed as JSON content to
-        the perun API to identify an attribute.
+        the perun API.
         """
         return {
-            "value": self.perun_encode(self._value),
+            "value": self.perun_serialize(self._value),
             "namespace": self.namespace,
             "id": self.id,
             "friendlyName": self.friendlyName,
@@ -61,12 +96,28 @@ class PerunAttribute(Generic[VT]):
 
     @classmethod
     def get_full_name(cls) -> str:
+        """Needed when querying specific attributes of a group instead of all of them.
+
+        :return: Full name of the attribute inside *Perun*.
+        """
         return f"{cls.namespace}:{cls.friendlyName}"
 
-    def perun_decode(self, value: Any) -> Any:
+    def perun_deserialize(self, value: Any) -> Any:
+        """Deserialize from the type/format used by *Perun* when converting into JSON to
+        transmit the value of this attribute.
+
+        :param value: Serialized value received by *Perun* via JSON.
+        :return: Deserialized value used by application.
+        """
         return value
 
-    def perun_encode(self, value: Any) -> Any:
+    def perun_serialize(self, value: Any) -> Any:
+        """Serialize to the type/format used by *Perun* when converting into JSON to
+        transmit the value of this attribute.
+
+        :param value: Deserialized value used by application.
+        :return: Serialized value for transmission to *Perun*.
+        """
         return value
 
     @classmethod
@@ -80,7 +131,7 @@ class PerunAttribute(Generic[VT]):
     @property
     def has_changed(self) -> bool:
         """
-        Whether the `value` of this attribute has been changed since creation.
+        Whether the ``value`` of this attribute has changed since creation.
         """
         return self._updated
 
@@ -112,7 +163,7 @@ class PerunAttribute(Generic[VT]):
         return bool(self._value)
 
 
-class _ReadOnlyScalarPerunAttribute(
+class ReadOnlyScalarPerunAttribute(
     PerunAttribute[VT],
     # class definition must contain the following attributes to allow 'passthrough' from
     # child classes
@@ -121,9 +172,8 @@ class _ReadOnlyScalarPerunAttribute(
     perun_type=None,
     perun_namespace=None,
 ):
-    """
-    Base class for all read-only scalar attributes, where `value` only contains a scalar
-    value, i.e.  an `float` or `str`, in contrast to container attributes
+    """Base class for all read-only scalar attributes, where `value` only contains a
+    scalar value, e.g. a `float` or `str`, in contrast to container attributes.
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -137,7 +187,7 @@ class _ReadOnlyScalarPerunAttribute(
         return self._value
 
 
-class _ScalarPerunAttribute(
+class ScalarPerunAttribute(
     PerunAttribute[VT],
     # class definition must contain the following attributes to allow 'passthrough' from
     # child classes
@@ -147,8 +197,8 @@ class _ScalarPerunAttribute(
     perun_namespace=None,
 ):
     """
-    Identical to :class:`_ReadOnlyScalarPerunAttribute` but provides a setter method for
-    `value`
+    Identical to :class:`ReadOnlyScalarPerunAttribute` but provides a setter method for
+    :attr:`value` which makes sure that type of non-empty content does not change.
     """
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
@@ -175,12 +225,12 @@ class _ScalarPerunAttribute(
 
 ToEmails = List[str]
 CreditTimestamps = Dict[str, datetime]
-# ContainerValueType, used to ensure type checker, that the classes define a `.copy`
-# method
+# "ContainerValueType", used by type checker, to ensure that the classes defines a
+# `.copy` method
 CVT = TypeVar("CVT", ToEmails, CreditTimestamps)
 
 
-class _ContainerPerunAttribute(
+class ContainerPerunAttribute(
     PerunAttribute[CVT],
     # class definition must contain the following attributes to allow 'passthrough' from
     # child classes
@@ -190,12 +240,12 @@ class _ContainerPerunAttribute(
     perun_namespace=None,
 ):
     """
-    Base class for container attributes, i.e. ToEmails where the `value` is a list of
-    the actual mail addresses.
+    Base class for container attributes, e.g. ToEmails where `value` is a list of the
+    actual mail addresses.
 
     The `has_changed` logic of PerunAttribute has to be overwritten for this classes
-    since any changes during runtime are not reflected by updating `value` as an
-    attribute but by updating its contents. Therefore `value` does not have a setter.
+    since any changes are not reflected by updating `value` as an attribute but by
+    updating its contents. Therefore `value` does not have a setter.
     """
 
     _value: CVT
@@ -207,13 +257,14 @@ class _ContainerPerunAttribute(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         # the super class will set self._value and we will save a copy here
-        # also ensures that `value` of a container attribute will never be None
+        # also ensures that `value` of a container attribute will never be None since it
+        # does not support `copy`
         self._value_copy = self._value.copy()
 
     @property
     def has_changed(self) -> bool:
         """
-        Since the value of this attribute is a dictionary the setter approach of the
+        Since the value of this attribute is a container the setter approach of the
         superclass to detect changes does not work. Instead we compare the current
         values with the initial ones.
         """

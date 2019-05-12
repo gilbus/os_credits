@@ -6,11 +6,11 @@ from typing import Any, Dict, List, Optional
 
 from .base_attributes import (
     PERUN_DATETIME_FORMAT,
+    ContainerPerunAttribute,
     CreditTimestamps,
+    ReadOnlyScalarPerunAttribute,
+    ScalarPerunAttribute,
     ToEmails,
-    _ContainerPerunAttribute,
-    _ReadOnlyScalarPerunAttribute,
-    _ScalarPerunAttribute,
 )
 from .exceptions import DenbiCreditsGrantedMissing
 
@@ -20,7 +20,7 @@ PERUN_NAMESPACE_GROUP_RESOURCE_OPT = "urn:perun:group_resource:attribute-def:opt
 
 
 class DenbiCreditsUsed(
-    _ScalarPerunAttribute[Optional[Decimal]],
+    ScalarPerunAttribute[Optional[Decimal]],
     perun_id=3382,
     perun_friendly_name="denbiCreditsCurrent",
     perun_type="java.lang.String",
@@ -29,16 +29,16 @@ class DenbiCreditsUsed(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> Optional[Decimal]:
+    def perun_deserialize(self, value: Optional[str]) -> Optional[Decimal]:
         """Stored as str inside perun, unfortunately"""
         return Decimal(value) if value else None
 
-    def perun_encode(self, value: Optional[Decimal]) -> Optional[str]:
+    def perun_serialize(self, value: Optional[Decimal]) -> Optional[str]:
         return None if value is None else str(value)
 
 
 class DenbiCreditsGranted(
-    _ReadOnlyScalarPerunAttribute[int],
+    ReadOnlyScalarPerunAttribute[int],
     perun_id=3383,
     perun_friendly_name="denbiCreditsGranted",
     perun_type="java.lang.String",
@@ -54,19 +54,19 @@ class DenbiCreditsGranted(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[str]) -> int:
+    def perun_deserialize(self, value: Optional[str]) -> int:
         """Stored as str inside perun, unfortunately"""
         if value is None:
             raise DenbiCreditsGrantedMissing()
         return int(value)
 
-    def perun_encode(self, value: int) -> str:
+    def perun_serialize(self, value: int) -> str:
         """Stored as str inside perun, unfortunately"""
         return str(value)
 
 
 class ToEmail(
-    _ContainerPerunAttribute[ToEmails],
+    ContainerPerunAttribute[ToEmails],
     perun_id=2020,
     perun_friendly_name="toEmail",
     perun_type="java.util.ArrayList",
@@ -75,13 +75,13 @@ class ToEmail(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[List[str]]) -> ToEmails:
+    def perun_deserialize(self, value: Optional[List[str]]) -> ToEmails:
         # see explanation in DenbiCreditTimestamps why initialising is no problem
         return value if value else []
 
 
 class DenbiCreditTimestamps(
-    _ContainerPerunAttribute[CreditTimestamps],
+    ContainerPerunAttribute[CreditTimestamps],
     perun_id=3386,
     perun_friendly_name="denbiCreditTimestamps",
     perun_type="java.util.LinkedHashMap",
@@ -90,7 +90,7 @@ class DenbiCreditTimestamps(
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-    def perun_decode(self, value: Optional[Dict[str, str]]) -> CreditTimestamps:
+    def perun_deserialize(self, value: Optional[Dict[str, str]]) -> CreditTimestamps:
         """Decodes the HashMap stored inside Perun and eases setting timestamps in case
         the attribute did not exist yet"""
 
@@ -110,7 +110,7 @@ class DenbiCreditTimestamps(
         return measurement_timestamps
 
     @classmethod
-    def perun_encode(cls, value: CreditTimestamps) -> Dict[str, str]:
+    def perun_serialize(cls, value: CreditTimestamps) -> Dict[str, str]:
         return {
             measurement: timestamp.strftime(PERUN_DATETIME_FORMAT)
             for measurement, timestamp in value.items()

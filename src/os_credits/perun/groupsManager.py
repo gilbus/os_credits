@@ -1,6 +1,6 @@
 """
-Implements the RPC-Calls of the GroupsManager
-https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-GroupsManager.html
+Implements the RPC-Calls of the `GroupsManager
+<https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-GroupsManager.html>`_.
 """
 
 from __future__ import annotations
@@ -17,7 +17,8 @@ __url = "groupsManager"
 async def get_group_by_name(name: str) -> Dict[str, Any]:
     """Retrieve all information of a Group from *Perun*.
 
-    Name of the function is chosen to match the one from the *Perun* documentation.
+    Name of the function is chosen to match the one from the `Perun documentation
+    <https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-GroupsManager.html#GroupsManagergetGroupByName1>`_.
 
     :param name: Name of the Group/Project whose information should be retrieved.
     :return: Dictionary of attributes of the requested Group."""
