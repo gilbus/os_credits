@@ -3,11 +3,12 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 """
 from __future__ import annotations
 
-from asyncio import Lock, Queue
+from asyncio import CancelledError, Lock, Queue, shield
 from decimal import Decimal
 from typing import Dict, cast
 
 from aiohttp.web import Application
+
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import TASK_ID, task_logger
 from os_credits.notifications import (
@@ -26,34 +27,60 @@ from .models import BillingHistory, measurement_by_name
 
 
 def unique_identifier(influx_line: str) -> str:
+    """Hashes the passed Influx Line and returns an unique ID.
+
+    Used to uniquely identify all log messages related to one specific Influx Line.
+    Needed since multiple ones are processed in parallel to the logs are scattered. Used
+    as :ref:`TASK_ID`.
+
+    :param influx_line: String to hash
+    :return: Unique ID consisting of 12 numbers
+    """
     # insert leading zeros if less numbers than 12 but don't use more
     return format(abs(hash(influx_line)), ">012")[:12]
 
 
 async def worker(name: str, app: Application) -> None:
+    """Worker task to process Influx Lines put into the :ref:`Task Queue` by the
+    ``/write`` endpoint(:func:`~os_credits.views.influxdb_write`).
+
+    Runs inside a ``while True`` loop, and blocks until it retrieves an item from the
+    :ref:`Task Queue`.
+
+    #. Calls :func:`unique_identifier` to generate a unique ID for the Influx Line
+    #. Shields :func:`process_influx_line` by wrapping it in :func:`~asyncio.shield`.
+    #. In case exceptions raised when processing the item or when sending the
+       notification log it properly.
+    #. Finally, in every case, signal to the queue that the task has been processed.
+
+
+    :param name: Name of this worker used for logging
+    :param app: Application instance holding the 
+    """
     group_locks = cast(Dict[str, Lock], app["group_locks"])
     task_queue = cast(Queue, app["task_queue"])
     while True:
         try:
             influx_line: str = await task_queue.get()
+        except CancelledError:
+            task_logger.info("Worker %s was cancelled when waiting for new item.", name)
+        try:
             task_id = unique_identifier(influx_line)
             TASK_ID.set(task_id)
             task_logger.debug("Worker %s starting task `%s`", name, task_id)
 
-            try:
-                await process_influx_line(influx_line, app, group_locks)
-                task_logger.debug(
-                    "Worker %s finished task `%s` successfully", name, task_id
-                )
-            except EmailNotificationBase as notification:
-                task_logger.info("Sending notification %s", notification)
-                await send_notification(notification)
+            # do not cancel a running task
+            await shield(process_influx_line(influx_line, app, group_locks))
+            task_logger.debug(
+                "Worker %s finished task `%s` successfully", name, task_id
+            )
         # necessary since the tasks must continue working despite any exceptions that
         # occurred
         except Exception as e:
             worker_exceptions_counter.inc()
             task_logger.exception(
-                "Worker %s exited task with unhandled exception: %s, stacktrace attached",
+                "Worker %s exited task with unhandled exception: %s, stacktrace "
+                "attached",
                 name,
                 e,
             )
@@ -64,6 +91,22 @@ async def worker(name: str, app: Application) -> None:
 async def process_influx_line(
     influx_line: str, app: Application, group_locks: Dict[str, Lock]
 ) -> None:
+    """Performs all preliminary task before actually billing a Group/Project.
+
+    #. Determine whether the passed item/str/Influx Line is billable/needed
+    #. Deserialize it into a :class:`~os_credits.models.UsageMeasurement` by calling
+       :func:`~os_credits.credits.models.measurement_by_name`, see :ref:`Metrics and
+       Measurements`.
+    #. Create a :class:`~os_credits.perun.group.Group` object, see :ref:`Perun`.
+    #. If a project whitelist is set in :ref:`Settings`, see whether the group is part
+       of it
+    #. Calls :func:`update_credits` once the correct :ref:`lock <Group Locks>` could be
+       acquired. Catch every notification, see :ref:`Notifications`, and send it.
+
+    :param influx_line: String/Influx Line to process
+    :param app: Application object holding our helper class instances
+    :param group_locks: Dictionary with :ref:`Group Locks`
+    """
     task_logger.debug("Processing Influx Line `%s`", influx_line)
     # we want to end this task as quickly as possible if the InfluxDB Point is not
     # needed
@@ -95,9 +138,13 @@ async def process_influx_line(
         "Processing UsageMeasurement `%s` - Group `%s`", measurement, perun_group
     )
     task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
-    async with group_locks[perun_group.name]:
-        task_logger.debug("Acquired async lock for Group %s", perun_group.name)
-        await update_credits(perun_group, measurement, app)
+    try:
+        async with group_locks[perun_group.name]:
+            task_logger.debug("Acquired async lock for Group %s", perun_group.name)
+            await update_credits(perun_group, measurement, app)
+    except EmailNotificationBase as notification:
+        task_logger.info("Sending notification %s", notification)
+        await send_notification(notification)
 
 
 async def update_credits(

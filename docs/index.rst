@@ -12,6 +12,9 @@ Welcome to OpenStack Credits Service's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   workflow
+   logging
+   views
    metrics_and_measurements
    perun
    influx

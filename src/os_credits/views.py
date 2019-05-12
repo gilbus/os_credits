@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from aiohttp import web
 from aiohttp_jinja2 import template
+
 from os_credits.credits.base_models import Metric
 from os_credits.influx.client import InfluxDBClient
 from os_credits.influx.exceptions import InfluxDBError
@@ -165,7 +166,7 @@ async def credits_history(request: web.Request) -> Dict[str, Any]:
     return {"project_name": request.match_info["project_name"]}
 
 
-async def influxdb_write_endpoint(request: web.Request) -> web.Response:
+async def influxdb_write(request: web.Request) -> web.Response:
     """
     Consumes the `Line Protocol
     <https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/>`_
