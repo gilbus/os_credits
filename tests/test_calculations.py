@@ -14,7 +14,7 @@ with pytest.raises(TypeError):
     # Due to CREDITS_PER_VIRTUAL_HOUR being None
 
     class _TestMetric1(TotalUsageMetric, name="test_fail1", friendly_name="test_fail1"):
-        CREDITS_PER_VIRTUAL_HOUR = None
+        CREDITS_PER_VIRTUAL_HOUR = None  # type: ignore
 
 
 class _TestMetric2(TotalUsageMetric, name="test2", friendly_name="test2"):

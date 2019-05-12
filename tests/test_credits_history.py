@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
+from decimal import Decimal
 from http import HTTPStatus
 
+from os_credits.credits.base_models import Credits
 from os_credits.credits.models import BillingHistory
 from os_credits.influx.client import InfluxDBClient
 from os_credits.main import create_app
@@ -13,7 +15,7 @@ async def test_api_endpoint(influx_client: InfluxDBClient, aiohttp_client):
     yesterday = now - timedelta(days=1)
     tomorrow = now + timedelta(days=1)
 
-    credits_left = 300
+    credits_left = Credits(Decimal(300))
     metric_name = metric_friendly_name = "test_history_metric"
     project_name = "test_history_measurement"
     point = BillingHistory(
