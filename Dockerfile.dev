@@ -1,3 +1,5 @@
+# Expected to be called with `--volume $(PWD)/src:/code/src:ro`
+# Uses `adev` from `aiohttp-devtools` to restart the application on any code change
 FROM python:3.7-alpine
 
 ADD src /code/src

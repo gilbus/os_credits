@@ -67,7 +67,7 @@ async def fixture_influx_client(loop):
             await sleep(1)
     yield influx_client
     # clear all data from pytest and credits_history_db
-    await influx_client.query("drop series from /.*/", db="pytest")
+    await influx_client.query("drop series from /.*/", db=config["INFLUXDB_DB"])
     # fails sometimes, ignore
     try:
         await influx_client.query(
