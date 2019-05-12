@@ -33,7 +33,7 @@ repos:
         language: system
         files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)$'
       - id: online_pytest
-        name: Tests (also against Perun)
+        name: Tests (only against Perun)
         entry: make test-online-only
         # we must have an internet connection when pushing
         stages: [push]
