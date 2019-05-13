@@ -14,12 +14,16 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
+from datetime import datetime
+
+from os_credits import __author__, __version__
 
 # -- Project information -----------------------------------------------------
 
 project = "OpenStack Credits Service"
-copyright = "2019, gilbus"
-author = "gilbus"
+copyright = "{}, {}".format(datetime.now().year, __author__)
+author = __author__
+version = __version__
 
 
 # -- General configuration ---------------------------------------------------
