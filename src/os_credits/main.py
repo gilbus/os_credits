@@ -137,7 +137,8 @@ async def create_app(
     """
     # imported inside the function to allow pytest to set environment variables and have
     # them applied
-    from os_credits.settings import DEFAULT_LOGGING_CONFIG, config
+    from os_credits.settings import config
+    from os_credits.log import DEFAULT_LOGGING_CONFIG
 
     dictConfig(DEFAULT_LOGGING_CONFIG)
     internal_logger.info("Applied default logging config")

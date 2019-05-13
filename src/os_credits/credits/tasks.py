@@ -31,7 +31,7 @@ def unique_identifier(influx_line: str) -> str:
 
     Used to uniquely identify all log messages related to one specific Influx Line.
     Needed since multiple ones are processed in parallel to the logs are scattered. Used
-    as :ref:`TASK_ID`.
+    as :ref:`Logging`.
 
     :param influx_line: String to hash
     :return: Unique ID consisting of 12 numbers
@@ -49,13 +49,16 @@ async def worker(name: str, app: Application) -> None:
 
     #. Calls :func:`unique_identifier` to generate a unique ID for the Influx Line
     #. Shields :func:`process_influx_line` by wrapping it in :func:`~asyncio.shield`.
+       Must be shielded since the attributes of group objects are retrieved and saved
+       with two separate calls to *Perun*. The task **must not** be cancelled between
+       the two ``save`` calls.
     #. In case exceptions raised when processing the item or when sending the
        notification log it properly.
     #. Finally, in every case, signal to the queue that the task has been processed.
 
 
     :param name: Name of this worker used for logging
-    :param app: Application instance holding the 
+    :param app: Application instance holding the helper class instances
     """
     group_locks = cast(Dict[str, Lock], app["group_locks"])
     task_queue = cast(Queue, app["task_queue"])
@@ -76,6 +79,8 @@ async def worker(name: str, app: Application) -> None:
             )
         # necessary since the tasks must continue working despite any exceptions that
         # occurred
+        except CancelledError:
+            raise
         except Exception as e:
             worker_exceptions_counter.inc()
             task_logger.exception(
@@ -139,6 +144,8 @@ async def process_influx_line(
     )
     task_logger.debug("Awaiting async lock for Group %s", perun_group.name)
     try:
+        # since group_locks is a defaultdict a new Lock is automatically created if
+        # necessary
         async with group_locks[perun_group.name]:
             task_logger.debug("Acquired async lock for Group %s", perun_group.name)
             await update_credits(perun_group, measurement, app)
@@ -150,6 +157,45 @@ async def process_influx_line(
 async def update_credits(
     group: Group, current_measurement: UsageMeasurement, app: Application
 ) -> None:
+    """Evaluates the measurement and decides what to do.
+
+    #. Connect the :ref:`group <Groups>`
+    #. If the amount of used credits is not set yet:
+
+       #. If no timestamp of the metric of the current measurement exists this group has
+          never been billed before. Initialize the used credits with 0.
+       #. If a timestamp exists the group **must** have been billed before and the
+          absence of ``credits_used`` is an error in which case
+          :exc:`~os_credits.exceptions.DenbiCreditsUsedMissing` is raised.
+    #. If the metric has not been billed before store the timestamp of the current
+       measurement and send the values to *Perun*.
+    #. Retrieve previous measurements of this group and metric especially the one whose
+       timestamp is stored in the group. Perform additional tests to make sure that we
+       can continue billing this group and metric.
+    #. Call :func:`~os_credits.credits.billing.calculate_credits` to let the
+       metric calculate how many credits should be billed for the current measurement.
+    #. In case of a positive amount of credits to bill do so, store the timestamp of
+       current measurement inside the group, create an entry for the :ref:`Credits
+       History` and send the changed group attributes to *Perun*.
+
+    When taking a look at the test coverage under ``htmlcov/tests/index.html`` this file
+    should have a very high value. Whenever you add a corner case or just another simple
+    if statement **write a test for it**!
+
+     .. todo::
+
+        Metrics should decide how to react to a value change, the current behaviour is
+        tied to TotalUsageMetrics! Idea: Something like `raise ProceedWithoutBilling` in
+        case of a lower value which might be related to a change of the **start**
+        parameter of the *OpenStack Usage Exporter*.
+
+    :param group: Group whose measurement is processed - Unconnected
+    :param current_measurement: Current measurement to process
+    :param app: Application instance holding the helper class instances
+    :raises EmailNotificationBase: Subclasses of it which are actual notifications can
+        be raised throughout the whole codebase.
+    :raise DenbiCreditsUsedMissing: See documentation above.
+    """
     try:
         await group.connect()
     except GroupNotExistsError as e:
@@ -231,13 +277,11 @@ async def update_credits(
         await group.save()
         return
 
-    # TODO: metrics decide how to react to a dropped value, this specific behaviour is
-    # tied to TotalUsageMetrics!
-    # Idea: Something like `raise ProceedWithoutBilling` in case of a lower value with
-    # notification to cloud governance.
+    # see TODO in __doc__
     if current_measurement.value == last_measurement.value:
         task_logger.info(
-            "Values of this and previously billed measurement do not differ, dropping it."
+            "Values of this and previously billed measurement do not differ, "
+            "dropping it."
         )
         return
 
@@ -254,9 +298,7 @@ async def update_credits(
     if previous_group_credits == group.credits_used.value:
         task_logger.info(
             "Measurement does not change the amount of credits left due to rounding, "
-            "therefore no changes will be stored inside Perun or the InfluxDB. Credits "
-            "to bill would have been: %f",
-            credits_to_bill,
+            "therefore no changes will be stored inside Perun or the InfluxDB."
         )
         return
     task_logger.info(
