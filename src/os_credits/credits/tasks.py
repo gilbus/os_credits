@@ -67,6 +67,7 @@ async def worker(name: str, app: Application) -> None:
             influx_line: str = await task_queue.get()
         except CancelledError:
             task_logger.info("Worker %s was cancelled when waiting for new item.", name)
+            raise
         try:
             task_id = unique_identifier(influx_line)
             TASK_ID.set(task_id)

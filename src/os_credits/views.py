@@ -348,11 +348,25 @@ async def get_metrics(_: web.Request) -> web.Response:
 
 
 async def costs_per_hour(request: web.Request) -> web.Response:
-    """
+    """Use for example 
+
+    .. code-block:: console
+
+       $ curl localhost:8000/api/costs_per_hour \\
+             -H "Content-Type: application/json" \\
+             -d '{"cpu":16,"ram":32768}'
+
+    Or if you have `httpie <https://github.com/jakubroztocil/httpie>`_ installed
+
+    .. code-block:: console
+
+       $ http -j :8000/api/costs_per_hour cpu:=16 ram:=32768
     ---
     description: Given the submitted specs of one or multiple machines combined
-      calculate the expected costs per hour. See the corresponding GET API to retrieve
-      information about the supported specs.
+      calculate the expected costs per hour. See the ``GET /api/metrics`` to retrieve
+      information about the supported specs. Since the input is dynamic and we are not
+      using swagger models you have to query the API from the command line. See official
+      documentation of the function for example calls.
     tags:
       - Service
     consumes:

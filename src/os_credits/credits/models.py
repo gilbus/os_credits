@@ -5,7 +5,6 @@ from decimal import Decimal
 from typing import AnyStr, Type
 
 from os_credits.influx.model import InfluxDBPoint
-from os_credits.log import internal_logger
 
 from .base_models import (
     REGISTERED_MEASUREMENTS,
@@ -74,10 +73,22 @@ class RAMMeasurement(UsageMeasurement):
 
 @dataclass(frozen=True)
 class BillingHistory(InfluxDBPoint):
+    """Whenever a project/group is successfully billed, meaning the amount used credits
+    has changed, we store the relevant data of the transaction inside the *InfluxDB*.
+
+    The name of the group/project is used as ``measurement`` and ``timestamp`` is the
+    timestamp of the measurement which caused the billing.
+
+    See :ref:`Credits History`.
+    """
 
     credits_left: Credits
+    """Amount of credits left for the project **after** the billing. Calculated via
+    ``credits_granted - credits_used``
+    """
     metric_name: str = field(metadata={"tag": True})
+    """Name of the metric of the measurement which caused the billing.
+    """
     metric_friendly_name: str = field(metadata={"tag": True})
-
-    def __post_init__(self) -> None:
-        internal_logger.debug("Constructed billing history point %s", self)
+    """Human readable name of the metric of the measurement which caused the billing.
+    """

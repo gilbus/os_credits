@@ -58,7 +58,7 @@ async def stop_worker(app: web.Application, queue_timeout: int = 120) -> None:
         "Waiting up to %d seconds to finish remaining tasks.", queue_timeout
     )
     try:
-        wait_for(app["task_queue"].join(), timeout=queue_timeout)
+        await wait_for(app["task_queue"].join(), timeout=queue_timeout)
     except TimeoutError:
         internal_logger.warning(
             "Waited %d seconds for all remaining tasks to be processed, killing "
@@ -85,9 +85,10 @@ async def setup_prometheus_metrics(app: web.Application) -> None:
     tasks_queued_gauge.set_function(lambda: app["task_queue"].qsize())
 
 
-async def close_client_session(_: web.Application) -> None:
+async def close_client_sessions(app: web.Application) -> None:
     try:
         await client_session.get().close()
+        await app["influx_client"].close()
     except LookupError:
         # no session: no need to close a session
         pass
@@ -123,7 +124,7 @@ async def create_app(
        it does not since we (deliberately) do not run with admin access to it.
     #. Schedule the following functions to run on start
 
-       - :func:`create_client_session`
+       - :func:`create_client_sessions`
        - :func:`create_worker`
        - :func:`setup_prometheus_metrics`
 
@@ -192,7 +193,7 @@ async def create_app(
     app.on_startup.append(create_worker)
     app.on_startup.append(setup_prometheus_metrics)
     app.on_cleanup.append(stop_worker)
-    app.on_cleanup.append(close_client_session)
+    app.on_cleanup.append(close_client_sessions)
 
     setup_swagger(app)
 
