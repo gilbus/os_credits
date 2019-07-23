@@ -5,19 +5,23 @@ and don't have to worry about stopping further execution. All notifications are 
 """
 from __future__ import annotations
 
-from asyncio import AbstractEventLoop, get_event_loop
+from asyncio import AbstractEventLoop
+from asyncio import get_event_loop
 from email.mime.text import MIMEText
-from enum import Enum, auto
+from enum import Enum
+from enum import auto
 from string import Template
-from typing import ClassVar, Dict, Optional, Set, Union
+from typing import ClassVar
+from typing import Dict
+from typing import Optional
+from typing import Set
+from typing import Union
 
 from aiosmtplib import SMTP
 
-from os_credits.exceptions import (
-    BrokenTemplateError,
-    MissingTemplateError,
-    MissingToError,
-)
+from os_credits.exceptions import BrokenTemplateError
+from os_credits.exceptions import MissingTemplateError
+from os_credits.exceptions import MissingToError
 from os_credits.log import internal_logger
 from os_credits.perun.group import Group
 from os_credits.settings import config
@@ -65,17 +69,19 @@ class EmailNotificationBase(Exception):
 
     subject_template: ClassVar[str]
     """String which will be parsed as :class:`string.Template` and used as the subject
-    of the mail. See :attr:`custom_placeholders` and :func:`construct_message` to know which
-    placeholders inside the templates are supported and how they can be customized."""
+    of the mail. See :attr:`custom_placeholders` and :func:`construct_message` to know
+    which placeholders inside the templates are supported and how they can be
+    customized."""
 
     _body: ClassVar[Template]
     """:class:`string.Template` object created on class instantiation from the content
     of :attr:`body_template`."""
 
     body_template: ClassVar[str]
-    """String which will be parsed as :class:`string.Template` and used as the body 
-    of the mail. See :attr:`custom_placeholders` and :func:`construct_message` to know which
-    placeholders inside the templates are supported and how they can be customized."""
+    """String which will be parsed as :class:`string.Template` and used as the body of
+    the mail. See :attr:`custom_placeholders` and :func:`construct_message` to know
+    which placeholders inside the templates are supported and how they can be
+    customized."""
 
     custom_placeholders: Dict[str, str] = {}
     """Custom mapping of additional placeholders and values which can be used inside
@@ -94,15 +100,15 @@ class EmailNotificationBase(Exception):
         :raises ValueError: In case any template construction fails or the class defines
         no `To`.
         """
-        if not "body_template" in dir(cls) or not cls.body_template.strip():
+        if "body_template" not in dir(cls) or not cls.body_template.strip():
             raise MissingTemplateError(
                 f"Body template of {cls.__name__} is not defined or empty."
             )
-        if not "subject_template" in dir(cls) or not cls.subject_template.strip():
+        if "subject_template" not in dir(cls) or not cls.subject_template.strip():
             raise MissingTemplateError(
                 f"Subject template of {cls.__name__} is not defined or empty."
             )
-        if not "to" in dir(cls) or not cls.to:
+        if "to" not in dir(cls) or not cls.to:
             raise MissingToError(
                 f"{cls.__name__} does any define any ``To`` recipients."
             )
@@ -117,8 +123,8 @@ class EmailNotificationBase(Exception):
         return f"{type(self)}@{self.group.name}"
 
     def construct_message(self) -> MIMEText:
-        """Constructs a :class:`~email.mime.text.MIMEText` object from the notification's
-        attributes.
+        """Constructs a :class:`~email.mime.text.MIMEText` object from the
+        notification's attributes.
 
         The recipient placeholders are resolved, body and subject templates are rendered
         with the following default placeholders:
@@ -128,7 +134,8 @@ class EmailNotificationBase(Exception):
         ``credits_used``
             The current value of :class:`~os_credits.perun.attributes.DenbiCreditsUsed`.
         ``credits_granted``
-            The current value of :class:`~os_credits.perun.attributes.DenbiCreditsGranted`.
+            The current value of
+            :class:`~os_credits.perun.attributes.DenbiCreditsGranted`.
 
         Subclasses are advised to add their own placeholders to
         :attr:`custom_placeholders` instead of overwriting this method. If any

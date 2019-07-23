@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from os_credits.credits.base_models import MT, Credits
+from os_credits.credits.base_models import MT
+from os_credits.credits.base_models import Credits
 from os_credits.exceptions import CalculationResultError
 from os_credits.log import internal_logger
 

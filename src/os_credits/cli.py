@@ -1,9 +1,12 @@
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, FileType
+from argparse import ArgumentDefaultsHelpFormatter
+from argparse import ArgumentParser
 from os import getenv
 
 from aiohttp import web
 
-from os_credits import __author__, __license__, __version__
+from os_credits import __author__
+from os_credits import __license__
+from os_credits import __version__
 from os_credits.log import internal_logger
 
 CONFIG_FILE_ENV_VAR = "CREDITS_SETTINGS_FILE"

@@ -10,10 +10,15 @@ purpose is to log any access to non existing settings and raise a
 
 from __future__ import annotations
 
-from collections import ChainMap, UserDict
+from collections import ChainMap
+from collections import UserDict
 from decimal import Decimal
 from os import environ
-from typing import Any, Dict, Optional, Set, cast
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Set
+from typing import cast
 
 from mypy_extensions import TypedDict
 
@@ -214,7 +219,8 @@ def parse_config_from_environment() -> Config:
             int_value = int(environ[int_value_key])
             if int_value < 0:
                 internal_logger.warning(
-                    "Integer value (%s) must not be negative, falling back to default value",
+                    "Integer value (%s) must not be negative, falling back to default "
+                    "value",
                     int_value_key,
                 )
                 del environ[int_value_key]

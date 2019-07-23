@@ -5,16 +5,17 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
-from .base_attributes import (
-    PERUN_DATETIME_FORMAT,
-    ContainerPerunAttribute,
-    CreditTimestamps,
-    ReadOnlyScalarPerunAttribute,
-    ScalarPerunAttribute,
-    ToEmails,
-)
+from .base_attributes import PERUN_DATETIME_FORMAT
+from .base_attributes import ContainerPerunAttribute
+from .base_attributes import CreditTimestamps
+from .base_attributes import ReadOnlyScalarPerunAttribute
+from .base_attributes import ScalarPerunAttribute
+from .base_attributes import ToEmails
 from .exceptions import DenbiCreditsGrantedMissing
 
 PERUN_NAMESPACE_OPT = "urn:perun:group:attribute-def:opt"
@@ -37,7 +38,7 @@ class DenbiCreditsUsed(
     in precision of this value must have been caused directly in *Perun* and not by us.
 
     Stored as string inside *Perun* which is good since the floats **must never be
-    stored as such** since it will lead to loss in precision! 
+    stored as such** since it will lead to loss in precision!
 
     .. todo::
 

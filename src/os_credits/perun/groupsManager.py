@@ -5,7 +5,9 @@ Implements the RPC-Calls of the `GroupsManager
 
 from __future__ import annotations
 
-from typing import Any, Dict, cast
+from typing import Any
+from typing import Dict
+from typing import cast
 
 from os_credits.settings import config
 

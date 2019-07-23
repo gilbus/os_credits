@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Type
+from typing import TypeVar
 
 from os_credits.log import internal_logger
 
-from .attributes import (
-    DenbiCreditsGranted,
-    DenbiCreditsUsed,
-    DenbiCreditTimestamps,
-    ToEmail,
-)
-from .attributesManager import (
-    get_attributes,
-    get_resource_bound_attributes,
-    set_attributes,
-    set_resource_bound_attributes,
-)
+from .attributes import DenbiCreditsGranted
+from .attributes import DenbiCreditsUsed
+from .attributes import DenbiCreditTimestamps
+from .attributes import ToEmail
+from .attributesManager import get_attributes
+from .attributesManager import get_resource_bound_attributes
+from .attributesManager import set_attributes
+from .attributesManager import set_resource_bound_attributes
 from .base_attributes import PerunAttribute
 from .exceptions import GroupResourceNotAssociatedError
 from .groupsManager import get_group_by_name
@@ -249,8 +250,8 @@ class Group:
             value, PerunAttribute
         ):
             raise AttributeError(
-                "PerunAttributes must not be replaced by non-PerunAttributes. Update the"
-                " attribute's `value` attribute instead."
+                "PerunAttributes must not be replaced by non-PerunAttributes. Update "
+                "the attribute's `value` attribute instead."
             )
         object.__setattr__(self, name, value)
 

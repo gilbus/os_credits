@@ -10,15 +10,6 @@ repos:
       #
       # run mypy first since its errors will probably also be the cause of
       # failing tests but its faster than the whole pytest suite
-      - id: mypy
-        name: Static type checker
-        entry: make mypy
-        language: system
-        files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)$'
-        stages: [commit]
-        # no not pass filenames since we want to check whole project not only
-        # changed files
-        pass_filenames: false
       - id: black
         name: Blacken code
         entry: poetry run black
@@ -31,7 +22,7 @@ repos:
         pass_filenames: false
         stages: [commit]
         language: system
-        files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)$'
+        files: '^((src/os_credits|tests)/.+\.py)|(poetry.lock)|(tox.ini)$'
       - id: online_pytest
         name: Tests (only against Perun)
         entry: make test-online-only

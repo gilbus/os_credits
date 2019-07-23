@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-from dataclasses import MISSING, dataclass, fields
+from dataclasses import MISSING
+from dataclasses import dataclass
+from dataclasses import fields
 from datetime import datetime
-from typing import Any, AnyStr, Dict, List, Type, TypeVar
+from typing import Any
+from typing import AnyStr
+from typing import Dict
+from typing import List
+from typing import Type
+from typing import TypeVar
 
 from os_credits.log import internal_logger
 
-from .helper import deserialize, serialize
+from .helper import deserialize
+from .helper import serialize
 
 INFLUX_QUERY_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
@@ -101,7 +109,7 @@ class InfluxDBPoint:
         >>> from os_credits.influx.model import InfluxDBPoint
         >>> line = b'weather,location=us-midwest temperature=82 1465839830100399872'
         >>> InfluxDBPoint.from_lineprotocol(line)
-        InfluxDBPoint(measurement='weather', timestamp=datetime.datetime(2016, 6, 13, 19, 43, 50, 100400))
+        InfluxDBPoint(measurement='weather', timestamp=datetime.datetime(2016, 6, 13, 19, 43, 50, 100400))  # noqa
 
         :param cls: Subclass on which this method is called. Instances of this class
             will be the return type.

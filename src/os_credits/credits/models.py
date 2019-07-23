@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from decimal import Decimal
-from typing import AnyStr, Type
+from typing import AnyStr
+from typing import Type
 
 from os_credits.influx.model import InfluxDBPoint
 
-from .base_models import (
-    REGISTERED_MEASUREMENTS,
-    Credits,
-    Metric,
-    TotalUsageMetric,
-    UsageMeasurement,
-)
+from .base_models import REGISTERED_MEASUREMENTS
+from .base_models import Credits
+from .base_models import Metric
+from .base_models import TotalUsageMetric
+from .base_models import UsageMeasurement
 
 
 class VCPUMetric(TotalUsageMetric, name="project_vcpu_usage", friendly_name="cpu"):

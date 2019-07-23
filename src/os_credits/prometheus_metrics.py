@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from prometheus_client import Counter, Gauge
+from prometheus_client import Counter
+from prometheus_client import Gauge
 
 projects_processed_counter = Counter(
     "projects_processed", "Number of projects that have been processed"

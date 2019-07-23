@@ -89,7 +89,7 @@ mypy: ## Run `mypy`, a static type checker for python, see 'htmlcov/mypy/index.h
 
 .PHONY: setup
 setup: ## Setup development environment
-	@cat 'Requires poetry from - https://poetry.eustace.io/docs/'
+	@echo 'Requires poetry from - https://poetry.eustace.io/docs/'
 	poetry install
 	poetry run pre-commit install -t pre-commit
 	poetry run pre-commit install -t pre-push

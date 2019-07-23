@@ -1,18 +1,19 @@
 from contextvars import ContextVar
-from typing import Any, Dict, Optional
+from typing import Any
+from typing import Dict
+from typing import Optional
 
-from aiohttp import BasicAuth, ClientSession
+from aiohttp import BasicAuth
+from aiohttp import ClientSession
 
 from os_credits.log import requests_logger
 from os_credits.settings import config
 
-from .exceptions import (
-    BadCredentialsException,
-    ConsistencyError,
-    GroupNotExistsError,
-    InternalError,
-    RequestError,
-)
+from .exceptions import BadCredentialsException
+from .exceptions import ConsistencyError
+from .exceptions import GroupNotExistsError
+from .exceptions import InternalError
+from .exceptions import RequestError
 
 # will be instantiated/set it in the context of the aiohttp.web.application on
 # startup to have its lifetime bound to the application

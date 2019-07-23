@@ -5,10 +5,15 @@ https://perun-aai.org/documentation/technical-documentation/rpc-api/rpc-javadoc-
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import cast
 
 from .base_attributes import PerunAttribute
-from .requests import perun_get, perun_set
+from .requests import perun_get
+from .requests import perun_set
 
 _URL = "attributesManager"
 

@@ -3,27 +3,33 @@ Performs the actual calculations concerning usage and the resulting credit 'bill
 """
 from __future__ import annotations
 
-from asyncio import CancelledError, Lock, Queue, shield
+from asyncio import CancelledError
+from asyncio import Lock
+from asyncio import Queue
+from asyncio import shield
 from decimal import Decimal
-from typing import Dict, cast
+from typing import Dict
+from typing import cast
 
 from aiohttp.web import Application
 
 from os_credits.influx.client import InfluxDBClient
-from os_credits.log import TASK_ID, task_logger
-from os_credits.notifications import (
-    EmailNotificationBase,
-    HalfOfCreditsLeft,
-    send_notification,
-)
-from os_credits.perun.exceptions import DenbiCreditsUsedMissing, GroupNotExistsError
+from os_credits.log import TASK_ID
+from os_credits.log import task_logger
+from os_credits.notifications import EmailNotificationBase
+from os_credits.notifications import HalfOfCreditsLeft
+from os_credits.notifications import send_notification
+from os_credits.perun.exceptions import DenbiCreditsUsedMissing
+from os_credits.perun.exceptions import GroupNotExistsError
 from os_credits.perun.group import Group
 from os_credits.prometheus_metrics import worker_exceptions_counter
 from os_credits.settings import config
 
-from .base_models import Credits, UsageMeasurement
+from .base_models import Credits
+from .base_models import UsageMeasurement
 from .billing import calculate_credits
-from .models import BillingHistory, measurement_by_name
+from .models import BillingHistory
+from .models import measurement_by_name
 
 
 def unique_identifier(influx_line: str) -> str:
@@ -125,7 +131,8 @@ async def process_influx_line(
         measurement = measurement_class.from_lineprotocol(influx_line)
     except (KeyError, ValueError):
         task_logger.exception(
-            "Could not convert influx line %s to UsageMeasurement. Appending stacktrace",
+            "Could not convert influx line %s to UsageMeasurement. Appending "
+            "stacktrace",
             influx_line,
         )
         return

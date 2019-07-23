@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from asyncio import Lock, Queue, TimeoutError, create_task, gather, wait_for
+from asyncio import Lock
+from asyncio import Queue
+from asyncio import TimeoutError
+from asyncio import create_task
+from asyncio import gather
+from asyncio import wait_for
 from collections import defaultdict
 from datetime import datetime
 from logging.config import dictConfig
@@ -8,7 +13,9 @@ from pathlib import Path
 from pprint import pformat
 from typing import Optional
 
-from aiohttp import BasicAuth, ClientSession, web
+from aiohttp import BasicAuth
+from aiohttp import ClientSession
+from aiohttp import web
 from aiohttp_jinja2 import setup
 from aiohttp_swagger import setup_swagger
 from jinja2 import FileSystemLoader
@@ -19,17 +26,16 @@ from os_credits.exceptions import MissingInfluxDatabase
 from os_credits.influx.client import InfluxDBClient
 from os_credits.log import internal_logger
 from os_credits.perun.requests import client_session
-from os_credits.prometheus_metrics import projects_processed_counter, tasks_queued_gauge
-from os_credits.views import (
-    application_stats,
-    costs_per_hour,
-    credits_history,
-    credits_history_api,
-    get_metrics,
-    influxdb_write,
-    ping,
-    update_logging_config,
-)
+from os_credits.prometheus_metrics import projects_processed_counter
+from os_credits.prometheus_metrics import tasks_queued_gauge
+from os_credits.views import application_stats
+from os_credits.views import costs_per_hour
+from os_credits.views import credits_history
+from os_credits.views import credits_history_api
+from os_credits.views import get_metrics
+from os_credits.views import influxdb_write
+from os_credits.views import ping
+from os_credits.views import update_logging_config
 
 APP_ROOT = Path(__file__).parent
 

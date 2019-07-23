@@ -5,7 +5,12 @@ subclasses.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Generic, List, Type, TypeVar
+from typing import Any
+from typing import Dict
+from typing import Generic
+from typing import List
+from typing import Type
+from typing import TypeVar
 
 PERUN_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 # ValueType

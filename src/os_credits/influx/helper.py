@@ -31,7 +31,12 @@ from __future__ import annotations
 from dataclasses import Field
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Type
+from typing import Union
 
 InfluxDataTypes = Union[bool, float, str, int]
 _registered_serializers: Dict[str, Type[InfluxSerializer]] = {}
@@ -48,7 +53,7 @@ def serialize(
     (simulated) nanosecond precision. This methods are automatically invoked by
     :class:`~os_credits.influx.model.InfluxDBPoint`.
 
-    :param value: Value to encode. 
+    :param value: Value to encode.
     :param field_or_type: Either a :class:`~dataclasses.Field` object of which we
         require the `type` information, which should be a string since we use ``from
         __future__ import annotations`` (available for Python3.7+) but the older case of
@@ -85,7 +90,7 @@ def deserialize(value: Any, field_or_type: Union[Field, Type[Any]]) -> Any:
     :attr:`InfluxDataTypes`. Additional decoding allows for storing more abstract data
     types inside the *InfluxDB* such as datetime objects.
 
-    :param value: Value to encode. 
+    :param value: Value to encode.
     :param field_or_type: Either a :class:`~dataclasses.Field` object of which we
         require the `type` information, which should be a string since declare ``from
         __future__ import annotations`` but the older case of classes is also supported.

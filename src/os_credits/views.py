@@ -6,9 +6,14 @@ The endpoint can also be explored via the *Swagger UI*, usually ``/api/doc``.
 import logging.config
 from datetime import datetime
 from decimal import Decimal
-from json import JSONDecodeError, loads
+from json import JSONDecodeError
+from json import loads
 from traceback import format_stack
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 from aiohttp import web
 from aiohttp_jinja2 import template
@@ -194,7 +199,7 @@ async def influxdb_write(request: web.Request) -> web.Response:
       202:
         description: A corresponding task object will be created. See application log
           for further information
-    """
+    """  # noqa (cannot fix long url)
     # .text() performs automatic decoding from bytes
     influxdb_lines = await request.text()
     # an unknown number of lines will be send, put them all into the queue
@@ -244,7 +249,9 @@ async def application_stats(request: web.Request) -> web.Response:
                 correspond to the number of billed/groups/projects
             uptime:
               type: string
-              description: Uptime, string representation of a python [`timedelta`](https://docs.python.org/3/library/datetime.html#timedelta-objects)
+              description: Uptime, string representation of a python
+                  [`timedelta`](
+                  https://docs.python.org/3/library/datetime.html#timedelta-objects)
                 object
             task_stacks:
               type: object
@@ -335,7 +342,8 @@ async def get_metrics(_: web.Request) -> web.Response:
                   description: Type information
                 metric_name:
                   type: str
-                  description: Name/Identifier of the metric inside prometheus and InfluxDB
+                  description: Name/Identifier of the metric inside prometheus and
+                      InfluxDB
                 friendly_name:
                   type: str
                   description: Human readable name of the metric.
@@ -348,7 +356,7 @@ async def get_metrics(_: web.Request) -> web.Response:
 
 
 async def costs_per_hour(request: web.Request) -> web.Response:
-    """Use for example 
+    """Use for example
 
     .. code-block:: console
 

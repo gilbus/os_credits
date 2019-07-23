@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from decimal import Decimal
-from typing import Any, ClassVar, Dict, NewType, Type, TypeVar
+from typing import Any
+from typing import ClassVar
+from typing import Dict
+from typing import NewType
+from typing import Type
+from typing import TypeVar
 
 from os_credits.exceptions import MeasurementError
 from os_credits.influx.helper import InfluxSerializer
@@ -100,8 +106,8 @@ class Metric:
     def __init_subclass__(cls, name: str, friendly_name: str) -> None:
         if None in (name, friendly_name):
             internal_logger.debug(
-                "Not registering subclass %s of `Metric` since one or both of its names "
-                "are None."
+                "Not registering subclass %s of `Metric` since one or both of its "
+                "names are None."
             )
             return
         if name in Metric._metrics_by_name:
@@ -126,15 +132,15 @@ class Metric:
     ) -> Credits:
         """Given two measurements determine how many credits should be billed. This
         function should not be called directly but rather through the high level
-        function :func:`~os_credits.credits.billing.calculate_credits`. 
+        function :func:`~os_credits.credits.billing.calculate_credits`.
 
         To prevent mistakes the arguments are keyword only. Defining their type as
         ``MT`` (:data:`MT`) shows a type checker that both arguments should be the same
         (sub)class of :class:`UsageMeasurement`.
 
         :param current_measurement: The measurement submitted by *InfluxDB* which is
-            processed by the current task. Represents the most recent measurement of this
-            metric.
+            processed by the current task. Represents the most recent measurement of
+            this metric.
         :param older_measurement: Measurement of the same type as
             :attr:`current_measurement` which is the most recent one on whose basis
             credits have been billed.

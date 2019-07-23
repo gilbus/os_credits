@@ -13,8 +13,15 @@ from __future__ import annotations
 from datetime import datetime
 from itertools import chain
 from textwrap import shorten
-from typing import AsyncGenerator, Dict, Iterable, List, Optional, Type, Union
-from warnings import catch_warnings, filterwarnings
+from typing import AsyncGenerator
+from typing import Dict
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import Type
+from typing import Union
+from warnings import catch_warnings
+from warnings import filterwarnings
 
 from os_credits.credits.base_models import UsageMeasurement
 from os_credits.credits.models import BillingHistory
