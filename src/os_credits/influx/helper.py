@@ -30,6 +30,7 @@ from __future__ import annotations
 
 from dataclasses import Field
 from datetime import datetime
+from datetime import timezone
 from decimal import Decimal
 from typing import Any
 from typing import Dict
@@ -197,7 +198,7 @@ class _BoolSerializer(InfluxSerializer, types=["bool"]):
 class _DatetimeSerializer(InfluxSerializer, types=["datetime"]):
     @staticmethod
     def serialize(value: datetime) -> int:
-        return int(value.timestamp() * 1e9)
+        return int(value.astimezone(timezone.utc).timestamp() * 1e9)
 
     @staticmethod
     def deserialize(value: InfluxDataTypes) -> datetime:
