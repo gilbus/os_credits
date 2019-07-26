@@ -6,8 +6,7 @@ services:
 python:
   - "3.7"
 before_install:
-  - curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
-  - export PATH=~/.local/bin:$PATH
+  - pip install poetry
 install:
   - poetry install
 script:
