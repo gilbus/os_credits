@@ -109,7 +109,7 @@ class InfluxDBPoint:
         >>> from os_credits.influx.model import InfluxDBPoint
         >>> line = b'weather,location=us-midwest temperature=82 1465839830100399872'
         >>> InfluxDBPoint.from_lineprotocol(line)
-        InfluxDBPoint(measurement='weather', timestamp=datetime.datetime(2016, 6, 13, 19, 43, 50, 100400))  # noqa
+        InfluxDBPoint(measurement='weather', timestamp=datetime.datetime(2016, 6, 13, 19, 43, 50, 100400))
 
         :param cls: Subclass on which this method is called. Instances of this class
             will be the return type.

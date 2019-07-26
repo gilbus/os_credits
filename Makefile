@@ -71,7 +71,7 @@ test: ## Start tests/docker-compose.yml, run test suite and stop docker-compose
 		do printf '.'; \
 		sleep 1; \
 		done
-	poetry run pytest --color=yes tests src || true
+	poetry run pytest --color=yes tests src
 	poetry run docker-compose -f tests/docker-compose.yml down --volumes --remove-orphans
 
 .PHONY: test-online
