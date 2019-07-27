@@ -83,9 +83,8 @@ test-online-only: ## Only run tests against Perun
 	poetry run env TEST_ONLINE=1 pytest --color=yes --no-cov tests/test_perun.py
 
 .PHONY: mypy
-# if tests contain errors they cannot test correct
 mypy: ## Run `mypy`, a static type checker for python, see 'htmlcov/mypy/index.html'
-	poetry run mypy src/os_credits tests --html-report=htmlcov/mypy
+	poetry run mypy src/os_credits --html-report=htmlcov/mypy
 
 .PHONY: setup
 setup: ## Setup development environment
