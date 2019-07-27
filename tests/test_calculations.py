@@ -1,14 +1,18 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 from decimal import Decimal
 from typing import Type
 
 import pytest
 
-from os_credits.credits.base_models import Metric, TotalUsageMetric, UsageMeasurement
+from os_credits.credits.base_models import Metric
+from os_credits.credits.base_models import TotalUsageMetric
+from os_credits.credits.base_models import UsageMeasurement
 from os_credits.credits.billing import calculate_credits
 from os_credits.credits.models import measurement_by_name
-from os_credits.exceptions import CalculationResultError, MeasurementError
+from os_credits.exceptions import CalculationResultError
+from os_credits.exceptions import MeasurementError
 
 with pytest.raises(TypeError):
     # Due to CREDITS_PER_VIRTUAL_HOUR being None

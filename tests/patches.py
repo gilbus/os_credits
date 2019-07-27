@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 from os_credits.perun.attributes import DenbiCreditsGranted
 from os_credits.perun.base_attributes import PerunAttribute

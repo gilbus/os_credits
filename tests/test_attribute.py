@@ -1,13 +1,12 @@
-from typing import List, Optional
+from typing import List
+from typing import Optional
 
 import pytest
 
-from os_credits.perun.attributes import (
-    ContainerPerunAttribute,
-    DenbiCreditsGranted,
-    DenbiCreditTimestamps,
-    ScalarPerunAttribute,
-)
+from os_credits.perun.attributes import ContainerPerunAttribute
+from os_credits.perun.attributes import DenbiCreditsGranted
+from os_credits.perun.attributes import DenbiCreditTimestamps
+from os_credits.perun.attributes import ScalarPerunAttribute
 from os_credits.perun.base_attributes import PerunAttribute
 
 

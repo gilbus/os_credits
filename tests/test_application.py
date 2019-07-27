@@ -4,8 +4,10 @@ requests against it. They all require the aiohttp_client and influx_client fixtu
 latter even if they do not the InfluxDB functionality since the app does check the
 existence of certain databases at startup.
 """
-from dataclasses import dataclass, replace
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from dataclasses import replace
+from datetime import datetime
+from datetime import timedelta
 from decimal import Decimal
 from importlib import reload
 from typing import Type
@@ -17,14 +19,12 @@ import os_credits.perun.group
 from os_credits.credits.models import BillingHistory
 
 from . import patches
-from .patches import (
-    get_attributes,
-    get_group_by_name,
-    get_resource_bound_attributes,
-    is_assigned_resource,
-    set_attributes,
-    set_resource_bound_attributes,
-)
+from .patches import get_attributes
+from .patches import get_group_by_name
+from .patches import get_resource_bound_attributes
+from .patches import is_assigned_resource
+from .patches import set_attributes
+from .patches import set_resource_bound_attributes
 
 
 @fixture

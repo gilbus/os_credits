@@ -4,19 +4,17 @@ from random import randint
 
 import pytest
 
-from os_credits.perun.attributes import DenbiCreditsUsed, DenbiCreditTimestamps, ToEmail
-from os_credits.perun.attributesManager import (
-    get_attributes,
-    get_resource_bound_attributes,
-    set_attributes,
-    set_resource_bound_attributes,
-)
-from os_credits.perun.exceptions import (
-    BadCredentialsException,
-    DenbiCreditsGrantedMissing,
-    GroupNotExistsError,
-    GroupResourceNotAssociatedError,
-)
+from os_credits.perun.attributes import DenbiCreditsUsed
+from os_credits.perun.attributes import DenbiCreditTimestamps
+from os_credits.perun.attributes import ToEmail
+from os_credits.perun.attributesManager import get_attributes
+from os_credits.perun.attributesManager import get_resource_bound_attributes
+from os_credits.perun.attributesManager import set_attributes
+from os_credits.perun.attributesManager import set_resource_bound_attributes
+from os_credits.perun.exceptions import BadCredentialsException
+from os_credits.perun.exceptions import DenbiCreditsGrantedMissing
+from os_credits.perun.exceptions import GroupNotExistsError
+from os_credits.perun.exceptions import GroupResourceNotAssociatedError
 from os_credits.perun.group import Group
 from os_credits.perun.groupsManager import get_group_by_name
 

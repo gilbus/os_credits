@@ -2,7 +2,8 @@ from asyncio import sleep
 from importlib import reload
 from logging import getLogger
 
-from aiohttp.client_exceptions import ClientOSError, ServerDisconnectedError
+from aiohttp.client_exceptions import ClientOSError
+from aiohttp.client_exceptions import ServerDisconnectedError
 from pytest import fixture
 
 from os_credits.influx.client import InfluxDBClient

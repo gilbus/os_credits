@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 
+from aioinflux import iterpoints
 from pytest import approx
 
-from aioinflux import iterpoints
 from os_credits.credits.models import BillingHistory
 from os_credits.influx.client import InfluxDBClient
 from os_credits.influx.model import InfluxDBPoint
