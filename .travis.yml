@@ -10,7 +10,6 @@ install:
   - pip install pip -U
   - curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
   - source $HOME/.poetry/env
-  - pip install poetry
   - poetry install -v
   - poetry build -v
 script:
