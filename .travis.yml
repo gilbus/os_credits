@@ -1,0 +1,14 @@
+---
+dist: xenial   # required for Python >= 3.7
+language: python
+cache: pip
+services:
+  - docker
+python:
+  - "3.7"
+before_install:
+  - pip install poetry
+install:
+  - poetry install
+script:
+  - make test
