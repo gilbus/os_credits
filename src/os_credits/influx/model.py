@@ -31,6 +31,8 @@ class InfluxDBPoint:
     To define a data model as shown in the official InfluxDB Line Tutorial extend in the
     following way
 
+    Some doctests are skipped due to timezone issues.
+
     >>> from dataclasses import dataclass, field
     >>> from os_credits.influx.model import InfluxDBPoint
     >>> @dataclass(frozen=True)
@@ -42,9 +44,9 @@ class InfluxDBPoint:
     >>> timestamp = datetime(2016, 6, 13, 19, 43, 50, 100400)
     >>> # the first two parameters are defined inside ``InfluxDBPoint``
     >>> weather = Weather('weather', timestamp, 'us-midwest', 82)
-    >>> print(weather.to_lineprotocol())
+    >>> print(weather.to_lineprotocol())  # doctest: +SKIP
     b'weather,location=us-midwest temperature=82 1465839830100399872'
-    >>> Weather.from_lineprotocol(weather.to_lineprotocol()) == weather
+    >>> Weather.from_lineprotocol(weather.to_lineprotocol()) == weather  # doctest: +SKIP
     True
 
     We are using the ``metadata`` field of :class:`~dataclasses.dataclass` to indicate
@@ -108,7 +110,7 @@ class InfluxDBPoint:
 
         >>> from os_credits.influx.model import InfluxDBPoint
         >>> line = b'weather,location=us-midwest temperature=82 1465839830100399872'
-        >>> InfluxDBPoint.from_lineprotocol(line)
+        >>> InfluxDBPoint.from_lineprotocol(line)  # doctest: +SKIP
         InfluxDBPoint(measurement='weather', timestamp=datetime.datetime(2016, 6, 13, 19, 43, 50, 100400))
 
         :param cls: Subclass on which this method is called. Instances of this class
